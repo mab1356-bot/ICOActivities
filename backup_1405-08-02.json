@@ -1,0 +1,418 @@
+{
+  "version": "10.0",
+  "export_date": "1405/08/02",
+  "persons": [
+    {
+      "id": "p1792663888605641",
+      "username": "admin",
+      "role": "admin",
+      "firstName": "مهدی",
+      "lastName": "احمدی",
+      "personnelId": "80109",
+      "passwordHash": "e3da2b65f58ebdfe5a240c3ef6b0c162841b0d224d48d9ab6069436a3d7d6281"
+    },
+    {
+      "id": "p1792665289300991",
+      "username": "141028",
+      "role": "user",
+      "firstName": "میلاد",
+      "lastName": "اسمعیلی",
+      "personnelId": "141028",
+      "passwordHash": "8a737d45bdeea131132013a4f465ade5f050b6874e44e30dc3c84484f2843a3d"
+    },
+    {
+      "id": "p1792665338442812",
+      "username": "78495",
+      "role": "manager",
+      "firstName": "سیدمرتضی",
+      "lastName": "نوابی",
+      "personnelId": "78495",
+      "passwordHash": "bff783fe1dbfa01eebbaf1081590abcbba3281d5102538173d52a41f1d88ae43"
+    },
+    {
+      "id": "p1792665377372888",
+      "username": "117320",
+      "role": "user",
+      "firstName": "رسول",
+      "lastName": "کوچکی",
+      "personnelId": "117320",
+      "passwordHash": "73592623822385f5ea2d508f76969c44437613fa42b500716c67c44c2cd55066"
+    },
+    {
+      "id": "p1792665425888863",
+      "username": "116243",
+      "role": "user",
+      "firstName": "محمد",
+      "lastName": "جاوری",
+      "personnelId": "116243",
+      "passwordHash": "dbf3c067f959cfff360b66a2838d606f6b38d5263c0dd151b1d3d1d335dbbdbe"
+    },
+    {
+      "id": "p1792665472585172",
+      "username": "980341",
+      "role": "user",
+      "firstName": "وحید",
+      "lastName": "معینی",
+      "personnelId": "980341",
+      "passwordHash": "eb856284f4de6ab675d10f3da4c15291aadfa70c2cba2679062bcbff8f415dc6"
+    },
+    {
+      "id": "p1792665506638512",
+      "username": "141434",
+      "role": "user",
+      "firstName": "محسن",
+      "lastName": "فتاح‌پور",
+      "personnelId": "141434",
+      "passwordHash": "b3d603fd19ba0d51dda28a242670b31a5fa0f2efc191e6825096395c4d2cb2e2"
+    },
+    {
+      "id": "p1792826287161108",
+      "username": "958001",
+      "role": "admin",
+      "firstName": "شادی",
+      "lastName": "علیخان‌پور",
+      "personnelId": "958001",
+      "passwordHash": "11fc8d3a862a1a1602244137f9efe8d1605410e186c01fffae84572e58d157a0"
+    }
+  ],
+  "topics": [
+    {
+      "id": "t1792593312902788",
+      "name": "جلسه داخلی"
+    },
+    {
+      "id": "t1792593706190699",
+      "name": "تهیه گزارش"
+    },
+    {
+      "id": "t1792598954521129",
+      "name": "بازدید / سایت ویزیت"
+    },
+    {
+      "id": "t1792598989285116",
+      "name": "جلسه با شرکت‌های گروه"
+    },
+    {
+      "id": "t1792599054333762",
+      "name": "ارزیابی"
+    },
+    {
+      "id": "t1792599075309199",
+      "name": "حضور در سمینار، نمایشگاه"
+    },
+    {
+      "id": "t1792599093266562",
+      "name": "سایر"
+    },
+    {
+      "id": "t1792844727196576",
+      "name": "دوره آموزشی"
+    }
+  ],
+  "acts": [
+    {
+      "id": "a1792676205249225",
+      "date": "1405/07/11",
+      "importance": "very_important",
+      "description": "حلسه با IT در خصوص راه‌اندازی آفام گروه",
+      "location": "",
+      "hours": 2,
+      "participants": [
+        "p1792665377372888"
+      ],
+      "endDate": "1405/07/11",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "topicId": "t1792598989285116",
+      "createdBy": "p1792665377372888",
+      "createdAt": 1792676205249,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792665902975477",
+      "date": "1405/07/07",
+      "importance": "current",
+      "description": "تهیه گزارش عملکرد ماهانه",
+      "location": "",
+      "hours": 16,
+      "participants": [
+        "p1792663888605641",
+        "p1792665377372888",
+        "p1792665472585172"
+      ],
+      "endDate": "1405/07/08",
+      "startTime": "08:00",
+      "endTime": "16:00",
+      "topicId": "t1792593706190699",
+      "createdBy": "p1792663888605641",
+      "createdAt": 1792665902975,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792665812685863",
+      "date": "1405/07/22",
+      "importance": "current",
+      "description": "شرکت در سمینار حاکمیت شرکتی",
+      "location": "",
+      "hours": 8,
+      "participants": [
+        "p1792663888605641"
+      ],
+      "endDate": "1405/07/22",
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "topicId": "t1792599075309199",
+      "createdBy": "p1792663888605641",
+      "createdAt": 1792665812685,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792675914539417",
+      "date": "1405/07/25",
+      "importance": "important",
+      "description": "جلسه با سبا در راه اندازی آفام سبا",
+      "location": "",
+      "hours": 2,
+      "participants": [
+        "p1792663888605641",
+        "p1792665338442812"
+      ],
+      "endDate": "1405/07/25",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "topicId": "t1792598989285116",
+      "createdBy": "p1792663888605641",
+      "createdAt": 1792675914539,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792675983122810",
+      "date": "1405/07/18",
+      "importance": "important",
+      "description": "جلسه با سبا (توضیح آفام)",
+      "location": "",
+      "hours": 2,
+      "participants": [
+        "p1792663888605641"
+      ],
+      "endDate": "1405/07/18",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "topicId": "t1792598989285116",
+      "createdBy": "p1792663888605641",
+      "createdAt": 1792675983122,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792677113913272",
+      "date": "1405/07/09",
+      "importance": "current",
+      "description": "اصلاح گزارش ماهانه مهر ماه",
+      "location": "",
+      "hours": 2,
+      "participants": [
+        "p1792663888605641"
+      ],
+      "endDate": "1405/07/09",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "topicId": "t1792593706190699",
+      "createdBy": "p1792663888605641",
+      "createdAt": 1792677113913,
+      "privateDescription": null
+    },
+    {
+      "id": "a179268180990338",
+      "date": "1405/07/28",
+      "importance": "important",
+      "description": "ارزیابی و بازدید از شرکت فکور صنعت و MMTEمناقصه گران پروژه اسید شویی و نورد سرد پیوسته",
+      "location": "",
+      "hours": 8,
+      "participants": [
+        "p1792665472585172",
+        "p1792665338442812"
+      ],
+      "endDate": "1405/07/28",
+      "startTime": "10:00",
+      "endTime": "18:00",
+      "topicId": "t1792599054333762",
+      "createdBy": "p1792665472585172",
+      "createdAt": 1792681809903,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792681919531692",
+      "date": "1405/07/29",
+      "importance": "important",
+      "description": "ارزیابی و بازدید از شرکت آذران مناقصه گر شرکت کننده در پروژه در حال احداث اسید شویی و نرود سردپیوسته .تهران",
+      "location": "",
+      "hours": 4,
+      "participants": [
+        "p1792665472585172",
+        "p1792665338442812"
+      ],
+      "endDate": "1405/07/29",
+      "startTime": "10:00",
+      "endTime": "14:00",
+      "topicId": "t1792599054333762",
+      "createdBy": "p1792665472585172",
+      "createdAt": 1792681919531,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792682093460242",
+      "date": "1405/07/27",
+      "importance": "important",
+      "description": "همراهی تیم بازدید کننده شرکت های EIEDو فرجود از مناقصه گران شرکت کننده در پروژه اسید شویی و نورد سرد پیوسته  و بازدید از خطوط نورد سرد شرکت فولاد مبارکه",
+      "location": "",
+      "hours": 9,
+      "participants": [
+        "p1792665472585172"
+      ],
+      "endDate": "1405/07/27",
+      "startTime": "08:00",
+      "endTime": "17:00",
+      "topicId": "t1792598954521129",
+      "createdBy": "p1792665472585172",
+      "createdAt": 1792682093460,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792817270119446",
+      "date": "1405/08/02",
+      "importance": "current",
+      "description": "irisa",
+      "location": "",
+      "hours": 5,
+      "participants": [
+        "p1792665338442812"
+      ],
+      "endDate": "1405/08/02",
+      "startTime": "09:00",
+      "endTime": "14:00",
+      "topicId": "t1792599054333762",
+      "createdBy": "p1792665338442812",
+      "createdAt": 1792817270119,
+      "privateDescription": null
+    },
+    {
+      "id": "a1792826937873106",
+      "date": "1405/08/02",
+      "importance": "current",
+      "description": "ارزیابی شرکت ایریسا",
+      "location": "",
+      "hours": 6,
+      "participants": [
+        "p1792665338442812"
+      ],
+      "endDate": "1405/08/02",
+      "startTime": "09:00",
+      "endTime": "15:00",
+      "topicId": "t1792599054333762",
+      "createdBy": "p1792826287161108",
+      "createdAt": 1792826937873,
+      "privateDescription": null
+    }
+  ],
+  "holidays": [
+    {
+      "id": "h17926656767280.9011364664002455",
+      "date": "1405/01/01",
+      "title": "عید نوروز"
+    },
+    {
+      "id": "h17926656767280.5046847719822306",
+      "date": "1405/01/02",
+      "title": "عید نوروز"
+    },
+    {
+      "id": "h17926656767280.034125717132327926",
+      "date": "1405/01/03",
+      "title": "عید نوروز"
+    },
+    {
+      "id": "h17926656767280.8196521340332312",
+      "date": "1405/01/04",
+      "title": "عید نوروز"
+    },
+    {
+      "id": "h17926656767280.061713723061459724",
+      "date": "1405/01/12",
+      "title": "روز جمهوری اسلامی"
+    },
+    {
+      "id": "h17926656767280.6678961667586731",
+      "date": "1405/01/13",
+      "title": "سیزده بدر"
+    },
+    {
+      "id": "h17926656767280.8107226217855005",
+      "date": "1405/03/14",
+      "title": "رحلت امام خمینی"
+    },
+    {
+      "id": "h17926656767280.2839156762152113",
+      "date": "1405/03/15",
+      "title": "قیام ۱۵ خرداد"
+    },
+    {
+      "id": "h17926656767280.634825939737285",
+      "date": "1405/11/22",
+      "title": "پیروزی انقلاب اسلامی"
+    },
+    {
+      "id": "h17926656767280.0490957261232432",
+      "date": "1405/12/29",
+      "title": "ملی شدن صنعت نفت"
+    },
+    {
+      "id": "h1792665697659",
+      "date": "1405/10/02",
+      "title": "ولادت حضرت علی علیه السلام"
+    },
+    {
+      "id": "h1792665725718",
+      "date": "1405/10/16",
+      "title": "مبعث حضرت رسول اکرم (ص)"
+    },
+    {
+      "id": "h1792676423891",
+      "date": "1405/11/04",
+      "title": "نیمه شعبان"
+    },
+    {
+      "id": "h1792676463594",
+      "date": "1405/12/09",
+      "title": "شهادت حضرت علی (ع)"
+    },
+    {
+      "id": "h1792676508162",
+      "date": "1405/12/19",
+      "title": "عید فطر"
+    }
+  ],
+  "importance": [
+    {
+      "id": "current",
+      "name": "اقدام جاری",
+      "color": "#3498db",
+      "created_at": "2026-10-24T10:14:02.771374+00:00",
+      "isKey": false
+    },
+    {
+      "id": "important",
+      "name": "مهم",
+      "color": "#f39c12",
+      "created_at": "2026-10-24T10:14:02.771374+00:00",
+      "isKey": false
+    },
+    {
+      "id": "very_important",
+      "name": "خیلی مهم",
+      "color": "#72f37b",
+      "created_at": "2026-10-24T10:14:02.771374+00:00",
+      "isKey": true
+    }
+  ],
+  "planning": []
+}
