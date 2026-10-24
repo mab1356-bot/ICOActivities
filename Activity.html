@@ -202,6 +202,14 @@ tbody tr:last-child td{border-bottom:0}
   table td{text-align:right;border-bottom:1px solid var(--border);padding:8px 12px;white-space:normal;display:flex;justify-content:space-between;align-items:center;gap:8px}
   table td:last-child{border-bottom:0;flex-direction:column;align-items:stretch;gap:6px}
   table td::before{content:attr(data-label);font-weight:700;font-size:var(--fsm);color:var(--text2)}
+
+  /* استثنا کردن جدول تقویم از حالت بلوکی موبایل */
+  .calendar-table { display: table !important; min-width: 500px !important; border-collapse: collapse !important; border-spacing: 0 !important; }
+  .calendar-table thead { display: table-header-group !important; }
+  .calendar-table tbody { display: table-row-group !important; }
+  .calendar-table tr { display: table-row !important; border: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+  .calendar-table th, .calendar-table td { display: table-cell !important; border: 1px solid var(--border) !important; padding: 2px !important; text-align: center !important; }
+  .calendar-table td::before { content: none !important; }
 }
 @media (max-width:480px){
   .top{padding:6px 8px}
@@ -508,6 +516,7 @@ tbody tr:last-child td{border-bottom:0}
 
 <div id="print_area"></div>
 
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
@@ -515,11 +524,9 @@ tbody tr:last-child td{border-bottom:0}
 (function(){
 'use strict';
 
-/* ═══════════════════════════════════════════════════════════════════
-   ⚠️ این دو خط را با مقادیر واقعی از فایل supabase-credentials.txt جایگزین کنید
-   ═══════════════════════════════════════════════════════════════════ */
-const SUPABASE_URL = 'https://chvauhqfpdimsatnlsgu.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNodmF1aHFmcGRpbXNhdG5sc2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MzI2MTUsImV4cCI6MjEwODQwODYxNX0.yWOUEpCw_gkqZlZP1mYOMVUrNH64WOGCVNAWCr_mCMw';
+// خواندن اطلاعات از فایل config.js یا استفاده از مقادیر پیش‌فرض
+const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) || 'YOUR_PROJECT_URL_HERE';
+const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY) || 'YOUR_ANON_KEY_HERE';
 
 let supabaseClient=null;
 
@@ -1693,10 +1700,7 @@ async function init(){
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 
-/* ── Expose functions used in inline HTML handlers ──
-   بدون این خطوط، دکمه‌های onclick="..." در HTML نمی‌توانند
-   توابع داخل این IIFE را فراخوانی کنند (تیک نمای هفته، دکمهٔ تم،
-   دکمهٔ منو، دکمه‌های هفته، انصراف از تبدیل، فیلتر Planning). */
+/* ── Expose functions used in inline HTML handlers ── */
 window.toggleNav = toggleNav;
 window.toggleTheme = toggleTheme;
 window.onWeekModeChange = onWeekModeChange;

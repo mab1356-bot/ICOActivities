@@ -1,23 +1,23 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: 1.0.0
+   نسخه: 1.0.2 (پشتیبانی از config.js و اصلاح موبایل)
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.0.0';
+const CACHE_VERSION = 'actbk-v1.0.2';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
+const OFFLINE_URL = './Activity.html';
 
-// فایل‌هایی که باید در اولین نصب کش شوند
+// فایل‌های محلی که باید در اولین نصب کش شوند
 const PRECACHE_URLS = [
   './Activity.html',
+  './index.html',
   './manifest.json',
-  'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-  'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js'
+  './config.js'
 ];
 
-/* ---- Install ---- */
+/* ---- Install: پیش‌کش فایل‌های محلی ---- */
 self.addEventListener('install', event => {
-  console.log('[SW] Installing...');
+  console.log('[SW] Installing v1.0.2...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => Promise.allSettled(
@@ -31,7 +31,7 @@ self.addEventListener('install', event => {
 
 /* ---- Activate: پاک‌سازی کش‌های قدیمی ---- */
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating...');
+  console.log('[SW] Activating v1.0.2...');
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
@@ -44,45 +44,68 @@ self.addEventListener('activate', event => {
   );
 });
 
+/* ---- fetch با timeout ---- */
+function fetchWithTimeout(request, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Network timeout')), timeoutMs);
+    fetch(request).then(res => {
+      clearTimeout(timer);
+      resolve(res);
+    }).catch(err => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
 /* ---- Fetch ---- */
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // Supabase: هرگز کش نکن (همیشه شبکه)
-  if (req.url.includes('supabase.co') || req.url.includes('/rest/v1/')) {
+  // Supabase: هرگز کش نکن
+  if (req.url.includes('supabase.co') || req.url.includes('/rest/v1/')) return;
+
+  // درخواست ناوبری (باز شدن صفحه): Network-First با timeout + fallback
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetchWithTimeout(req, 8000)
+        .then(res => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(req, clone)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => {
+          // آفلاین یا timeout → از کش
+          return caches.match(OFFLINE_URL)
+            .then(c => c || caches.match('./index.html'))
+            .then(c => c || new Response(
+              '<!DOCTYPE html><html dir="rtl"><body style="font-family:Tahoma;padding:20px;text-align:center"><h2>اتصال برقرار نیست</h2><p>لطفاً اینترنت را بررسی و صفحه را دوباره باز کنید.</p></body></html>',
+              { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+            ));
+        })
+    );
     return;
   }
 
-  // استراتژی: Cache First با fallback به شبکه
+  // درخواست‌های دیگر: Cache-First + network
   event.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;
-
       return fetch(req).then(res => {
-        // فقط پاسخ‌های موفق را کش کن
         if (res.ok && res.type === 'basic') {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, clone)).catch(() => {});
         }
         return res;
-      }).catch(() => {
-        // آفلاین:
-        if (req.mode === 'navigate') {
-          return caches.match('./Activity.html');
-        }
-        return new Response('آفلاین - فایل در دسترس نیست', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
-      });
+      }).catch(() => new Response('', { status: 503 }));
     })
   );
 });
 
-/* ---- پیام‌ها از صفحه ---- */
+/* ---- پیام‌ها ---- */
 self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
