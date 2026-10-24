@@ -1,9 +1,9 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: 1.0.3 (رفع نهایی مشکل کش و config.js)
+   نسخه: 1.0.5 (رفع نهایی مشکل کش و config.js)
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.0.4';
+const CACHE_VERSION = 'actbk-v1.0.5';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
