@@ -1,9 +1,9 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: 1.0.2 (پشتیبانی از config.js و اصلاح موبایل)
+   نسخه: 1.0.3 (رفع نهایی مشکل کش و config.js)
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.0.2';
+const CACHE_VERSION = 'actbk-v1.0.3';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
@@ -15,9 +15,7 @@ const PRECACHE_URLS = [
   './config.js'
 ];
 
-/* ---- Install: پیش‌کش فایل‌های محلی ---- */
 self.addEventListener('install', event => {
-  console.log('[SW] Installing v1.0.2...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => Promise.allSettled(
@@ -29,9 +27,7 @@ self.addEventListener('install', event => {
   );
 });
 
-/* ---- Activate: پاک‌سازی کش‌های قدیمی ---- */
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating v1.0.2...');
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
@@ -44,7 +40,6 @@ self.addEventListener('activate', event => {
   );
 });
 
-/* ---- fetch با timeout ---- */
 function fetchWithTimeout(request, timeoutMs) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Network timeout')), timeoutMs);
@@ -58,15 +53,12 @@ function fetchWithTimeout(request, timeoutMs) {
   });
 }
 
-/* ---- Fetch ---- */
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // Supabase: هرگز کش نکن
   if (req.url.includes('supabase.co') || req.url.includes('/rest/v1/')) return;
 
-  // درخواست ناوبری (باز شدن صفحه): Network-First با timeout + fallback
   if (req.mode === 'navigate') {
     event.respondWith(
       fetchWithTimeout(req, 8000)
@@ -78,7 +70,6 @@ self.addEventListener('fetch', event => {
           return res;
         })
         .catch(() => {
-          // آفلاین یا timeout → از کش
           return caches.match(OFFLINE_URL)
             .then(c => c || caches.match('./index.html'))
             .then(c => c || new Response(
@@ -90,7 +81,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // درخواست‌های دیگر: Cache-First + network
   event.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;
@@ -105,7 +95,6 @@ self.addEventListener('fetch', event => {
   );
 });
 
-/* ---- پیام‌ها ---- */
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
