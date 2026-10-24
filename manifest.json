@@ -1,8 +1,9 @@
 {
+  "id": "./",
   "name": "ثبت فعالیت ماهانه",
   "short_name": "فعالیت ماهانه",
   "description": "سیستم ثبت فعالیت ماهانه واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری",
-  "start_url": "./Activity.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -11,6 +12,7 @@
   "dir": "rtl",
   "lang": "fa",
   "categories": ["productivity", "business"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -35,20 +37,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "ثبت اقدام جدید",
-      "short_name": "اقدام جدید",
-      "url": "./Activity.html#activity",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "تقویم",
-      "short_name": "تقویم",
-      "url": "./Activity.html#calendar",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
