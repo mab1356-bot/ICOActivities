@@ -525,11 +525,9 @@ tbody tr:last-child td{border-bottom:0}
 'use strict';
 
 // خواندن اطلاعات از فایل config.js یا استفاده از مقادیر پیش‌فرض
-//const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL);
-//const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY);
-const SUPABASE_URL = 'https://chvauhqfpdimsatnlsgu.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNodmF1aHFmcGRpbXNhdG5sc2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MzI2MTUsImV4cCI6MjEwODQwODYxNX0.yWOUEpCw_gkqZlZP1mYOMVUrNH64WOGCVNAWCr_mCMw';
-  
+const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL);
+const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY);
+
 let supabaseClient=null;
 
 function initSupabase(){try{if(!window.supabase)throw new Error("Supabase لود نشد.");if(SUPABASE_URL==='YOUR_PROJECT_URL_HERE')throw new Error("تنظیمات Supabase وارد نشده.");supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);return true}catch(e){window.supabaseInitError=e.message;return false}}
