@@ -101,7 +101,7 @@ tbody tr:last-child td{border-bottom:0}
 .day-cell:hover{background:var(--primaryS)}
 .day-cell.holiday{background:var(--dangerS)}
 .day-cell.has-log{background:var(--successS)}
-.day-cell.has-private {background: var(--warningS); border-color: var(--warning);} /* رنگ زرد برای اقدامات شخصی */
+.day-cell.has-private {background: var(--warningS); border-color: var(--warning);}
 .day-number{font-size:18px;font-family:var(--font-main);font-weight:800}
 .day-status{font-size:11px;margin-top:4px;color:var(--text2);font-weight:600}
 .holiday-title{font-size:11px;color:var(--danger);font-family:var(--font-main);margin-top:2px;font-weight:700}
@@ -262,6 +262,7 @@ tbody tr:last-child td{border-bottom:0}
       <button class="btn btn-sm btn-success" id="btn_sync_cloud" style="display:none">🔄 بروزرسانی</button>
       <div class="user-chip" id="user_info" style="display:none">
         <span class="user-name" id="current_user"></span>
+        <button class="btn-icon" id="btn_change_password" title="تغییر رمز عبور">🔑</button>
         <button class="btn-icon" id="btn_logout" title="خروج">🚪</button>
       </div>
     </div>
@@ -531,9 +532,33 @@ tbody tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<!-- Modal: Change Password -->
+<div id="modal_change_password" class="modal-overlay hidden">
+  <div class="modal" style="max-width:420px">
+    <h3>🔑 تغییر رمز عبور</h3>
+    <p class="modal-note">برای تغییر رمز، ابتدا رمز فعلی خود را وارد کنید.</p>
+    <div class="form-group">
+      <label>رمز عبور فعلی:</label>
+      <input type="password" id="chg_old_pass" dir="ltr">
+    </div>
+    <div class="form-group">
+      <label>رمز عبور جدید (حداقل ۴ کاراکتر):</label>
+      <input type="password" id="chg_new_pass" dir="ltr">
+    </div>
+    <div class="form-group">
+      <label>تکرار رمز عبور جدید:</label>
+      <input type="password" id="chg_confirm_pass" dir="ltr">
+    </div>
+    <div id="chg_error" class="alert alert-error" style="display:none;margin-top:10px"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-success" style="flex:1" id="btn_submit_change_pass">ذخیره</button>
+      <button class="btn btn-secondary" style="flex:1" id="btn_cancel_change_pass">انصراف</button>
+    </div>
+  </div>
+</div>
+
 <div id="print_area"></div>
 
-<!-- بارگذاری فایل تنظیمات -->
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -547,67 +572,65 @@ tbody tr:last-child td{border-bottom:0}
    ───────────────────────────────────────────────────────────── */
 let supabaseClients = [];
 let activeServerName = '';
+let nhostClient = null;
 
-// لایه واسط برای Nhost (تا API آن شبیه Supabase شود)
-function createNhostAdapter(baseUrl, adminSecret) {
-    const headers = {
-        'Content-Type': 'application/json',
-        'x-hasura-admin-secret': adminSecret,
-        'Prefer': 'resolution=merge-duplicates' // برای عملیات Upsert
-    };
-    
-    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-    
-    return {
-        name: 'Nhost',
-        from: function(tableName) {
-            const restUrl = `${cleanBaseUrl}/api/rest/${tableName}`;
-            return {
-                select: async (columns = '*') => {
-                    try {
-                        const url = columns === '*' ? restUrl : `${restUrl}?select=${columns}`;
-                        const res = await fetch(url, { headers });
-                        if (!res.ok) throw new Error(await res.text());
-                        const data = await res.json();
-                        return { data, error: null };
-                    } catch (err) {
-                        return { data: null, error: { message: err.message } };
-                    }
-                },
-                upsert: async (dataArray) => {
-                    try {
-                        const res = await fetch(restUrl, {
-                            method: 'POST',
-                            headers,
-                            body: JSON.stringify(dataArray)
-                        });
-                        if (!res.ok) throw new Error(await res.text());
-                        return { error: null };
-                    } catch (err) {
-                        return { error: { message: err.message } };
-                    }
-                },
-                delete: () => ({
-                    eq: async (column, value) => {
+// آداپتور برای استفاده از Nhost (با GraphQL) به شکلی شبیه Supabase
+async function createNhostAdapter(subdomain, region) {
+    try {
+        // بارگذاری داینامیک کتابخانه رسمی Nhost
+        const { createClient } = await import("https://esm.sh/@nhost/nhost-js");
+        nhostClient = createClient({ subdomain, region });
+        console.log(`[Nhost] Client initialized for subdomain: ${subdomain}`);
+        
+        return {
+            name: 'Nhost',
+            from: function(tableName) {
+                return {
+                    select: async (columns = '*') => {
+                        const query = `query Get_${tableName} { ${tableName} { ${columns === '*' ? 'id' : columns} } }`;
                         try {
-                            const res = await fetch(`${restUrl}?${column}=eq.${value}`, {
-                                method: 'DELETE',
-                                headers
-                            });
-                            if (!res.ok) throw new Error(await res.text());
+                            const response = await nhostClient.graphql.request(query);
+                            if (response.error) throw new Error(response.error.message);
+                            return { data: response.data[tableName], error: null };
+                        } catch (err) {
+                            return { data: null, error: { message: err.message } };
+                        }
+                    },
+                    upsert: async (dataArray) => {
+                        // در Nhost برای سادگی از insert استفاده می‌کنیم
+                        // (برای Upsert واقعی نیاز به تعریف conflict است)
+                        const mutation = `mutation Insert_${tableName}($objects: [${tableName}_insert_input!]!) { insert_${tableName}(objects: $objects) { affected_rows } }`;
+                        try {
+                            const response = await nhostClient.graphql.request(mutation, { objects: dataArray });
+                            if (response.error) throw new Error(response.error.message);
                             return { error: null };
                         } catch (err) {
                             return { error: { message: err.message } };
                         }
-                    }
-                }),
-                order: function() { return this; } 
-            };
-        }
-    };
+                    },
+                    delete: () => ({
+                        eq: async (column, value) => {
+                            const mutation = `mutation Delete_${tableName}($where: ${tableName}_bool_exp!) { delete_${tableName}(where: $where) { affected_rows } }`;
+                            try {
+                                const response = await nhostClient.graphql.request(mutation, { where: { [column]: { _eq: value } } });
+                                if (response.error) throw new Error(response.error.message);
+                                return { error: null };
+                            } catch (err) {
+                                return { error: { message: err.message } };
+                            }
+                        }
+                    }),
+                    order: function() { return this; }
+                };
+            }
+        };
+    } catch (e) {
+        console.error('[Nhost] Failed to load client:', e);
+        return null;
+    }
 }
 
-function initSupabaseClients() {
+async function initSupabaseClients() {
     if (!window.supabase) {
         window.supabaseInitError = "کتابخانه Supabase لود نشد.";
         return false;
@@ -619,22 +642,16 @@ function initSupabaseClients() {
         return false;
     }
     
-    supabaseClients = []; 
-    servers.forEach(server => {
-        try {
-            if (server.url && server.key && !server.url.includes('YOUR_')) {
-                if (server.type === 'nhost') {
-                    const client = createNhostAdapter(server.url, server.key);
-                    supabaseClients.push({ name: server.name, client: client });
-                } else {
-                    const client = window.supabase.createClient(server.url, server.key);
-                    supabaseClients.push({ name: server.name, client: client });
-                }
-            }
-        } catch (e) {
-            console.warn(`[Multi-Server] Failed to init ${server.name}:`, e);
+    supabaseClients = [];
+    for (const server of servers) {
+        if (server.type === 'nhost') {
+            const adapter = await createNhostAdapter(server.subdomain, server.region);
+            if (adapter) supabaseClients.push({ name: server.name, client: adapter });
+        } else if (server.url && server.key && !server.url.includes('YOUR_')) {
+            const client = window.supabase.createClient(server.url, server.key);
+            supabaseClients.push({ name: server.name, client: client });
         }
-    });
+    }
     
     console.log(`[Multi-Server] Initialized ${supabaseClients.length} client(s).`);
     return supabaseClients.length > 0;
@@ -1865,6 +1882,71 @@ async function handleSetup(){
 }
 function handleLogout(){if(!confirm('از حساب خارج می‌شوید؟'))return;clearSession();location.reload()}
 
+async function openChangePasswordModal(){
+  $('chg_old_pass').value='';
+  $('chg_new_pass').value='';
+  $('chg_confirm_pass').value='';
+  $('chg_error').style.display='none';
+  $('modal_change_password').classList.remove('hidden');
+}
+
+async function submitChangePassword(){
+  const session=getSession();
+  if(!session){return;}
+  
+  const oldPass=val('chg_old_pass');
+  const newPass=val('chg_new_pass');
+  const confirmPass=val('chg_confirm_pass');
+  const errBox=$('chg_error');
+  
+  errBox.style.display='none';
+  
+  if(!oldPass || !newPass || !confirmPass){
+    errBox.textContent='همه فیلدها الزامی است.';
+    errBox.style.display='block';
+    return;
+  }
+  
+  if(newPass.length<4){
+    errBox.textContent='رمز جدید باید حداقل ۴ کاراکتر باشد.';
+    errBox.style.display='block';
+    return;
+  }
+  
+  if(newPass !== confirmPass){
+    errBox.textContent='رمز جدید و تکرار آن یکسان نیستند.';
+    errBox.style.display='block';
+    return;
+  }
+  
+  const persons=getData(KEYS.persons);
+  const p=persons.find(x=>x.id===session.personId);
+  
+  if(!p){
+    errBox.textContent='کاربر یافت نشد.';
+    errBox.style.display='block';
+    return;
+  }
+  
+  const oldHash=await hashPassword(oldPass,p.username);
+  if(oldHash !== p.passwordHash){
+    errBox.textContent='رمز فعلی اشتباه است.';
+    errBox.style.display='block';
+    return;
+  }
+  
+  const newHash=await hashPassword(newPass,p.username);
+  p.passwordHash=newHash;
+  
+  if(await setData(KEYS.persons,persons)){
+    $('modal_change_password').classList.add('hidden');
+    showAlert('✅ رمز عبور با موفقیت تغییر کرد.','success');
+  } else {
+    errBox.textContent='خطا در ذخیره‌سازی رمز جدید.';
+    errBox.style.display='block';
+  }
+}
+
 function on(id,ev,fn){var e=$(id);if(e)e.addEventListener(ev,fn)}
 function delegate(id,fn){var e=$(id);if(!e)return;e.addEventListener('click',ev=>{var b=ev.target.closest('button');if(b&&b.dataset.action)fn(b.dataset.action,b.dataset.id)})}
 
@@ -1885,11 +1967,14 @@ async function startApp(){
 async function init(){
   initTheme();
   document.addEventListener('click',closePopups);
-  const supabaseReady=initSupabaseClients(); // استفاده از تابع چندسروری
+  const supabaseReady=await initSupabaseClients(); // استفاده از تابع چندسروری (Async)
 
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
   on('btn_sync_cloud','click',()=>syncFromCloud(true));
   on('btn_logout','click',handleLogout);
+  on('btn_change_password','click',openChangePasswordModal);
+  on('btn_submit_change_pass','click',submitChangePassword);
+  on('btn_cancel_change_pass','click',()=>$('modal_change_password').classList.add('hidden'));
 
   on('btn_login','click',handleLogin);
   on('btn_setup','click',handleSetup);

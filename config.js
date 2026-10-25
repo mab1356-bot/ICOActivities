@@ -1,5 +1,6 @@
 window.APP_CONFIG = {
-    SERVERS: [
+    SERVERS: 
+    [
         {
             type: 'supabase',
             name: 'Main_Data',
@@ -9,9 +10,8 @@ window.APP_CONFIG = {
         {
             type: 'nhost',
             name: 'Backup_Data',
-            // آدرس را دقیقاً به شکل زیر بنویسید (بدون / در انتها):
-            url: 'https://orxqbytxsqjqpqsmqllu.nhost.run', 
-            key: '{{ secrets.HASURA_GRAPHQL_ADMIN_SECRET }}' 
+            subdomain: 'orxqbytxsqjqpqsmqllu',  // مثلا: orxqbytxsqjqpqsmqllu
+            region: 'eu-central-1'         // مثلا: eu-central-1
         }
     ]
 };
