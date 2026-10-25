@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
 <style>
-:root{--s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;--e1:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.1);--e2:0 4px 12px rgba(15,23,42,.08);--e3:0 12px 32px rgba(15,23,42,.14);--tfast:120ms;--tbase:200ms;--bg:#f6f8fb;--surface:#fff;--surface2:#f9fbfd;--surface3:#f1f5f9;--border:#e2e8f0;--borderS:#cbd5e1;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--primary:#2563eb;--primaryH:#1d4ed8;--primaryS:#eff6ff;--primaryI:#1e40af;--success:#059669;--successS:#d1fae5;--successI:#065f46;--warning:#d97706;--warningS:#fef3c7;--warningI:#92400e;--danger:#dc2626;--dangerS:#fee2e2;--dangerI:#991b1b;--purple:#7c3aed;--purpleS:#ede9fe;--ring:rgba(37,99,235,.18);--fsm:12px;--fmd:13px;--fbase:14px;--flg:16px;--fxl:20px;--f2xl:26px;--font-main:'B Titr','Vazirmatn',Tahoma,sans-serif;--font-body:'Vazirmatn','B Mitra',Tahoma,sans-serif}
+:root{--s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;--e1:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.1);--e2:0 4px 12px rgba(15,23,42,.08);--e3:0 12px 32px rgba(15,23,42,.14);--tfast:120ms;--tbase:200ms;--bg:#f6f8fb;--surface:#fff;--surface2:#f9fbfd;--surface3:#f1f5f9;--border:#e2e8f0;--borderS:#cbd5e1;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--primary:#2563eb;--primaryH:#1d4ed8;--primaryS:#eff6ff;--primaryI:#1e40af;--success:#059669;--successS:#d1fae5;--successI:#065f46;--warning:#d97706;--warningS:#fef3c7;--warningI:#92400e;--danger:#dc2626;--dangerS:#fee2e2;--dangerI:#991b1b;--purple:#7c3aed;--purpleS:#ede9fe;--ring:rgba(37,99,235,.18);--fsm:12px;--fmd:13px;--fbase:14px;--flg:16px;--fxl:20px;--f2xl:26px;--font-main:'B Titr','Vazirmatn',Tahoma,sans-serif;--font-body:'B Nazanin','Vazirmatn',Tahoma,sans-serif}
 [data-theme="dark"]{--bg:#0b1220;--surface:#111a2e;--surface2:#0f1a30;--surface3:#1a2540;--border:#243049;--borderS:#334155;--text:#e8eefc;--text2:#94a3b8;--text3:#64748b;--primary:#60a5fa;--primaryH:#3b82f6;--primaryS:#172554;--primaryI:#bfdbfe;--success:#34d399;--successS:#052e1f;--successI:#a7f3d0;--warning:#fbbf24;--warningS:#451a03;--warningI:#fde68a;--danger:#f87171;--dangerS:#450a0a;--dangerI:#fecaca;--purple:#a78bfa;--purpleS:#2e1065;--ring:rgba(96,165,250,.28);--e1:0 1px 2px rgba(0,0,0,.5);--e2:0 4px 12px rgba(0,0,0,.4);--e3:0 16px 48px rgba(0,0,0,.6)}
 *{box-sizing:border-box;font-family:var(--font-body);-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;width:100%;overflow-x:hidden}
@@ -140,8 +140,6 @@ tbody tr:last-child td{border-bottom:0}
 .modal{background:var(--surface);border-radius:var(--r-xl);max-width:700px;width:100%;max-height:92vh;overflow:auto;padding:20px;box-shadow:var(--e3);animation:modalIn .25s cubic-bezier(.16,1,.3,1)}
 @keyframes modalIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:none}}
 .modal h3{margin:0 0 8px;color:var(--warning);font-size:18px}
-.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.modal-head h3{margin:0;color:var(--primary)}
 .modal-note{color:var(--text2);margin:0 0 12px;line-height:1.7;font-size:var(--fmd)}
 .modal-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;margin-top:15px}
 .auth-root{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 20% 20%,#1e293b,#0b1220 70%);overflow-y:auto}
@@ -263,7 +261,6 @@ tbody tr:last-child td{border-bottom:0}
       <button class="btn btn-sm btn-success" id="btn_sync_cloud" style="display:none">🔄 بروزرسانی</button>
       <div class="user-chip" id="user_info" style="display:none">
         <span class="user-name" id="current_user"></span>
-        <button class="btn-icon" id="btn_change_pwd" title="تغییر رمز">🔑</button>
         <button class="btn-icon" id="btn_logout" title="خروج">🚪</button>
       </div>
     </div>
@@ -451,14 +448,8 @@ tbody tr:last-child td{border-bottom:0}
         <div class="form-group"><label>شرکت‌کنندگان:</label><div id="participants_checkboxes" class="participants-list"></div></div>
         <div class="form-group"><label>شرح اقدام (الزامی):</label><textarea id="act_desc" placeholder="شرح دقیق اقدام..."></textarea></div>
         <div class="form-group hidden" id="private_desc_wrap">
-          <label>🔒 توضیحات محرمانه <span style="color:var(--text3);font-weight:normal;font-size:11px">(فقط ادمین)</span></label>
+          <label>🔒 توضیحات محرمانه <span style="color:var(--text3);font-weight:normal;font-size:11px">(فقط مدیر/ادمین)</span></label>
           <textarea id="act_private_desc" placeholder="توضیحات محرمانه..."></textarea>
-        </div>
-        <div class="form-group hidden" id="only_for_me_wrap">
-          <label class="check-line" style="display:inline-flex">
-            <input type="checkbox" id="act_only_for_me">
-            <span>👁️ این اقدام فقط برای من نمایش داده شود (مخفی از سایر کاربران)</span>
-          </label>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn btn-success" style="flex:1" id="btn_save_act">ثبت اقدام</button>
@@ -511,7 +502,7 @@ tbody tr:last-child td{border-bottom:0}
 
       <div id="section-settings" class="card hidden">
         <h2>💾 پشتیبان‌گیری و بازیابی</h2>
-        <div class="alert alert-success" style="display:block;margin-bottom:15px">دیتابیس شما به Supabase متصل است.</div>
+        <div class="alert alert-success" style="display:block;margin-bottom:15px">دیتابیس شما به سرورهای ابری متصل است.</div>
         <div class="form-group"><button class="btn btn-success" style="width:100%" id="btn_export">دریافت فایل پشتیبان (JSON)</button></div>
         <div class="form-group" style="margin-top:30px;border-top:1px solid var(--border);padding-top:20px">
           <label>بازیابی و ادغام فایل JSON:</label>
@@ -524,8 +515,8 @@ tbody tr:last-child td{border-bottom:0}
 </div>
 
 <div id="print_area"></div>
-<div id="modal_root"></div>
 
+<!-- بارگذاری فایل تنظیمات -->
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
@@ -534,13 +525,124 @@ tbody tr:last-child td{border-bottom:0}
 (function(){
 'use strict';
 
-const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) || '';
-const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY) || '';
+/* ─────────────────────────────────────────────────────────────
+   سیستم مدیریت اتصال به چند سرور (Supabase & Nhost)
+   ───────────────────────────────────────────────────────────── */
+let supabaseClients = [];
+let activeServerName = '';
 
-let supabaseClient=null;
+// لایه واسط برای Nhost (تا API آن شبیه Supabase شود)
+function createNhostAdapter(baseUrl, adminSecret) {
+    const headers = {
+        'Content-Type': 'application/json',
+        'x-hasura-admin-secret': adminSecret,
+        'Prefer': 'resolution=merge-duplicates' // برای عملیات Upsert
+    };
+    
+    // اطمینان از اینکه آدرس پایه با / تمام نمی‌شود
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    
+    return {
+        name: 'Nhost',
+        from: function(tableName) {
+            const restUrl = `${cleanBaseUrl}/api/rest/${tableName}`;
+            return {
+                select: async (columns = '*') => {
+                    try {
+                        // Nhost از پارامتر select برای انتخاب ستون‌ها استفاده می‌کند
+                        // اگر * باشد، نیازی به ارسال نیست
+                        const url = columns === '*' ? restUrl : `${restUrl}?select=${columns}`;
+                        const res = await fetch(url, { headers });
+                        if (!res.ok) throw new Error(await res.text());
+                        const data = await res.json();
+                        return { data, error: null };
+                    } catch (err) {
+                        return { data: null, error: { message: err.message } };
+                    }
+                },
+                upsert: async (dataArray) => {
+                    try {
+                        const res = await fetch(restUrl, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(dataArray)
+                        });
+                        if (!res.ok) throw new Error(await res.text());
+                        return { error: null };
+                    } catch (err) {
+                        return { error: { message: err.message } };
+                    }
+                },
+                delete: () => ({
+                    eq: async (column, value) => {
+                        try {
+                            const res = await fetch(`${restUrl}?${column}=eq.${value}`, {
+                                method: 'DELETE',
+                                headers
+                            });
+                            if (!res.ok) throw new Error(await res.text());
+                            return { error: null };
+                        } catch (err) {
+                            return { error: { message: err.message } };
+                        }
+                    }
+                }),
+                order: function() { return this; } 
+            };
+        }
+    };
+}
 
-function initSupabase(){try{if(!window.supabase)throw new Error("Supabase لود نشد.");if(!SUPABASE_URL)throw new Error("تنظیمات Supabase وارد نشده.");supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);return true}catch(e){window.supabaseInitError=e.message;return false}}
-async function testSupabaseConnection(){if(!supabaseClient)return{ok:false,message:window.supabaseInitError||'کلاینت آماده نیست'};try{const{error}=await supabaseClient.from('persons').select('id').limit(1);if(error){if(error.code==='42P01')return{ok:false,message:'جدول persons ساخته نشده'};return{ok:false,message:error.message}}return{ok:true}}catch(e){return{ok:false,message:e.message}}}
+function initSupabaseClients() {
+    if (!window.supabase) {
+        window.supabaseInitError = "کتابخانه Supabase لود نشد.";
+        return false;
+    }
+    
+    const servers = (window.APP_CONFIG && window.APP_CONFIG.SERVERS) || [];
+    if (servers.length === 0) {
+        window.supabaseInitError = "هیچ سروری در config.js تعریف نشده است.";
+        return false;
+    }
+    
+    supabaseClients = []; 
+    servers.forEach(server => {
+        try {
+            if (server.url && server.key && !server.url.includes('YOUR_')) {
+                if (server.type === 'nhost') {
+                    const client = createNhostAdapter(server.url, server.key);
+                    supabaseClients.push({ name: server.name, client: client });
+                } else {
+                    const client = window.supabase.createClient(server.url, server.key);
+                    supabaseClients.push({ name: server.name, client: client });
+                }
+            }
+        } catch (e) {
+            console.warn(`[Multi-Server] Failed to init ${server.name}:`, e);
+        }
+    });
+    
+    console.log(`[Multi-Server] Initialized ${supabaseClients.length} client(s).`);
+    return supabaseClients.length > 0;
+}
+
+async function testSupabaseConnection() {
+    if (supabaseClients.length === 0) {
+        return { ok: false, message: 'هیچ کلاینت متصلی وجود ندارد.' };
+    }
+    for (const server of supabaseClients) {
+        try {
+            const { error } = await server.client.from('persons').select('id').limit(1);
+            if (!error) {
+                activeServerName = server.name;
+                return { ok: true, server: server.name };
+            }
+        } catch (e) {
+            console.warn(`[Multi-Server] Connection test failed for ${server.name}:`, e.message);
+        }
+    }
+    return { ok: false, message: 'اتصال به تمام سرورها برقرار نشد.' };
+}
 
 function $(id){return document.getElementById(id)}
 function val(id){var e=$(id);return e?String(e.value).trim():''}
@@ -560,19 +662,6 @@ function toggleTheme(){var c=document.documentElement.getAttribute('data-theme')
 function toggleNav(){$('main_nav').classList.toggle('active');$('navOverlay').classList.toggle('active')}
 
 async function hashPassword(password,username){const text=username+':'+password+':icg-actbk-salt-2024';const buf=new TextEncoder().encode(text);const hashBuffer=await crypto.subtle.digest('SHA-256',buf);return Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-
-var modalStack=[];
-function openModal(opts){
-  var root=$('modal_root');if(!root){root=document.createElement('div');root.id='modal_root';document.body.appendChild(root)}
-  var overlay=document.createElement('div');overlay.className='modal-overlay';
-  var modal=document.createElement('div');modal.className='modal';modal.style.maxWidth=opts.width||'520px';
-  var head=opts.title?'<div class="modal-head"><h3>'+opts.title+'</h3><button class="btn-icon" onclick="closeTopModal()">✕</button></div>':'';
-  modal.innerHTML=head+'<div class="modal-body">'+(opts.body||'')+'</div>'+(opts.foot?'<div class="modal-foot" style="padding:15px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'+opts.foot+'</div>':'');
-  overlay.appendChild(modal);
-  overlay.addEventListener('click',function(e){if(e.target===overlay)closeTopModal()});
-  root.appendChild(overlay);modalStack.push(overlay);
-}
-function closeTopModal(){if(modalStack.length===0)return;var overlay=modalStack.pop();overlay.remove()}
 
 function div(a,b){return~~(a/b)}function mod(a,b){return a-~~(a/b)*b}
 var BREAKS=[-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];
@@ -605,7 +694,7 @@ function getData(k){try{var v=JSON.parse(localStorage.getItem(k)||'[]');return A
 function toDB(key,item){
   var res=Object.assign({},item);
   if(key==='actbk_persons'){res.firstname=item.firstName;delete res.firstName;res.lastname=item.lastName;delete res.lastName;res.personnelid=item.personnelId;delete res.personnelId;res.passwordhash=item.passwordHash;delete res.passwordHash}
-  else if(key==='actbk_activities'){res.enddate=item.endDate;delete res.endDate;res.starttime=item.startTime;delete res.startTime;res.endtime=item.endTime;delete res.endTime;res.topicid=item.topicId;delete res.topicId;res.createdby=item.createdBy;delete res.createdBy;res.createdat=item.createdAt;delete res.createdAt;res.privatedescription=item.privateDescription;delete res.privateDescription;res.onlyforme=item.onlyForMe===true;delete res.onlyForMe}
+  else if(key==='actbk_activities'){res.enddate=item.endDate;delete res.endDate;res.starttime=item.startTime;delete res.startTime;res.endtime=item.endTime;delete res.endTime;res.topicid=item.topicId;delete res.topicId;res.createdby=item.createdBy;delete res.createdBy;res.createdat=item.createdAt;delete res.createdAt;res.privatedescription=item.privateDescription;delete res.privateDescription}
   else if(key==='actbk_importance'){res.is_key=item.isKey===true;delete res.isKey}
   else if(key==='actbk_planning'){res.proposeddate=item.proposedDate;delete res.proposedDate;res.importanceid=item.importanceId;delete res.importanceId;res.locationhint=item.locationHint;delete res.locationHint;res.createdby=item.createdBy;delete res.createdBy;res.createdat=item.createdAt;delete res.createdAt;res.convertedactivityid=item.convertedActivityId;delete res.convertedActivityId;res.convertedat=item.convertedAt;delete res.convertedAt;res.cancelreason=item.cancelReason;delete res.cancelReason}
   delete res.created_at;
@@ -614,42 +703,80 @@ function toDB(key,item){
 function fromDB(key,item){
   var res=Object.assign({},item);
   if(key==='actbk_persons'){res.firstName=item.firstname;delete res.firstname;res.lastName=item.lastname;delete res.lastname;res.personnelId=item.personnelid;delete res.personnelid;res.passwordHash=item.passwordhash;delete res.passwordhash}
-  else if(key==='actbk_activities'){res.endDate=item.enddate;delete res.enddate;res.startTime=item.starttime;delete res.starttime;res.endTime=item.endtime;delete res.endtime;res.topicId=item.topicid;delete res.topicid;res.createdBy=item.createdby;delete res.createdby;res.createdAt=item.createdat;delete res.createdat;res.privateDescription=item.privatedescription;delete res.privatedescription;res.onlyForMe=item.onlyforme===true;delete res.onlyforme}
+  else if(key==='actbk_activities'){res.endDate=item.enddate;delete res.enddate;res.startTime=item.starttime;delete res.starttime;res.endTime=item.endtime;delete res.endtime;res.topicId=item.topicid;delete res.topicid;res.createdBy=item.createdby;delete res.createdby;res.createdAt=item.createdat;delete res.createdat;res.privateDescription=item.privatedescription;delete res.privatedescription}
   else if(key==='actbk_importance'){res.isKey=item.is_key===true;delete res.is_key}
   else if(key==='actbk_planning'){res.proposedDate=item.proposeddate;delete res.proposeddate;res.importanceId=item.importanceid;delete res.importanceid;res.locationHint=item.locationhint;delete res.locationhint;res.createdBy=item.createdby;delete res.createdby;res.createdAt=item.createdat;delete res.createdat;res.convertedActivityId=item.convertedactivityid;delete res.convertedactivityid;res.convertedAt=item.convertedat;delete res.convertedat;res.cancelReason=item.cancelreason;delete res.cancelreason}
   return res;
 }
+
 async function setData(key,data){
-  try{
-    localStorage.setItem(key,JSON.stringify(data));
-    const tableName=TABLE_MAP[key];
-    if(!tableName||!supabaseClient)return true;
-    var supabaseData=data.map(item=>toDB(key,item));
-    const{error}=await supabaseClient.from(tableName).upsert(supabaseData,{onConflict:'id'});
-    if(error){console.error('Supabase save error:',error);showAlert('خطا در ذخیره‌سازی ابری: '+error.message,'error');return false}
-    return true;
-  }catch(e){showAlert('خطا در ذخیره‌سازی: '+e.message,'error');return false}
+  localStorage.setItem(key,JSON.stringify(data));
+  if(supabaseClients.length===0)return true;
+  const tableName=TABLE_MAP[key];
+  if(!tableName)return true;
+  const supabaseData=data.map(item=>toDB(key,item));
+  
+  const promises=supabaseClients.map(async(server)=>{
+    try{
+      const{error}=await server.client.from(tableName).upsert(supabaseData);
+      if(error){console.warn(`[Multi-Server] Save failed on ${server.name}: ${error.message}`);return false;}
+      return true;
+    }catch(e){console.warn(`[Multi-Server] Exception on ${server.name}:`, e.message);return false;}
+  });
+
+  const results=await Promise.allSettled(promises);
+  const anySuccess=results.some(r=>r.status==='fulfilled'&&r.value===true);
+
+  if(!anySuccess){showAlert('خطا در ذخیره‌سازی ابری: هیچ‌کدام از سرورها پاسخ ندادند.','error');return false;}
+  return true;
 }
+
 async function syncFromCloud(showMessage){
   if(showMessage===undefined)showMessage=true;
-  if(!supabaseClient)return{ok:false};
+  if(supabaseClients.length===0)return{ok:false};
+
   const btn=$('btn_sync_cloud');
   if(btn&&showMessage){btn.textContent='⏳...';btn.disabled=true}
-  let failedCount=0;
-  for(let localKey in TABLE_MAP){
+  let anySuccess=false;
+
+  for(const server of supabaseClients){
     try{
-      let query=supabaseClient.from(TABLE_MAP[localKey]).select('*');
-      if(localKey===KEYS.importance)query=query.order('created_at',{ascending:true}).order('id',{ascending:true});
-      const{data,error}=await query;
-      if(error){console.error('Fetch error for '+localKey+':',error);failedCount++}
-      else if(data){var converted=data.map(item=>fromDB(localKey,item));localStorage.setItem(localKey,JSON.stringify(converted))}
-    }catch(e){failedCount++}
+      for(let localKey in TABLE_MAP){
+        const tableName=TABLE_MAP[localKey];
+        const{data,error}=await server.client.from(tableName).select('*');
+        if(!error&&data){
+          const converted=data.map(item=>fromDB(localKey,item));
+          const currentData=getData(localKey);
+          
+          // استراتژی همگام‌سازی ساده: اگر داده‌های سرور بیشتر بود، جایگزین کن
+          if(converted.length>currentData.length){
+            localStorage.setItem(localKey,JSON.stringify(converted));
+            console.log(`[Multi-Server] Updated ${localKey} from ${server.name}`);
+          }
+        }
+      }
+      anySuccess=true;
+    }catch(e){
+      console.warn(`[Multi-Server] Sync failed for ${server.name}:`,e.message);
+    }
   }
+
   if(btn&&showMessage){btn.textContent='🔄 بروزرسانی';btn.disabled=false}
-  if(showMessage){if(failedCount>0)showAlert('خطا در دریافت اطلاعات از Supabase.','error');else showAlert('اطلاعات با موفقیت از Supabase دریافت شد.','success')}
-  if(failedCount===0){try{refreshDropdowns();renderPersons();renderTopics();renderImportance();renderHolidays();renderCalendar();renderRecords();renderDayActs();renderPlanning();updatePlanningBadge()}catch(e){}}
-  return{ok:failedCount===0};
+  
+  if(anySuccess){
+    if(showMessage)showAlert('اطلاعات از سرورها دریافت و همگام‌سازی شد.','success');
+    try{
+      refreshDropdowns();renderPersons();renderTopics();renderImportance();
+      renderHolidays();renderCalendar();renderRecords();renderDayActs();
+      renderPlanning();updatePlanningBadge();
+    }catch(e){}
+    return{ok:true};
+  }else{
+    if(showMessage)showAlert('خطا در دریافت اطلاعات از تمام سرورها.','error');
+    return{ok:false};
+  }
 }
+/* ───────────────────────────────────────────────────────────── */
 
 function getImportanceLevels(){return getData(KEYS.importance)}
 function getImpLabel(id){var l=getImportanceLevels();for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i].name;return id||'-'}
@@ -673,7 +800,6 @@ function migrateData(){
     if(!a.createdBy&&a.participants&&a.participants.length>0){a.createdBy=a.participants[0];changed=true}
     if(a.location===undefined){a.location='';changed=true}
     if(a.privateDescription===undefined){a.privateDescription='';changed=true}
-    if(a.onlyForMe===undefined){a.onlyForMe=false;changed=true}
   });
   if(changed)setData(KEYS.acts,acts);
   var persons=getData(KEYS.persons),pc=false;
@@ -745,14 +871,8 @@ function showSection(id){
   if(window.innerWidth<900){$('main_nav').classList.remove('active');$('navOverlay').classList.remove('active')}
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function updatePrivateFieldVisibility(){
-  var wrap=$('private_desc_wrap');if(!wrap)return;
-  if(isAdmin())wrap.classList.remove('hidden');else wrap.classList.add('hidden');
-  
-  var onlyWrap=$('only_for_me_wrap');if(!onlyWrap)return;
-  if(isAdmin())onlyWrap.classList.remove('hidden');else onlyWrap.classList.add('hidden');
-}
-function updateRecSearchHint(){var hint=$('rec_search_hint');if(hint)hint.style.display=isAdmin()?'':'none'}
+function updatePrivateFieldVisibility(){var wrap=$('private_desc_wrap');if(!wrap)return;if(isPriv())wrap.classList.remove('hidden');else wrap.classList.add('hidden')}
+function updateRecSearchHint(){var hint=$('rec_search_hint');if(hint)hint.style.display=isPriv()?'':'none'}
 
 function populateParticipants(preselected){
   var container=$('participants_checkboxes');if(!container)return;
@@ -781,46 +901,6 @@ function applyPermissions(){
   $('current_user').textContent=s.name+' — '+roleLabel;$('user_info').style.display='';
   updatePrivateFieldVisibility();updateRecSearchHint();
   if(!priv){['rec_person','rep_person'].forEach(id=>{const el=$(id);if(el){el.value=s.personId;el.disabled=true}});const calEl=$('cal_person');if(calEl){calEl.value='';calEl.disabled=false}}
-}
-
-/* ── Password Change ── */
-function openChangePasswordModal() {
-  var session = getSession(); if(!session) return;
-  var body = '<div class="alert alert-info" style="display:block;margin-bottom:15px">شما در حال تغییر رمز عبور خود هستید.<br>نام کاربری: <b>'+esc(session.username)+'</b></div>'
-    + '<div class="form-group"><label>رمز عبور فعلی:</label><input type="password" id="pwd_old"></div>'
-    + '<div class="form-group"><label>رمز عبور جدید (حداقل ۴ کاراکتر):</label><input type="password" id="pwd_new"></div>'
-    + '<div class="form-group"><label>تکرار رمز جدید:</label><input type="password" id="pwd_confirm"></div>'
-    + '<div id="pwd_error" class="alert alert-error" style="display:none"></div>';
-  var foot = '<button class="btn btn-secondary" onclick="closeTopModal()">انصراف</button>'
-    + '<button class="btn btn-success" onclick="submitPasswordChange()">💾 تغییر رمز</button>';
-  openModal({title:'🔑 تغییر رمز عبور', body:body, foot:foot, width:'420px'});
-}
-
-async function submitPasswordChange() {
-  var oldPwd = val('pwd_old'), newPwd = val('pwd_new'), confirmPwd = val('pwd_confirm');
-  var errEl = $('pwd_error'); errEl.style.display = 'none';
-  
-  if (!oldPwd || !newPwd || !confirmPwd) { errEl.textContent='همه فیلدها الزامی است.'; errEl.style.display='block'; return; }
-  if (newPwd.length < 4) { errEl.textContent='رمز جدید حداقل ۴ کاراکتر باشد.'; errEl.style.display='block'; return; }
-  if (newPwd !== confirmPwd) { errEl.textContent='تکرار رمز جدید مطابقت ندارد.'; errEl.style.display='block'; return; }
-  
-  var session = getSession();
-  var persons = getData(KEYS.persons);
-  var user = persons.find(x => x.id === session.personId);
-  if (!user) { errEl.textContent='کاربر یافت نشد.'; errEl.style.display='block'; return; }
-  
-  var oldHash = await hashPassword(oldPwd, user.username);
-  if (oldHash !== user.passwordHash) { errEl.textContent='رمز فعلی اشتباه است.'; errEl.style.display='block'; return; }
-  
-  var newHash = await hashPassword(newPwd, user.username);
-  user.passwordHash = newHash;
-  
-  if (await setData(KEYS.persons, persons)) {
-    closeTopModal();
-    showAlert('رمز عبور با موفقیت تغییر کرد.','success');
-  } else {
-    errEl.textContent='خطا در ذخیره‌سازی.'; errEl.style.display='block';
-  }
 }
 
 async function savePerson(){
@@ -869,7 +949,11 @@ function renderPersons(){
 async function deletePerson(id){
   if(!confirm('حذف کاربر باعث حذف نام او از اقدامات می‌شود. مطمئن؟'))return;
   if(id===getSession().personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
-  if(supabaseClient){const{error}=await supabaseClient.from('persons').delete().eq('id',id);if(error){showAlert('خطا: '+error.message,'error');return}}
+  if(supabaseClients.length>0){
+    for(let server of supabaseClients){
+      try{await server.client.from('persons').delete().eq('id',id);}catch(e){}
+    }
+  }
   setData(KEYS.persons,getData(KEYS.persons).filter(p=>p.id!==id));
   const acts=getData(KEYS.acts);let changed=false;
   acts.forEach(a=>{if(a.participants&&a.participants.indexOf(id)!==-1){a.participants=a.participants.filter(pid=>pid!==id);changed=true}});
@@ -881,7 +965,7 @@ async function saveTopic(){
   var name=val('t_name');if(!name){showAlert('نام موضوع الزامی.');return}
   var topics=getData(KEYS.topics);
   for(var i=0;i<topics.length;i++)if(normText(topics[i].name)===normText(name)){showAlert('قبلاً ثبت شده.');return}
-  topics.push({id:'t'+Date.now()+Math.floor(Math.random()*1000),name});
+  topics.push({id:'t'+Date.now()+Math.floor(Math.random()*1000),name,Sorting:99});
   if(!(await setData(KEYS.topics,topics)))return;
   $('t_name').value='';renderTopics();refreshDropdowns();showAlert('افزوده شد.','success');
 }
@@ -896,7 +980,11 @@ async function deleteTopic(id){
   var used=getData(KEYS.acts).filter(a=>a.topicId===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده و قابل حذف نیست.');return}
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClient){const{error}=await supabaseClient.from('topics').delete().eq('id',id);if(error){showAlert('خطا: '+error.message,'error');return}}
+  if(supabaseClients.length>0){
+    for(let server of supabaseClients){
+      try{await server.client.from('topics').delete().eq('id',id);}catch(e){}
+    }
+  }
   setData(KEYS.topics,getData(KEYS.topics).filter(t=>t.id!==id));
   renderTopics();refreshDropdowns();showAlert('حذف شد.','success');
 }
@@ -929,7 +1017,11 @@ async function deleteImportance(id){
   var used=getData(KEYS.acts).filter(a=>a.importance===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده.','error');return}
   if(!confirm('از حذف «'+lv.name+'» مطمئن هستید؟'))return;
-  if(supabaseClient){const{error}=await supabaseClient.from('importance_levels').delete().eq('id',id);if(error){showAlert('خطا: '+error.message,'error');return}}
+  if(supabaseClients.length>0){
+    for(let server of supabaseClients){
+      try{await server.client.from('importance_levels').delete().eq('id',id);}catch(e){}
+    }
+  }
   setData(KEYS.importance,levels.filter(x=>x.id!==id));
   renderImportance();refreshDropdowns();showAlert('حذف شد.','success');
 }
@@ -957,7 +1049,11 @@ async function saveHoliday(){
 }
 async function deleteHoliday(id){
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClient){const{error}=await supabaseClient.from('holidays').delete().eq('id',id);if(error){showAlert('خطا: '+error.message,'error');return}}
+  if(supabaseClients.length>0){
+    for(let server of supabaseClients){
+      try{await server.client.from('holidays').delete().eq('id',id);}catch(e){}
+    }
+  }
   setData(KEYS.holidays,getData(KEYS.holidays).filter(h=>h.id!==id));renderHolidays();showAlert('حذف شد.','success');
 }
 function renderHolidays(){
@@ -994,7 +1090,6 @@ function renderCalendar(){
   var weekMode=$('cal_week_mode')&&$('cal_week_mode').checked;
   if(weekMode){$('calendar_container').classList.add('hidden');$('calendar_week_view').classList.remove('hidden');renderWeekView();return}
   $('calendar_container').classList.remove('hidden');$('calendar_week_view').classList.add('hidden');
-  var session=getSession();
   var c=$('calendar_container'),personId=val('cal_person'),month=parseInt(val('cal_month'),10),year=parseInt(val('cal_year'),10);
   if(isNaN(year)||isNaN(month)){var today=getTodayJalali().split('/');year=parseInt(today[0],10);month=parseInt(today[1],10)}
   var days=jalaliMonthLength(year,month),first=getJalaliDayOfWeek(year,month,1);
@@ -1002,7 +1097,6 @@ function renderCalendar(){
   holidays.forEach(h=>{holMap[h.date]=h.title});
   var actMeta=[];
   acts.forEach(a=>{
-    if(a.onlyForMe && a.createdBy!==session.personId) return;
     if(personId&&(!a.participants||a.participants.indexOf(personId)===-1))return;
     var sTs=jalaliToTimestamp(a.date);var eTs=a.endDate?jalaliToTimestamp(a.endDate):sTs;
     actMeta.push({a,sTs,eTs});
@@ -1034,7 +1128,6 @@ function renderCalendar(){
 function renderWeekView(){
   if(!_weekStart)_weekStart=getWeekStart(getTodayJalali());
   var container=$('week_grid');if(!container)return;
-  var session=getSession();
   var days=[];for(var i=0;i<7;i++)days.push(addDaysStr(_weekStart,i));
   $('week_label').textContent=days[0]+' تا '+days[6];
   var acts=getData(KEYS.acts);var personId=val('cal_person');var holidays=getData(KEYS.holidays);
@@ -1045,7 +1138,6 @@ function renderWeekView(){
     var p=parseJalali(ds);var dow=getJalaliDayOfWeek(p.jy,p.jm,p.jd);
     var isHol=isHolidayDow(dow)||holMap[ds];var isToday=ds===todayStr;
     var dayActs=acts.filter(a=>{
-      if(a.onlyForMe && a.createdBy!==session.personId) return false;
       if(personId&&(!a.participants||a.participants.indexOf(personId)===-1))return false;
       return a.date===ds||(a.endDate&&jalaliToTimestamp(ds)>=jalaliToTimestamp(a.date)&&jalaliToTimestamp(ds)<=jalaliToTimestamp(a.endDate));
     });
@@ -1104,7 +1196,7 @@ function updateCalculatedHours(){
 function resetActivityForm(keepDate){
   $('act_id').value='';var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
   $('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';
-  $('act_location').value='';$('act_private_desc').value='';$('act_only_for_me').checked=false;
+  $('act_location').value='';$('act_private_desc').value='';
   if(!keepDate){$('act_start_date').value=getTodayJalali();$('act_end_date').value=''}
   populateParticipants();updateCalculatedHours();renderDayActs();
 }
@@ -1113,9 +1205,7 @@ async function saveActivity(){
   var sd=val('act_start_date'),st=val('act_start_time');
   var ed=val('act_end_date')||sd,et=val('act_end_time');
   var topicId=val('act_topic'),imp=val('act_importance'),desc=val('act_desc');
-  var location=val('act_location');
-  var privateDescription=isAdmin()?val('act_private_desc'):'';
-  var onlyForMe=isAdmin()?$('act_only_for_me').checked:false;
+  var location=val('act_location');var privateDescription=isPriv()?val('act_private_desc'):'';
   var checkedParticipants=getSelectedParticipants();var session=getSession();
   if(!session){showAlert('دوباره وارد شوید.');return}
   if(checkedParticipants.length===0){showAlert('حداقل یک شرکت‌کننده.');return}
@@ -1129,17 +1219,14 @@ async function saveActivity(){
   if(!desc){showAlert('شرح اقدام الزامی.');return}
   var hours=calcDurationHours(sd,st,ed,et);
   if(hours<=0){showAlert('مدت محاسبه‌شده نامعتبر.');return}
-  var obj={id:id||('a'+Date.now()+Math.floor(Math.random()*1000)),date:normJ(sd),endDate:normJ(ed),startTime:st,endTime:et,topicId,importance:imp,description:desc,location,privateDescription,onlyForMe,hours,participants:checkedParticipants};
+  var obj={id:id||('a'+Date.now()+Math.floor(Math.random()*1000)),date:normJ(sd),endDate:normJ(ed),startTime:st,endTime:et,topicId,importance:imp,description:desc,location,privateDescription,hours,participants:checkedParticipants, onlyForMe:false};
   if(id){
     var acts=getData(KEYS.acts);
     for(var i=0;i<acts.length;i++){
       if(acts[i].id===id){
         obj.createdAt=acts[i].createdAt;
         obj.createdBy=acts[i].createdBy||session.personId;
-        if(!isAdmin()){
-          obj.privateDescription=acts[i].privateDescription||'';
-          obj.onlyForMe=acts[i].onlyForMe||false;
-        }
+        if(!isPriv())obj.privateDescription=acts[i].privateDescription||'';
         acts[i]=obj;break;
       }
     }
@@ -1156,7 +1243,6 @@ function findSimilar(obj,threshold){
   threshold=threshold||0.2;
   var acts=getData(KEYS.acts);var nd=normText(obj.description);var res=[];
   acts.forEach(a=>{
-    if(a.onlyForMe && a.createdBy!==obj.createdBy) return;
     if(a.topicId!==obj.topicId)return;
     if(a.date!==obj.date)return;
     var ad=normText(a.description);
@@ -1192,7 +1278,7 @@ function showSimilarBlockModal(sims,obj){
 }
 function afterSave(msg){
   if(msg)showAlert(msg,'success');
-  $('act_id').value='';$('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';$('act_end_date').value='';$('act_location').value='';$('act_private_desc').value='';$('act_only_for_me').checked=false;
+  $('act_id').value='';$('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';$('act_end_date').value='';$('act_location').value='';$('act_private_desc').value='';
   var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
   populateParticipants();renderDayActs();
 }
@@ -1208,18 +1294,14 @@ async function joinActivity(id){
 function renderDayActs(){
   var c=$('day_acts_container'),dateStr=val('act_start_date');
   var session=getSession();if(!session)return;
-  var canEditAll=isPriv();
-  var isAdm=isAdmin();
+  var priv=session.role==='admin'||session.role==='manager';
   if(!isValidJalaliDate(dateStr)){c.innerHTML='<p style="padding:20px;text-align:center;color:var(--text3)">تاریخ را انتخاب کنید.</p>';return}
   var date=normJ(dateStr);
-  var acts=getData(KEYS.acts).filter(a=>{
-    if(a.onlyForMe && a.createdBy!==session.personId) return false;
-    return a.date===date||(a.endDate&&jalaliToTimestamp(date)>=jalaliToTimestamp(a.date)&&jalaliToTimestamp(date)<=jalaliToTimestamp(a.endDate));
-  });
+  var acts=getData(KEYS.acts).filter(a=>a.date===date||(a.endDate&&jalaliToTimestamp(date)>=jalaliToTimestamp(a.date)&&jalaliToTimestamp(date)<=jalaliToTimestamp(a.endDate)));
   acts.sort((a,b)=>(getImpOrder(b.importance)-getImpOrder(a.importance))||((a.createdAt||0)-(b.createdAt||0)));
   if(!acts.length){c.innerHTML='<p style="padding:20px;text-align:center;color:var(--text3)">برای این روز اقدامی ثبت نشده.</p>';return}
   var headers='<th>تاریخ</th><th>موضوع</th><th>محل</th><th>مدت</th><th>اهمیت</th><th>شرح</th>';
-  if(isAdm)headers+='<th>🔒 محرمانه</th>';
+  if(priv)headers+='<th>🔒 محرمانه</th>';
   headers+='<th>شرکت‌کنندگان</th><th>عملیات</th>';
   var h='<table><tr>'+headers+'</tr>';
   acts.forEach(a=>{
@@ -1227,11 +1309,11 @@ function renderDayActs(){
     if(a.startTime)dStr+=' ('+esc(a.startTime)+' تا '+esc(a.endTime)+')';
     var parts=a.participants.map(pid=>personName(pid)).join('، ');
     var isJoined=a.participants.indexOf(session.personId)!==-1;var btns='';
-    if(canEditAll){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
+    if(priv){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else if(!isJoined){btns+='<button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else{if(a.createdBy===session.personId)btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> ';if(a.createdBy===session.personId&&a.participants.length<=1)btns+='<button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>'}
     h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+esc(a.description)+'</td>';
-    if(isAdm)h+='<td data-label="محرمانه">'+(a.privateDescription?'<span class="badge badge-private">🔒</span> <small>'+esc(a.privateDescription)+'</small>':'<span style="color:var(--text3)">—</span>')+'</td>';
+    if(priv)h+='<td data-label="محرمانه">'+(a.privateDescription?'<span class="badge badge-private">🔒</span> <small>'+esc(a.privateDescription)+'</small>':'<span style="color:var(--text3)">—</span>')+'</td>';
     h+='<td data-label="شرکت‌کنندگان"><span class="chip">'+esc(parts)+'</span></td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap">'+btns+'</td></tr>';
   });
   c.innerHTML=h+'</table>';
@@ -1245,10 +1327,7 @@ function editAct(id){
   $('act_start_time').value=a.startTime||'';$('act_end_time').value=a.endTime||'';
   $('act_topic').value=a.topicId;$('act_importance').value=a.importance;$('act_desc').value=a.description;
   $('act_location').value=a.location||'';
-  if(isAdmin()){
-    $('act_private_desc').value=a.privateDescription||'';
-    $('act_only_for_me').checked=a.onlyForMe===true;
-  }
+  if(priv)$('act_private_desc').value=a.privateDescription||'';
   populateParticipants(a.participants);updateCalculatedHours();renderDayActs();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1257,7 +1336,11 @@ async function deleteAct(id){
   var session=getSession();var priv=session.role==='admin'||session.role==='manager';
   if(!priv){if(a.createdBy!==session.personId){showAlert('اجازه حذف ندارید.','error');return}if(a.participants.length>1){showAlert('شرکت‌کننده دیگر دارد.','error');return}}
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClient){const{error}=await supabaseClient.from('activities').delete().eq('id',id);if(error){showAlert('خطا: '+error.message,'error');return}}
+  if(supabaseClients.length>0){
+    for(let server of supabaseClients){
+      try{await server.client.from('activities').delete().eq('id',id);}catch(e){}
+    }
+  }
   setData(KEYS.acts,getData(KEYS.acts).filter(x=>x.id!==id));
   if($('act_id').value===id)resetActivityForm(true);
   renderDayActs();showAlert('حذف شد.','success');
@@ -1269,17 +1352,14 @@ function renderRecords(){
   var from=val('rec_from'),to=val('rec_to');
   var vf=isValidJalaliDate(from),vt=isValidJalaliDate(to);
   var fromTs=vf?jalaliToTimestamp(from):0,toTs=vt?jalaliToTimestamp(to):0;
-  var session=getSession();if(!session)return;
-  var canEditAll=isPriv();
-  var isAdm=isAdmin();
+  var priv=isPriv();
   var list=getData(KEYS.acts).filter(a=>{
-    if(a.onlyForMe && a.createdBy!==session.personId) return false;
     if(personId&&(!a.participants||a.participants.indexOf(personId)===-1))return false;
     if(topicId&&a.topicId!==topicId)return false;
     if(imp&&a.importance!==imp)return false;
     if(search){
       var haystack=normText(a.description);
-      if(isAdm&&a.privateDescription)haystack+=' '+normText(a.privateDescription);
+      if(priv&&a.privateDescription)haystack+=' '+normText(a.privateDescription);
       if(haystack.indexOf(search)===-1)return false;
     }
     if(vf&&jalaliToTimestamp(a.date)<fromTs)return false;
@@ -1289,8 +1369,9 @@ function renderRecords(){
   list.sort((x,y)=>{var d=jalaliToTimestamp(y.date)-jalaliToTimestamp(x.date);return d!==0?d:getImpOrder(y.importance)-getImpOrder(x.importance)});
   var c=$('records_list_container');
   if(!list.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">رکوردی یافت نشد.</p>';return}
+  var session=getSession();
   var headers='<th>تاریخ</th><th>موضوع</th><th>محل</th><th>مدت</th><th>اهمیت</th><th>شرح</th>';
-  if(isAdm)headers+='<th>🔒 محرمانه</th>';
+  if(priv)headers+='<th>🔒 محرمانه</th>';
   headers+='<th>شرکت‌کنندگان</th><th>ثبت‌کننده</th><th>عملیات</th>';
   var h='<table><tr>'+headers+'</tr>';
   list.forEach(a=>{
@@ -1299,11 +1380,11 @@ function renderRecords(){
     var parts=a.participants.map(pid=>personName(pid)).join('، ');
     var creator=a.createdBy?personName(a.createdBy):'-';
     var isJoined=a.participants.indexOf(session.personId)!==-1;var btns='';
-    if(canEditAll){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
+    if(priv){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else if(!isJoined){btns+='<button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button>';
     h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+esc(a.description)+'</td>';
-    if(isAdm)h+='<td data-label="محرمانه">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
+    if(priv)h+='<td data-label="محرمانه">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
     h+='<td data-label="شرکت‌کنندگان"><span class="chip">'+esc(parts)+'</span></td><td data-label="ثبت‌کننده"><small>'+esc(creator)+'</small></td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap">'+btns+'</td></tr>';
   });
   c.innerHTML=h+'</table>';
@@ -1357,7 +1438,11 @@ async function deletePlan(id){
   var p=getData(KEYS.planning).find(x=>x.id===id);if(!p)return;
   if(p.status==='converted'){showAlert('موضوع تبدیل‌شده قابل حذف نیست.','warning');return}
   if(!confirm('حذف «'+p.title+'»؟'))return;
-  if(supabaseClient){const{error}=await supabaseClient.from('planning_topics').delete().eq('id',id);if(error){showAlert('خطا: '+error.message,'error');return}}
+  if(supabaseClients.length>0){
+    for(let server of supabaseClients){
+      try{await server.client.from('planning_topics').delete().eq('id',id);}catch(e){}
+    }
+  }
   setData(KEYS.planning,getData(KEYS.planning).filter(x=>x.id!==id));
   renderPlanning();updatePlanningBadge();showAlert('حذف شد.','success');
 }
@@ -1438,11 +1523,9 @@ async function handlePendingPlanConversion(activityId){
 
 function gatherReportData(){
   var personId=val('rep_person'),topicId=val('rep_topic'),imp=val('rep_imp'),from=val('rep_from'),to=val('rep_to');
-  var session=getSession();if(!session)return null;
   if(!isValidJalaliDate(from)||!isValidJalaliDate(to))return null;
   var ta=jalaliToTimestamp(from),tb=jalaliToTimestamp(to);if(tb<ta)return null;
   var list=getData(KEYS.acts).filter(x=>{
-    if(x.onlyForMe && x.createdBy!==session.personId) return false;
     if(personId&&(!x.participants||x.participants.indexOf(personId)===-1))return false;
     if(topicId&&x.topicId!==topicId)return false;
     if(imp&&x.importance!==imp)return false;
@@ -1492,7 +1575,7 @@ function printData(containerId,needTable){var c=$(containerId);if(!c.innerHTML.t
 function exportWord(){
   if(!generateReport())return;
   var c=$('report_area');var content=c.innerHTML;
-  var style='<style>@page{size:A4 landscape;margin:1cm}body{font-family:"Vazirmatn","B Mitra","Tahoma",sans-serif;direction:rtl;font-size:12pt;color:#222}.db-header{text-align:center;border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:20px}.db-header h1{font-size:20pt;margin:0 0 6pt 0;color:#1a2530}.db-header p{font-size:11pt;color:#555;margin:0}.db-kpi-grid{display:block;margin-bottom:20px;text-align:center}.db-kpi{display:inline-block;width:22%;margin:0 1% 10px 1%;padding:10px;border:1px solid #ddd;text-align:center;vertical-align:top}.db-kpi-val{font-size:18pt;color:#1a2530;margin-bottom:4pt}.db-kpi-title{font-size:10pt;color:#555}.db-section-bar{background:#1a2530;color:white;padding:8px;text-align:center;margin-bottom:15px;font-size:14pt}.db-columns{display:block}.db-col{display:inline-block;width:45%;margin:5px 2% 15px 2%;border:1px solid #ccc;vertical-align:top;page-break-inside:avoid}.db-col-header{background:#2980b9;color:white;padding:6px;text-align:center;font-size:12pt}.db-col-body{padding:8px}.db-box{border:1px solid #ccc;padding:10px;margin-bottom:15px;page-break-inside:avoid}.db-box h3{font-size:13pt;margin:0 0 8px 0;border-bottom:2px solid #eee;padding-bottom:4px}.db-details-page{page-break-before:always}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4pt;text-align:right}th{background:#eee;font-size:11pt}ul{margin:0;padding-right:18pt}li{margin-bottom:4pt;font-size:11pt}</style>';
+  var style='<style>@page{size:A4 landscape;margin:1cm}body{font-family:"B Nazanin","Tahoma",sans-serif;direction:rtl;font-size:12pt;color:#222}.db-header{text-align:center;border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:20px}.db-header h1{font-size:20pt;margin:0 0 6pt 0;color:#1a2530}.db-header p{font-size:11pt;color:#555;margin:0}.db-kpi-grid{display:block;margin-bottom:20px;text-align:center}.db-kpi{display:inline-block;width:22%;margin:0 1% 10px 1%;padding:10px;border:1px solid #ddd;text-align:center;vertical-align:top}.db-kpi-val{font-size:18pt;color:#1a2530;margin-bottom:4pt}.db-kpi-title{font-size:10pt;color:#555}.db-section-bar{background:#1a2530;color:white;padding:8px;text-align:center;margin-bottom:15px;font-size:14pt}.db-columns{display:block}.db-col{display:inline-block;width:45%;margin:5px 2% 15px 2%;border:1px solid #ccc;vertical-align:top;page-break-inside:avoid}.db-col-header{background:#2980b9;color:white;padding:6px;text-align:center;font-size:12pt}.db-col-body{padding:8px}.db-box{border:1px solid #ccc;padding:10px;margin-bottom:15px;page-break-inside:avoid}.db-box h3{font-size:13pt;margin:0 0 8px 0;border-bottom:2px solid #eee;padding-bottom:4px}.db-details-page{page-break-before:always}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4pt;text-align:right}th{background:#eee;font-size:11pt}ul{margin:0;padding-right:18pt}li{margin-bottom:4pt;font-size:11pt}</style>';
   var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><title>گزارش عملکرد</title>'+style+'</head><body>'+content+'</body></html>';
   var blob=new Blob(['\ufeff',html],{type:'application/msword'});
   var url=URL.createObjectURL(blob);var a=document.createElement('a');
@@ -1654,7 +1737,7 @@ async function handleLogin(){
   const username=val('login_username'),password=val('login_password');
   if(!username||!password){showAlert('نام کاربری و رمز الزامی.');return}
   showAlert('در حال بررسی...','success');
-  if(supabaseClient)await syncFromCloud(false);
+  if(supabaseClients.length>0)await syncFromCloud(false);
   const persons=getData(KEYS.persons);
   const p=persons.find(x=>x.username===username);
   if(!p||!p.passwordHash){showAlert('❌ نام کاربری یا رمز اشتباه.','error');return}
@@ -1712,12 +1795,11 @@ async function startApp(){
 async function init(){
   initTheme();
   document.addEventListener('click',closePopups);
-  const supabaseReady=initSupabase();
+  const supabaseReady=initSupabaseClients(); // استفاده از تابع چندسروری
 
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
   on('btn_sync_cloud','click',()=>syncFromCloud(true));
   on('btn_logout','click',handleLogout);
-  on('btn_change_pwd','click',openChangePasswordModal);
 
   on('btn_login','click',handleLogin);
   on('btn_setup','click',handleSetup);
@@ -1799,9 +1881,6 @@ window.weekShift = weekShift;
 window.weekGoToday = weekGoToday;
 window.cancelPendingConversion = cancelPendingConversion;
 window.renderPlanning = renderPlanning;
-window.openChangePasswordModal = openChangePasswordModal;
-window.submitPasswordChange = submitPasswordChange;
-window.closeTopModal = closeTopModal;
 
 })();
 </script>

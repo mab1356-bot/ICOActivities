@@ -1,4 +1,17 @@
 window.APP_CONFIG = {
-    SUPABASE_URL: 'https://chvauhqfpdimsatnlsgu.supabase.co',
-    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNodmF1aHFmcGRpbXNhdG5sc2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MzI2MTUsImV4cCI6MjEwODQwODYxNX0.yWOUEpCw_gkqZlZP1mYOMVUrNH64WOGCVNAWCr_mCMw'
+    SERVERS: [
+        {
+            type: 'supabase',
+            name: 'Main_Data',
+            url:  'https://chvauhqfpdimsatnlsgu.supabase.co',
+            key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNodmF1aHFmcGRpbXNhdG5sc2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MzI2MTUsImV4cCI6MjEwODQwODYxNX0.yWOUEpCw_gkqZlZP1mYOMVUrNH64WOGCVNAWCr_mCMw'
+        },
+        {
+            type: 'nhost',
+            name: 'Backup_Data',
+            // آدرس را دقیقاً به شکل زیر بنویسید (بدون / در انتها):
+            url: 'https://orxqbytxsqjqpqsmqllu.nhost.run', 
+            key: '{{ secrets.HASURA_GRAPHQL_ADMIN_SECRET }}' 
+        }
+    ]
 };

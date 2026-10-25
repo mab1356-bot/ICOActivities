@@ -3,7 +3,7 @@
    نسخه: 1.0.5 (رفع نهایی مشکل کش و config.js)
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.0.5';
+const CACHE_VERSION = 'actbk-v1.0.6';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
