@@ -101,6 +101,7 @@ tbody tr:last-child td{border-bottom:0}
 .day-cell:hover{background:var(--primaryS)}
 .day-cell.holiday{background:var(--dangerS)}
 .day-cell.has-log{background:var(--successS)}
+.day-cell.has-private {background: var(--warningS); border-color: var(--warning);} /* رنگ زرد برای اقدامات شخصی */
 .day-number{font-size:18px;font-family:var(--font-main);font-weight:800}
 .day-status{font-size:11px;margin-top:4px;color:var(--text2);font-weight:600}
 .holiday-title{font-size:11px;color:var(--danger);font-family:var(--font-main);margin-top:2px;font-weight:700}
@@ -443,10 +444,26 @@ tbody tr:last-child td{border-bottom:0}
           <div class="form-group"><label>مدت محاسبه‌شده (ساعت):</label><input type="text" id="act_calc_hours" readonly style="text-align:center;font-weight:bold;background:var(--primaryS);color:var(--primaryI)"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>📍 محل برگزاری:</label><input type="text" id="act_location" placeholder="مثلاً: سالن جلسات طبقه ۳"></div>
+          <div class="form-group">
+            <label>📍 محل برگزاری:</label>
+            <select id="act_location_select" onchange="onLocationChange()">
+              <option value="دفتر اصفهان">دفتر اصفهان</option>
+              <option value="فولاد مبارکه">فولاد مبارکه</option>
+              <option value="باغ فردوس">باغ فردوس</option>
+              <option value="ساختمان نگین سپاهانشهر">ساختمان نگین سپاهانشهر</option>
+              <option value="سایر">سایر</option>
+            </select>
+            <input type="text" id="act_location_other" class="hidden" placeholder="محل را وارد کنید..." style="margin-top:8px">
+          </div>
         </div>
         <div class="form-group"><label>شرکت‌کنندگان:</label><div id="participants_checkboxes" class="participants-list"></div></div>
         <div class="form-group"><label>شرح اقدام (الزامی):</label><textarea id="act_desc" placeholder="شرح دقیق اقدام..."></textarea></div>
+        <div class="form-group">
+          <label class="check-line" style="background:transparent;border:none;padding:0">
+            <input type="checkbox" id="act_only_for_me">
+            <span>👤 فقط برای من (در تقویم زرد شده و در گزارش‌ها نمایش داده نمی‌شود)</span>
+          </label>
+        </div>
         <div class="form-group hidden" id="private_desc_wrap">
           <label>🔒 توضیحات محرمانه <span style="color:var(--text3);font-weight:normal;font-size:11px">(فقط مدیر/ادمین)</span></label>
           <textarea id="act_private_desc" placeholder="توضیحات محرمانه..."></textarea>
@@ -539,7 +556,6 @@ function createNhostAdapter(baseUrl, adminSecret) {
         'Prefer': 'resolution=merge-duplicates' // برای عملیات Upsert
     };
     
-    // اطمینان از اینکه آدرس پایه با / تمام نمی‌شود
     const cleanBaseUrl = baseUrl.replace(/\/$/, '');
     
     return {
@@ -549,8 +565,6 @@ function createNhostAdapter(baseUrl, adminSecret) {
             return {
                 select: async (columns = '*') => {
                     try {
-                        // Nhost از پارامتر select برای انتخاب ستون‌ها استفاده می‌کند
-                        // اگر * باشد، نیازی به ارسال نیست
                         const url = columns === '*' ? restUrl : `${restUrl}?select=${columns}`;
                         const res = await fetch(url, { headers });
                         if (!res.ok) throw new Error(await res.text());
@@ -748,7 +762,6 @@ async function syncFromCloud(showMessage){
           const converted=data.map(item=>fromDB(localKey,item));
           const currentData=getData(localKey);
           
-          // استراتژی همگام‌سازی ساده: اگر داده‌های سرور بیشتر بود، جایگزین کن
           if(converted.length>currentData.length){
             localStorage.setItem(localKey,JSON.stringify(converted));
             console.log(`[Multi-Server] Updated ${localKey} from ${server.name}`);
@@ -776,7 +789,6 @@ async function syncFromCloud(showMessage){
     return{ok:false};
   }
 }
-/* ───────────────────────────────────────────────────────────── */
 
 function getImportanceLevels(){return getData(KEYS.importance)}
 function getImpLabel(id){var l=getImportanceLevels();for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i].name;return id||'-'}
@@ -800,6 +812,7 @@ function migrateData(){
     if(!a.createdBy&&a.participants&&a.participants.length>0){a.createdBy=a.participants[0];changed=true}
     if(a.location===undefined){a.location='';changed=true}
     if(a.privateDescription===undefined){a.privateDescription='';changed=true}
+    if(a.onlyForMe===undefined){a.onlyForMe=false;changed=true}
   });
   if(changed)setData(KEYS.acts,acts);
   var persons=getData(KEYS.persons),pc=false;
@@ -1116,8 +1129,14 @@ function renderCalendar(){
     var isHol=isHolDow||holMap[ds];var holTitle=holMap[ds]?'<div class="holiday-title">'+esc(holMap[ds])+'</div>':'';
     var dayStatus='';
     if(da.length>0)dayStatus='<div class="day-status">'+da.length+' اقدام'+(hrs>0?'<br>'+fmtHours(hrs):'')+'</div>';
+    
     var cellClass='day-cell';
-    if(isHol)cellClass+=' holiday';else if(da.length>0)cellClass+=' has-log';
+    var hasPrivate = da.some(a => a.onlyForMe);
+    
+    if(isHol) cellClass+=' holiday';
+    else if(hasPrivate) cellClass+=' has-private';
+    else if(da.length>0) cellClass+=' has-log';
+
     h+='<td class="'+cellClass+'" data-date="'+ds+'"><div class="day-number">'+day+'</div>'+holTitle+dayStatus+'</td>';
     if((first+day)%7===0&&day!==days)h+='</tr><tr>';
   }
@@ -1150,13 +1169,14 @@ function renderWeekView(){
     else{
       dayActs.forEach(a=>{
         var pNames=a.participants.map(pid=>personName(pid)).join('، ');
-        html+='<div class="week-activity" style="border-right:3px solid '+getImpColor(a.importance)+'">';
+        html+='<div class="week-activity" style="border-right:3px solid '+getImpColor(a.importance)+';'+(a.onlyForMe?'background:var(--warningS);':'')+'">';
         html+='<div class="week-activity-title">'+esc(topicName(a.topicId))+'</div>';
         if(a.startTime)html+='<div class="week-activity-time">⏰ '+esc(a.startTime)+' - '+esc(a.endTime)+' • '+esc(fmtHours(a.hours))+'</div>';
         html+='<div class="week-activity-desc">'+esc(a.description.length>80?a.description.substring(0,80)+'...':a.description)+'</div>';
         if(a.location)html+='<div class="week-activity-meta">📍 '+esc(a.location)+'</div>';
         html+='<div class="week-activity-meta">👥 '+esc(pNames)+'</div>';
-        html+='<div class="week-activity-imp">'+impBadge(a.importance)+'</div>';
+        if(a.onlyForMe) html+='<div class="week-activity-imp"><span class="badge badge-warning">👤 فقط من</span></div>';
+        else html+='<div class="week-activity-imp">'+impBadge(a.importance)+'</div>';
         html+='</div>';
       });
     }
@@ -1193,19 +1213,37 @@ function updateCalculatedHours(){
   hoursEl.value=h>0?h+' ساعت':'نامعتبر';
 }
 
+function onLocationChange() {
+  const sel = $('act_location_select').value;
+  if (sel === 'سایر') {
+    $('act_location_other').classList.remove('hidden');
+    $('act_location_other').focus();
+  } else {
+    $('act_location_other').classList.add('hidden');
+    $('act_location_other').value = '';
+  }
+}
+
 function resetActivityForm(keepDate){
   $('act_id').value='';var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
   $('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';
-  $('act_location').value='';$('act_private_desc').value='';
+  $('act_location_select').value='دفتر اصفهان';$('act_location_other').value='';$('act_location_other').classList.add('hidden');$('act_private_desc').value='';
+  $('act_only_for_me').checked = false;
   if(!keepDate){$('act_start_date').value=getTodayJalali();$('act_end_date').value=''}
   populateParticipants();updateCalculatedHours();renderDayActs();
 }
+
 async function saveActivity(){
   var id=$('act_id').value;
   var sd=val('act_start_date'),st=val('act_start_time');
   var ed=val('act_end_date')||sd,et=val('act_end_time');
   var topicId=val('act_topic'),imp=val('act_importance'),desc=val('act_desc');
-  var location=val('act_location');var privateDescription=isPriv()?val('act_private_desc'):'';
+  
+  var location = val('act_location_select');
+  if (location === 'سایر') location = val('act_location_other') || 'سایر';
+  var onlyForMe = $('act_only_for_me').checked;
+
+  var privateDescription=isPriv()?val('act_private_desc'):'';
   var checkedParticipants=getSelectedParticipants();var session=getSession();
   if(!session){showAlert('دوباره وارد شوید.');return}
   if(checkedParticipants.length===0){showAlert('حداقل یک شرکت‌کننده.');return}
@@ -1219,7 +1257,14 @@ async function saveActivity(){
   if(!desc){showAlert('شرح اقدام الزامی.');return}
   var hours=calcDurationHours(sd,st,ed,et);
   if(hours<=0){showAlert('مدت محاسبه‌شده نامعتبر.');return}
-  var obj={id:id||('a'+Date.now()+Math.floor(Math.random()*1000)),date:normJ(sd),endDate:normJ(ed),startTime:st,endTime:et,topicId,importance:imp,description:desc,location,privateDescription,hours,participants:checkedParticipants, onlyForMe:false};
+  
+  var obj={
+    id:id||('a'+Date.now()+Math.floor(Math.random()*1000)),
+    date:normJ(sd),endDate:normJ(ed),startTime:st,endTime:et,
+    topicId,importance:imp,description:desc,location,privateDescription,hours,
+    participants:checkedParticipants, onlyForMe:onlyForMe
+  };
+  
   if(id){
     var acts=getData(KEYS.acts);
     for(var i=0;i<acts.length;i++){
@@ -1278,7 +1323,9 @@ function showSimilarBlockModal(sims,obj){
 }
 function afterSave(msg){
   if(msg)showAlert(msg,'success');
-  $('act_id').value='';$('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';$('act_end_date').value='';$('act_location').value='';$('act_private_desc').value='';
+  $('act_id').value='';$('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';$('act_end_date').value='';$('act_private_desc').value='';
+  $('act_location_select').value='دفتر اصفهان';$('act_location_other').value='';$('act_location_other').classList.add('hidden');
+  $('act_only_for_me').checked=false;
   var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
   populateParticipants();renderDayActs();
 }
@@ -1312,7 +1359,11 @@ function renderDayActs(){
     if(priv){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else if(!isJoined){btns+='<button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else{if(a.createdBy===session.personId)btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> ';if(a.createdBy===session.personId&&a.participants.length<=1)btns+='<button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>'}
-    h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+esc(a.description)+'</td>';
+    
+    var titleStr = esc(a.description);
+    if (a.onlyForMe) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
+
+    h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+titleStr+'</td>';
     if(priv)h+='<td data-label="محرمانه">'+(a.privateDescription?'<span class="badge badge-private">🔒</span> <small>'+esc(a.privateDescription)+'</small>':'<span style="color:var(--text3)">—</span>')+'</td>';
     h+='<td data-label="شرکت‌کنندگان"><span class="chip">'+esc(parts)+'</span></td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap">'+btns+'</td></tr>';
   });
@@ -1326,7 +1377,23 @@ function editAct(id){
   $('act_id').value=a.id;$('act_start_date').value=a.date;$('act_end_date').value=a.endDate||'';
   $('act_start_time').value=a.startTime||'';$('act_end_time').value=a.endTime||'';
   $('act_topic').value=a.topicId;$('act_importance').value=a.importance;$('act_desc').value=a.description;
-  $('act_location').value=a.location||'';
+  
+  const locs = ['دفتر اصفهان', 'فولاد مبارکه', 'باغ فردوس', 'ساختمان نگین سپاهانشهر'];
+  if (locs.includes(a.location)) {
+    $('act_location_select').value = a.location;
+    $('act_location_other').classList.add('hidden');
+    $('act_location_other').value = '';
+  } else if (a.location) {
+    $('act_location_select').value = 'سایر';
+    $('act_location_other').classList.remove('hidden');
+    $('act_location_other').value = a.location;
+  } else {
+    $('act_location_select').value = 'دفتر اصفهان';
+    $('act_location_other').classList.add('hidden');
+    $('act_location_other').value = '';
+  }
+
+  $('act_only_for_me').checked = a.onlyForMe === true;
   if(priv)$('act_private_desc').value=a.privateDescription||'';
   populateParticipants(a.participants);updateCalculatedHours();renderDayActs();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1383,7 +1450,11 @@ function renderRecords(){
     if(priv){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else if(!isJoined){btns+='<button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
     else btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button>';
-    h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+esc(a.description)+'</td>';
+    
+    var titleStr = esc(a.description);
+    if (a.onlyForMe) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
+
+    h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+titleStr+'</td>';
     if(priv)h+='<td data-label="محرمانه">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
     h+='<td data-label="شرکت‌کنندگان"><span class="chip">'+esc(parts)+'</span></td><td data-label="ثبت‌کننده"><small>'+esc(creator)+'</small></td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap">'+btns+'</td></tr>';
   });
@@ -1501,8 +1572,24 @@ function convertPlanToActivity(id){
   $('act_start_date').value=p.proposedDate||getTodayJalali();
   $('act_end_date').value='';
   $('act_desc').value=p.title+(p.description?'\n\n'+p.description:'');
-  $('act_location').value=p.locationHint||'';
+  
+  const locs = ['دفتر اصفهان', 'فولاد مبارکه', 'باغ فردوس', 'ساختمان نگین سپاهانشهر'];
+  if (locs.includes(p.locationHint)) {
+    $('act_location_select').value = p.locationHint;
+    $('act_location_other').classList.add('hidden');
+    $('act_location_other').value = '';
+  } else if (p.locationHint) {
+    $('act_location_select').value = 'سایر';
+    $('act_location_other').classList.remove('hidden');
+    $('act_location_other').value = p.locationHint;
+  } else {
+    $('act_location_select').value = 'دفتر اصفهان';
+    $('act_location_other').classList.add('hidden');
+    $('act_location_other').value = '';
+  }
+  
   $('act_importance').value=p.importanceId||(getImportanceLevels()[0]||{}).id;
+  $('act_only_for_me').checked=false;
   updateCalculatedHours();
   showAlert('فرم پیش‌پر شد. پس از تکمیل (ساعت، شرکت‌کنندگان، موضوع) ذخیره کنید.','success');
 }
@@ -1525,13 +1612,16 @@ function gatherReportData(){
   var personId=val('rep_person'),topicId=val('rep_topic'),imp=val('rep_imp'),from=val('rep_from'),to=val('rep_to');
   if(!isValidJalaliDate(from)||!isValidJalaliDate(to))return null;
   var ta=jalaliToTimestamp(from),tb=jalaliToTimestamp(to);if(tb<ta)return null;
+  
   var list=getData(KEYS.acts).filter(x=>{
+    if(x.onlyForMe) return false; // 💡 حذف اقدامات شخصی از گزارش
     if(personId&&(!x.participants||x.participants.indexOf(personId)===-1))return false;
     if(topicId&&x.topicId!==topicId)return false;
     if(imp&&x.importance!==imp)return false;
     var t=jalaliToTimestamp(x.date);var tEnd=x.endDate?jalaliToTimestamp(x.endDate):t;
     return(t>=ta&&t<=tb)||(tEnd>=ta&&tEnd<=tb)||(t<=ta&&tEnd>=tb);
   });
+  
   if(!list.length)return null;
   var pFrom=parseJalali(from);var periodTitle=MONTH_NAMES[pFrom.jm-1]+' '+pFrom.jy;
   var totalPersonHours=list.reduce((s,x)=>s+(Number(x.hours)*x.participants.length),0);
@@ -1881,6 +1971,7 @@ window.weekShift = weekShift;
 window.weekGoToday = weekGoToday;
 window.cancelPendingConversion = cancelPendingConversion;
 window.renderPlanning = renderPlanning;
+window.onLocationChange = onLocationChange;
 
 })();
 </script>
