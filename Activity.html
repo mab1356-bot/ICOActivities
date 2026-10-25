@@ -42,22 +42,27 @@ button,input,select,textarea{font-family:inherit;font-size:var(--fbase);color:in
 .top-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .user-chip{display:flex;align-items:center;gap:6px;background:var(--surface3);padding:4px 6px 4px 10px;border-radius:20px;font-size:var(--fsm)}
 .user-chip .user-name{font-weight:700;color:var(--text);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
-.online-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
-.online-dot.online{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
-.online-dot.offline{background:var(--danger);box-shadow:0 0 8px var(--danger)}
-.online-dot.partial{background:var(--warning);box-shadow:0 0 8px var(--warning);animation:pulse 2s infinite}
-.online-dot.checking{background:var(--warning);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-.login-conn-status{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:var(--r-md);font-size:var(--fmd);font-family:var(--font-main);margin-bottom:16px;border:1px solid;transition:all var(--tbase);line-height:1.6}
+.conn-dots{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;background:var(--surface3);border-radius:20px;font-size:10px;font-family:var(--font-main);border:1px solid var(--border)}
+.conn-dot-item{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--text2);transition:color .3s;cursor:help}
+.conn-dot-item::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
+.conn-dot-item.checking::before{background:var(--warning);animation:pulse 1s infinite}
+.conn-dot-item.online::before{background:var(--success);box-shadow:0 0 6px var(--success)}
+.conn-dot-item.offline::before{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.conn-dot-item.online{color:var(--successI)}
+.conn-dot-item.offline{color:var(--dangerI)}
+.login-conn-status{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:var(--r-md);font-size:var(--fmd);font-family:var(--font-main);margin-bottom:16px;border:1px solid;transition:all var(--tbase);line-height:1.6}
 .login-conn-status.online{background:var(--successS);color:var(--successI);border-color:var(--success)}
 .login-conn-status.offline{background:var(--dangerS);color:var(--dangerI);border-color:var(--danger)}
 .login-conn-status.partial{background:var(--warningS);color:var(--warningI);border-color:var(--warning)}
 .login-conn-status.checking{background:var(--surface3);color:var(--text2);border-color:var(--border)}
-.login-conn-status .conn-dot{display:inline-block;width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--text3);transition:all .3s}
-.login-conn-status.online .conn-dot{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
-.login-conn-status.offline .conn-dot{background:var(--danger);box-shadow:0 0 8px var(--danger)}
-.login-conn-status.partial .conn-dot{background:var(--warning);box-shadow:0 0 8px var(--warning);animation:pulse 2s infinite}
-.login-conn-status.checking .conn-dot{background:var(--warning);animation:pulse 1s infinite}
+.conn-line{display:flex;align-items:center;gap:8px;justify-content:flex-start}
+.conn-dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
+.conn-dot.checking{background:var(--warning);animation:pulse 1s infinite}
+.conn-dot.online{background:var(--success);box-shadow:0 0 6px var(--success)}
+.conn-dot.offline{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.conn-label{font-weight:700;white-space:nowrap}
+@media (max-width:700px){.conn-dot-item .dot-label{display:none}.conn-dots{padding:4px 8px;gap:6px}}
 .layout{display:grid;grid-template-columns:230px 1fr;gap:var(--s4)}
 .nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s2);position:sticky;top:90px;height:max-content;box-shadow:var(--e1);max-height:calc(100vh - 110px);overflow-y:auto}
 .nav button{display:flex;width:100%;align-items:center;gap:10px;text-align:right;background:transparent;color:var(--text2);margin:2px 0;font-weight:600;border-radius:var(--r-md);padding:10px 12px;justify-content:flex-start;font-size:var(--fmd);border:0;cursor:pointer;transition:all var(--tfast);position:relative}
@@ -242,10 +247,7 @@ tbody tr:last-child td{border-bottom:0}
 <div id="login_modal" class="auth-root" style="display:none">
   <div class="auth-card">
     <div style="text-align:center;font-size:44px;margin-bottom:8px">📊</div>
-    <div id="login_conn_box" class="login-conn-status checking">
-      <span class="conn-dot"></span>
-      <span id="login_conn_text">در حال بررسی اتصال...</span>
-    </div>
+    <div id="login_conn_box" class="login-conn-status checking"></div>
     <h2 id="login_title" class="auth-title">ورود به سیستم</h2>
     <p id="login_msg" class="auth-sub">لطفاً نام کاربری و کلمه عبور خود را وارد کنید.</p>
     <div id="login_form">
@@ -278,7 +280,7 @@ tbody tr:last-child td{border-bottom:0}
     </div>
     <div class="top-actions">
       <button class="btn-icon" onclick="toggleTheme()" id="themeBtn" title="تغییر تم">🌙</button>
-      <span class="online-dot checking" id="onlineDot" title="در حال بررسی..."></span>
+      <span class="conn-dots" id="connDots" title="وضعیت اتصال دیتابیس"></span>
       <button class="btn btn-sm btn-success" id="btn_sync_cloud" style="display:none">🔄 بروزرسانی</button>
       <div class="user-chip" id="user_info" style="display:none">
         <span class="user-name" id="current_user"></span>
@@ -681,124 +683,162 @@ async function initSupabaseClients() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   چراغ راهنمای اتصال به دیتابیس (اصلی + پشتیبان)
+   چراغ راهنمای اتصال به دیتابیس (دو دایره: اصلی + جایگزین)
    ───────────────────────────────────────────────────────────── */
 let _connTimer = null;
+let _connDotsRendered = false;
 
-// محاسبه وضعیت کلی از روی نتایج همه سرورها
-function computeConnectionState(results) {
-    if (!results || results.length === 0) {
-        return {
-            level: 'offline',
-            text: '⛔ هیچ دیتابیسی تعریف نشده — ورود آنلاین ممکن نیست',
-            title: 'آفلاین — هیچ دیتابیسی تعریف نشده'
-        };
-    }
-    const online = results.filter(r => r.ok);
-    const offline = results.filter(r => !r.ok);
-    if (offline.length === 0) {
-        return {
-            level: 'online',
-            text: '✅ اتصال به همه دیتابیس‌ها برقرار است — ' + online.map(r => r.name).join(' + '),
-            title: 'آنلاین — ' + online.map(r => r.name).join(' + ')
-        };
-    } else if (online.length === 0) {
-        return {
-            level: 'offline',
-            text: '⛔ اتصال به هیچ‌کدام از دیتابیس‌ها برقرار نیست — ورود آنلاین ممکن نیست',
-            title: 'آفلاین — هیچ دیتابیسی متصل نیست'
-        };
-    } else {
-        return {
-            level: 'partial',
-            text: '⚠️ اتصال جزئی — متصل: ' + online.map(r => r.name).join(' + ') + ' | قطع: ' + offline.map(r => r.name).join(' + '),
-            title: 'اتصال جزئی — ' + online.map(r => r.name).join(' + ') + ' متصل'
-        };
-    }
+function ensureConnectionDotsRendered() {
+  if (_connDotsRendered) return;
+  renderConnectionDots();
+  renderLoginConnectionRows();
+  _connDotsRendered = true;
 }
 
-function applyConnectionUI(state) {
-    const dot = $('onlineDot');
+function renderConnectionDots() {
+  const container = $('connDots');
+  if (!container) return;
+  if (!supabaseClients || supabaseClients.length === 0) {
+    container.innerHTML = '<span class="conn-dot-item offline" title="هیچ سروری تعریف نشده"><span class="dot-label">—</span></span>';
+    return;
+  }
+  const labels = ['اصلی', 'جایگزین', 'سوم', 'چهارم', 'پنجم'];
+  container.innerHTML = supabaseClients.map((s, i) => {
+    const label = labels[i] || ('سرور ' + (i+1));
+    return `<span class="conn-dot-item checking" id="dot-${i}" title="${esc(s.name)}"><span class="dot-label">${label}</span></span>`;
+  }).join('');
+}
+
+function renderLoginConnectionRows() {
+  const box = $('login_conn_box');
+  if (!box) return;
+  if (!supabaseClients || supabaseClients.length === 0) {
+    box.innerHTML = '<div class="conn-line"><span class="conn-dot offline"></span><span>⛔ هیچ دیتابیسی تعریف نشده است</span></div>';
+    return;
+  }
+  const labels = ['اصلی', 'جایگزین', 'سوم', 'چهارم', 'پنجم'];
+  box.innerHTML = supabaseClients.map((s, i) => {
+    const label = labels[i] || ('سرور ' + (i+1));
+    return `<div class="conn-line">
+      <span class="conn-dot checking" id="login-dot-${i}"></span>
+      <span class="conn-label">${label} (${esc(s.name)}):</span>
+      <span id="login-status-${i}">در حال بررسی...</span>
+    </div>`;
+  }).join('');
+}
+
+function setAllChecking() {
+  ensureConnectionDotsRendered();
+  (supabaseClients || []).forEach((s, i) => {
+    const dot = document.getElementById('dot-' + i);
     if (dot) {
-        dot.classList.remove('online', 'partial', 'offline', 'checking');
-        dot.classList.add(state.level);
-        dot.title = state.title || state.level;
+      dot.classList.remove('online', 'offline');
+      dot.classList.add('checking');
     }
-    const box = $('login_conn_box');
-    const textEl = $('login_conn_text');
-    if (box) {
-        box.classList.remove('online', 'partial', 'offline', 'checking');
-        box.classList.add(state.level);
+    const loginDot = document.getElementById('login-dot-' + i);
+    if (loginDot) {
+      loginDot.classList.remove('online', 'offline');
+      loginDot.classList.add('checking');
     }
-    if (textEl) textEl.textContent = state.text || '';
+    const status = document.getElementById('login-status-' + i);
+    if (status) status.textContent = 'در حال بررسی...';
+  });
+  const box = $('login_conn_box');
+  if (box) {
+    box.classList.remove('online', 'partial', 'offline');
+    box.classList.add('checking');
+  }
 }
 
-function setConnectionStatus(level, text) {
-    if (!text) {
-        const defaults = {
-            online: '✅ متصل',
-            partial: '⚠️ اتصال جزئی',
-            offline: '⛔ قطع',
-            checking: '⏳ در حال بررسی...'
-        };
-        text = defaults[level] || '';
+function applyConnectionUI(perServerResults) {
+  ensureConnectionDotsRendered();
+  if (!perServerResults) perServerResults = [];
+
+  perServerResults.forEach((r, i) => {
+    const dot = document.getElementById('dot-' + i);
+    if (dot) {
+      dot.classList.remove('online', 'offline', 'checking');
+      dot.classList.add(r.ok ? 'online' : 'offline');
+      dot.title = r.name + ': ' + (r.ok ? 'متصل' : 'قطع');
     }
-    applyConnectionUI({ level, text, title: text });
+    const loginDot = document.getElementById('login-dot-' + i);
+    if (loginDot) {
+      loginDot.classList.remove('online', 'offline', 'checking');
+      loginDot.classList.add(r.ok ? 'online' : 'offline');
+    }
+    const status = document.getElementById('login-status-' + i);
+    if (status) status.textContent = r.ok ? 'متصل ✅' : 'قطع ⛔';
+  });
+
+  const box = $('login_conn_box');
+  if (box) {
+    box.classList.remove('online', 'partial', 'offline', 'checking');
+    if (perServerResults.length === 0) {
+      box.classList.add('offline');
+    } else {
+      const onlineCount = perServerResults.filter(r => r.ok).length;
+      if (onlineCount === 0) box.classList.add('offline');
+      else if (onlineCount === perServerResults.length) box.classList.add('online');
+      else box.classList.add('partial');
+    }
+  }
 }
 
-// بررسی اتصال به همه سرورها (اصلی + پشتیبان)
 async function checkDbConnection() {
-    if (!supabaseClients || supabaseClients.length === 0) {
-        applyConnectionUI(computeConnectionState([]));
-        return { allOnline: false, anyOnline: false, results: [] };
+  ensureConnectionDotsRendered();
+  if (!supabaseClients || supabaseClients.length === 0) {
+    applyConnectionUI([]);
+    return { allOnline: false, anyOnline: false, results: [] };
+  }
+  setAllChecking();
+
+  const results = [];
+  for (const server of supabaseClients) {
+    let ok = false;
+    try {
+      const { error } = await server.client.from('persons').select('id').limit(1);
+      ok = !error;
+    } catch (e) {
+      console.warn(`[Conn] Check failed for ${server.name}:`, e.message);
     }
-    applyConnectionUI({ level: 'checking', text: '⏳ در حال بررسی اتصال به همه دیتابیس‌ها...', title: 'در حال بررسی...' });
+    results.push({ name: server.name, ok });
+  }
 
-    const results = [];
-    for (const server of supabaseClients) {
-        let ok = false;
-        try {
-            const { error } = await server.client.from('persons').select('id').limit(1);
-            ok = !error;
-        } catch (e) {
-            console.warn(`[Conn] Check failed for ${server.name}:`, e.message);
-        }
-        results.push({ name: server.name, ok });
-    }
+  applyConnectionUI(results);
+  const online = results.filter(r => r.ok);
+  if (online[0]) activeServerName = online[0].name;
 
-    applyConnectionUI(computeConnectionState(results));
-    const online = results.filter(r => r.ok);
-    if (online[0]) activeServerName = online[0].name;
-
-    return {
-        allOnline: results.every(r => r.ok),
-        anyOnline: online.length > 0,
-        results
-    };
+  return {
+    allOnline: results.every(r => r.ok),
+    anyOnline: online.length > 0,
+    results
+  };
 }
 
 function startConnectionMonitor() {
-    if (_connTimer) clearInterval(_connTimer);
-    _connTimer = setInterval(() => {
-        if (document.visibilityState === 'visible') {
-            checkDbConnection();
-        }
-    }, 60000);
-    window.addEventListener('online', () => checkDbConnection());
-    window.addEventListener('offline', () => {
-        const fakeResults = (supabaseClients || []).map(s => ({ name: s.name, ok: false }));
-        applyConnectionUI(computeConnectionState(fakeResults));
-    });
+  ensureConnectionDotsRendered();
+  setAllChecking();
+  if (_connTimer) clearInterval(_connTimer);
+  _connTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') checkDbConnection();
+  }, 60000);
+  window.addEventListener('online', () => checkDbConnection());
+  window.addEventListener('offline', () => {
+    const fakeResults = (supabaseClients || []).map(s => ({ name: s.name, ok: false }));
+    applyConnectionUI(fakeResults);
+  });
+  // بررسی اولیه بلافاصله پس از راه‌اندازی
+  setTimeout(() => checkDbConnection(), 200);
 }
 
 async function testSupabaseConnection() {
-    const res = await checkDbConnection();
-    return {
-        ok: res.anyOnline,
-        allOnline: res.allOnline,
-        server: activeServerName,
-        message: res.anyOnline ? '' : 'اتصال به تمام سرورها برقرار نشد.'
-    };
+  const res = await checkDbConnection();
+  return {
+    ok: res.anyOnline,
+    allOnline: res.allOnline,
+    server: activeServerName,
+    message: res.anyOnline ? '' : 'اتصال به تمام سرورها برقرار نشد.'
+  };
 }
 
 function $(id){return document.getElementById(id)}
@@ -895,7 +935,7 @@ async function setData(key,data){
 async function syncFromCloud(showMessage){
   if(showMessage===undefined)showMessage=true;
   if(supabaseClients.length===0){
-    applyConnectionUI(computeConnectionState([]));
+    applyConnectionUI([]);
     return{ok:false};
   }
 
@@ -927,7 +967,7 @@ async function syncFromCloud(showMessage){
 
   if(btn&&showMessage){btn.textContent='🔄 بروزرسانی';btn.disabled=false}
 
-  applyConnectionUI(computeConnectionState(serverResults));
+  applyConnectionUI(serverResults);
   const online=serverResults.filter(r=>r.ok);
   if(online[0])activeServerName=online[0].name;
 
@@ -1514,7 +1554,7 @@ async function joinActivity(id){
   var acts=getData(KEYS.acts);var session=getSession();if(!session)return;
   var found=false;
   for(var i=0;i<acts.length;i++){if(acts[i].id===id){if(acts[i].participants.indexOf(session.personId)===-1){acts[i].participants.push(session.personId);found=true}break}}
-  if(found){if(await setData(KEYS.acts,acts)){showAlert('به شرکت‌کنندگان اضافه شدید.','success');renderDayActs();renderRecords();renderCalendar();}}
+  if(found){if(await setData(KEYS.acts,acts)){showAlert('به شرکت‌کنندگان اضافه شدید.','success');renderDayActs();renderRecords();renderCalendar();renderWeekView();}}
   else showAlert('از قبل در این اقدام هستید.','warning');
 }
 
@@ -1554,7 +1594,6 @@ function editAct(id){
   var session=getSession();var priv=session.role==='admin'||session.role==='manager';
   if(!priv&&a.createdBy!==session.personId&&a.participants.indexOf(session.personId)===-1){showAlert('اجازه ویرایش ندارید.','error');return}
   showSection('activity');
-  // فعال‌سازی حالت ویرایش (پنهان‌سازی سرتیتر/راهنما و نمایش دکمه انصراف)
   setActivityEditMode(true);
   
   $('act_id').value=a.id;$('act_start_date').value=a.date;$('act_end_date').value=a.endDate||'';
@@ -2136,11 +2175,12 @@ async function init(){
   document.addEventListener('click',closePopups);
   const supabaseReady=await initSupabaseClients();
 
-  // چراغ راهنمای اتصال: پایش دوره‌ای (اگر کلاینتی موجود باشد)
+  // چراغ راهنمای اتصال (دو دایره: اصلی + جایگزین)
   if(supabaseReady){
     startConnectionMonitor();
   }else{
-    applyConnectionUI(computeConnectionState([]));
+    ensureConnectionDotsRendered();
+    applyConnectionUI([]);
   }
 
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
