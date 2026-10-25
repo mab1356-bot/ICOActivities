@@ -45,15 +45,18 @@ button,input,select,textarea{font-family:inherit;font-size:var(--fbase);color:in
 .online-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
 .online-dot.online{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
 .online-dot.offline{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.online-dot.partial{background:var(--warning);box-shadow:0 0 8px var(--warning);animation:pulse 2s infinite}
 .online-dot.checking{background:var(--warning);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 .login-conn-status{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:var(--r-md);font-size:var(--fmd);font-family:var(--font-main);margin-bottom:16px;border:1px solid;transition:all var(--tbase);line-height:1.6}
 .login-conn-status.online{background:var(--successS);color:var(--successI);border-color:var(--success)}
 .login-conn-status.offline{background:var(--dangerS);color:var(--dangerI);border-color:var(--danger)}
+.login-conn-status.partial{background:var(--warningS);color:var(--warningI);border-color:var(--warning)}
 .login-conn-status.checking{background:var(--surface3);color:var(--text2);border-color:var(--border)}
 .login-conn-status .conn-dot{display:inline-block;width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--text3);transition:all .3s}
 .login-conn-status.online .conn-dot{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
 .login-conn-status.offline .conn-dot{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.login-conn-status.partial .conn-dot{background:var(--warning);box-shadow:0 0 8px var(--warning);animation:pulse 2s infinite}
 .login-conn-status.checking .conn-dot{background:var(--warning);animation:pulse 1s infinite}
 .layout{display:grid;grid-template-columns:230px 1fr;gap:var(--s4)}
 .nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s2);position:sticky;top:90px;height:max-content;box-shadow:var(--e1);max-height:calc(100vh - 110px);overflow-y:auto}
@@ -132,6 +135,9 @@ tbody tr:last-child td{border-bottom:0}
 .week-activity-time,.week-activity-meta{color:var(--text2);font-size:10px;margin-top:2px}
 .week-activity-desc{color:var(--text);margin-top:2px;line-height:1.5}
 .week-activity-imp{margin-top:4px}
+.week-join-btn{display:block;width:100%;margin-top:6px;padding:5px 8px;font-size:10px;background:var(--success);color:#fff;border:0;border-radius:var(--r-sm);cursor:pointer;font-family:var(--font-main);font-weight:700;transition:all var(--tfast)}
+.week-join-btn:hover{background:#047857;filter:brightness(1.05)}
+.week-join-btn:active{transform:translateY(1px)}
 .date-picker,.time-picker{cursor:pointer;background:var(--surface)}
 .datepicker-popup{position:absolute;right:0;top:100%;z-index:1000;background:var(--surface);border:1px solid var(--borderS);border-radius:var(--r-md);box-shadow:var(--e3);padding:15px;width:290px;max-width:95vw;direction:rtl}
 .dp-nav{display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:10px}
@@ -438,8 +444,10 @@ tbody tr:last-child td{border-bottom:0}
       </div>
 
       <div id="section-activity" class="card hidden">
-        <h2>➕ ثبت اقدام انجام‌شده</h2>
-        <p class="hint">تاریخ و ساعت شروع/پایان را وارد کنید. سیستم مدت را خودکار محاسبه می‌کند (روزهای تعطیل در اقدامات چندروزه از مجموع ساعت‌ها کسر می‌شوند).</p>
+        <div id="activity_form_header">
+          <h2>➕ ثبت اقدام انجام‌شده</h2>
+          <p class="hint">تاریخ و ساعت شروع/پایان را وارد کنید. سیستم مدت را خودکار محاسبه می‌کند (روزهای تعطیل در اقدامات چندروزه از مجموع ساعت‌ها کسر می‌شوند).</p>
+        </div>
         <div id="plan_convert_banner" class="alert alert-info hidden" style="display:none;align-items:center;gap:10px">
           <span>🔄 در حال تبدیل از موضوع: <b id="plan_convert_title"></b></span>
           <button class="btn btn-secondary btn-sm" style="margin-right:auto" onclick="cancelPendingConversion()">انصراف از تبدیل</button>
@@ -486,6 +494,7 @@ tbody tr:last-child td{border-bottom:0}
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn btn-success" style="flex:1" id="btn_save_act">ثبت اقدام</button>
           <button class="btn btn-warning" style="flex:1" id="btn_reset_act">فرم جدید</button>
+          <button class="btn btn-danger" style="flex:1;display:none" id="btn_cancel_edit_act">انصراف از ویرایش</button>
         </div>
         <hr style="margin:20px 0;border:0;border-top:1px solid var(--border)">
         <h3>اقدامات ثبت‌شده برای این روز</h3>
@@ -672,60 +681,100 @@ async function initSupabaseClients() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   چراغ راهنمای اتصال به دیتابیس
+   چراغ راهنمای اتصال به دیتابیس (اصلی + پشتیبان)
    ───────────────────────────────────────────────────────────── */
 let _connTimer = null;
 
-function setConnectionStatus(status, serverName) {
-    // چراغ هدر
-    const dot = $('onlineDot');
-    if (dot) {
-        dot.classList.remove('online', 'offline', 'checking');
-        dot.classList.add(status);
-        dot.title = status === 'online'
-            ? ('آنلاین' + (serverName ? ' — ' + serverName : ''))
-            : status === 'offline'
-                ? 'آفلاین — اتصال به دیتابیس برقرار نیست'
-                : 'در حال بررسی اتصال...';
+// محاسبه وضعیت کلی از روی نتایج همه سرورها
+function computeConnectionState(results) {
+    if (!results || results.length === 0) {
+        return {
+            level: 'offline',
+            text: '⛔ هیچ دیتابیسی تعریف نشده — ورود آنلاین ممکن نیست',
+            title: 'آفلاین — هیچ دیتابیسی تعریف نشده'
+        };
     }
-    // چراغ صفحه ورود
-    const box = $('login_conn_box');
-    const text = $('login_conn_text');
-    if (box) {
-        box.classList.remove('online', 'offline', 'checking');
-        box.classList.add(status);
-    }
-    if (text) {
-        if (status === 'online') {
-            text.textContent = '✅ اتصال به دیتابیس برقرار است' + (serverName ? ' (' + serverName + ')' : '');
-        } else if (status === 'offline') {
-            text.textContent = '⛔ اتصال به دیتابیس برقرار نیست — ورود آنلاین ممکن نیست';
-        } else {
-            text.textContent = '⏳ در حال بررسی اتصال...';
-        }
+    const online = results.filter(r => r.ok);
+    const offline = results.filter(r => !r.ok);
+    if (offline.length === 0) {
+        return {
+            level: 'online',
+            text: '✅ اتصال به همه دیتابیس‌ها برقرار است — ' + online.map(r => r.name).join(' + '),
+            title: 'آنلاین — ' + online.map(r => r.name).join(' + ')
+        };
+    } else if (online.length === 0) {
+        return {
+            level: 'offline',
+            text: '⛔ اتصال به هیچ‌کدام از دیتابیس‌ها برقرار نیست — ورود آنلاین ممکن نیست',
+            title: 'آفلاین — هیچ دیتابیسی متصل نیست'
+        };
+    } else {
+        return {
+            level: 'partial',
+            text: '⚠️ اتصال جزئی — متصل: ' + online.map(r => r.name).join(' + ') + ' | قطع: ' + offline.map(r => r.name).join(' + '),
+            title: 'اتصال جزئی — ' + online.map(r => r.name).join(' + ') + ' متصل'
+        };
     }
 }
 
+function applyConnectionUI(state) {
+    const dot = $('onlineDot');
+    if (dot) {
+        dot.classList.remove('online', 'partial', 'offline', 'checking');
+        dot.classList.add(state.level);
+        dot.title = state.title || state.level;
+    }
+    const box = $('login_conn_box');
+    const textEl = $('login_conn_text');
+    if (box) {
+        box.classList.remove('online', 'partial', 'offline', 'checking');
+        box.classList.add(state.level);
+    }
+    if (textEl) textEl.textContent = state.text || '';
+}
+
+function setConnectionStatus(level, text) {
+    if (!text) {
+        const defaults = {
+            online: '✅ متصل',
+            partial: '⚠️ اتصال جزئی',
+            offline: '⛔ قطع',
+            checking: '⏳ در حال بررسی...'
+        };
+        text = defaults[level] || '';
+    }
+    applyConnectionUI({ level, text, title: text });
+}
+
+// بررسی اتصال به همه سرورها (اصلی + پشتیبان)
 async function checkDbConnection() {
     if (!supabaseClients || supabaseClients.length === 0) {
-        setConnectionStatus('offline');
-        return false;
+        applyConnectionUI(computeConnectionState([]));
+        return { allOnline: false, anyOnline: false, results: [] };
     }
-    setConnectionStatus('checking');
+    applyConnectionUI({ level: 'checking', text: '⏳ در حال بررسی اتصال به همه دیتابیس‌ها...', title: 'در حال بررسی...' });
+
+    const results = [];
     for (const server of supabaseClients) {
+        let ok = false;
         try {
             const { error } = await server.client.from('persons').select('id').limit(1);
-            if (!error) {
-                activeServerName = server.name;
-                setConnectionStatus('online', server.name);
-                return true;
-            }
+            ok = !error;
         } catch (e) {
             console.warn(`[Conn] Check failed for ${server.name}:`, e.message);
         }
+        results.push({ name: server.name, ok });
     }
-    setConnectionStatus('offline');
-    return false;
+
+    applyConnectionUI(computeConnectionState(results));
+    const online = results.filter(r => r.ok);
+    if (online[0]) activeServerName = online[0].name;
+
+    return {
+        allOnline: results.every(r => r.ok),
+        anyOnline: online.length > 0,
+        results
+    };
 }
 
 function startConnectionMonitor() {
@@ -736,29 +785,20 @@ function startConnectionMonitor() {
         }
     }, 60000);
     window.addEventListener('online', () => checkDbConnection());
-    window.addEventListener('offline', () => setConnectionStatus('offline'));
+    window.addEventListener('offline', () => {
+        const fakeResults = (supabaseClients || []).map(s => ({ name: s.name, ok: false }));
+        applyConnectionUI(computeConnectionState(fakeResults));
+    });
 }
 
 async function testSupabaseConnection() {
-    if (supabaseClients.length === 0) {
-        setConnectionStatus('offline');
-        return { ok: false, message: 'هیچ کلاینت متصلی وجود ندارد.' };
-    }
-    setConnectionStatus('checking');
-    for (const server of supabaseClients) {
-        try {
-            const { error } = await server.client.from('persons').select('id').limit(1);
-            if (!error) {
-                activeServerName = server.name;
-                setConnectionStatus('online', server.name);
-                return { ok: true, server: server.name };
-            }
-        } catch (e) {
-            console.warn(`[Multi-Server] Connection test failed for ${server.name}:`, e.message);
-        }
-    }
-    setConnectionStatus('offline');
-    return { ok: false, message: 'اتصال به تمام سرورها برقرار نشد.' };
+    const res = await checkDbConnection();
+    return {
+        ok: res.anyOnline,
+        allOnline: res.allOnline,
+        server: activeServerName,
+        message: res.anyOnline ? '' : 'اتصال به تمام سرورها برقرار نشد.'
+    };
 }
 
 function $(id){return document.getElementById(id)}
@@ -845,23 +885,26 @@ async function setData(key,data){
   const anySuccess=results.some(r=>r.status==='fulfilled'&&r.value===true);
 
   if(!anySuccess){
-    setConnectionStatus('offline');
     showAlert('خطا در ذخیره‌سازی ابری: هیچ‌کدام از سرورها پاسخ ندادند.','error');
+    setTimeout(() => checkDbConnection(), 1500);
     return false;
   }
-  setConnectionStatus('online', activeServerName);
   return true;
 }
 
 async function syncFromCloud(showMessage){
   if(showMessage===undefined)showMessage=true;
-  if(supabaseClients.length===0)return{ok:false};
+  if(supabaseClients.length===0){
+    applyConnectionUI(computeConnectionState([]));
+    return{ok:false};
+  }
 
   const btn=$('btn_sync_cloud');
   if(btn&&showMessage){btn.textContent='⏳...';btn.disabled=true}
-  let anySuccess=false;
-
+  
+  const serverResults=[];
   for(const server of supabaseClients){
+    let serverOk=false;
     try{
       for(let localKey in TABLE_MAP){
         const tableName=TABLE_MAP[localKey];
@@ -869,23 +912,27 @@ async function syncFromCloud(showMessage){
         if(!error&&data){
           const converted=data.map(item=>fromDB(localKey,item));
           const currentData=getData(localKey);
-          
           if(converted.length>currentData.length){
             localStorage.setItem(localKey,JSON.stringify(converted));
             console.log(`[Multi-Server] Updated ${localKey} from ${server.name}`);
           }
+          serverOk=true;
         }
       }
-      anySuccess=true;
     }catch(e){
       console.warn(`[Multi-Server] Sync failed for ${server.name}:`,e.message);
     }
+    serverResults.push({name:server.name,ok:serverOk});
   }
 
   if(btn&&showMessage){btn.textContent='🔄 بروزرسانی';btn.disabled=false}
-  
+
+  applyConnectionUI(computeConnectionState(serverResults));
+  const online=serverResults.filter(r=>r.ok);
+  if(online[0])activeServerName=online[0].name;
+
+  const anySuccess=serverResults.some(r=>r.ok);
   if(anySuccess){
-    setConnectionStatus('online', activeServerName);
     if(showMessage)showAlert('اطلاعات از سرورها دریافت و همگام‌سازی شد.','success');
     try{
       refreshDropdowns();renderPersons();renderTopics();renderImportance();
@@ -894,7 +941,6 @@ async function syncFromCloud(showMessage){
     }catch(e){}
     return{ok:true};
   }else{
-    setConnectionStatus('offline');
     if(showMessage)showAlert('خطا در دریافت اطلاعات از تمام سرورها.','error');
     return{ok:false};
   }
@@ -1262,6 +1308,8 @@ function renderWeekView(){
   var acts=getData(KEYS.acts);var personId=val('cal_person');var holidays=getData(KEYS.holidays);
   var holMap={};holidays.forEach(h=>holMap[h.date]=h.title);
   var todayStr=getTodayJalali();
+  var session=getSession();
+  var selfId=session?session.personId:null;
   var html='';
   days.forEach(ds=>{
     var p=parseJalali(ds);var dow=getJalaliDayOfWeek(p.jy,p.jm,p.jd);
@@ -1279,6 +1327,7 @@ function renderWeekView(){
     else{
       dayActs.forEach(a=>{
         var pNames=a.participants.map(pid=>personName(pid)).join('، ');
+        var isJoined=selfId&&a.participants.indexOf(selfId)!==-1;
         html+='<div class="week-activity" style="border-right:3px solid '+getImpColor(a.importance)+';'+(a.onlyForMe?'background:var(--warningS);':'')+'">';
         html+='<div class="week-activity-title">'+esc(topicName(a.topicId))+'</div>';
         if(a.startTime)html+='<div class="week-activity-time">⏰ '+esc(a.startTime)+' - '+esc(a.endTime)+' • '+esc(fmtHours(a.hours))+'</div>';
@@ -1287,6 +1336,9 @@ function renderWeekView(){
         html+='<div class="week-activity-meta">👥 '+esc(pNames)+'</div>';
         if(a.onlyForMe) html+='<div class="week-activity-imp"><span class="badge badge-warning">👤 فقط من</span></div>';
         else html+='<div class="week-activity-imp">'+impBadge(a.importance)+'</div>';
+        if(!isJoined) {
+          html+='<button class="week-join-btn" data-week-join="'+esc(a.id)+'">🤝 پیوستن</button>';
+        }
         html+='</div>';
       });
     }
@@ -1334,13 +1386,30 @@ function onLocationChange() {
   }
 }
 
+// فعال/غیرفعال کردن حالت ویرایش در فرم اقدام
+function setActivityEditMode(isEdit) {
+  var hdr = $('activity_form_header');
+  if (hdr) hdr.classList.toggle('hidden', isEdit);
+  var saveBtn = $('btn_save_act');
+  if (saveBtn) saveBtn.textContent = isEdit ? '💾 ذخیره تغییرات' : 'ثبت اقدام';
+  var cancelBtn = $('btn_cancel_edit_act');
+  if (cancelBtn) cancelBtn.style.display = isEdit ? '' : 'none';
+}
+
 function resetActivityForm(keepDate){
-  $('act_id').value='';var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
+  $('act_id').value='';
+  setActivityEditMode(false);
+  var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
   $('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';
   $('act_location_select').value='دفتر اصفهان';$('act_location_other').value='';$('act_location_other').classList.add('hidden');$('act_private_desc').value='';
   $('act_only_for_me').checked = false;
   if(!keepDate){$('act_start_date').value=getTodayJalali();$('act_end_date').value=''}
   populateParticipants();updateCalculatedHours();renderDayActs();
+}
+
+function cancelEditAct(){
+  resetActivityForm(true);
+  showAlert('ویرایش لغو شد.','info');
 }
 
 async function saveActivity(){
@@ -1388,14 +1457,14 @@ async function saveActivity(){
     if(await setData(KEYS.acts,acts)){afterSave('اقدام ویرایش شد.');handlePendingPlanConversion(obj.id)}
     return;
   }
-  var sims=findSimilar(obj,0.2);
+  var sims=findSimilar(obj,0.4);
   if(sims.length){showSimilarBlockModal(sims,obj);return}
   obj.createdAt=Date.now();obj.createdBy=session.personId;
   var allActs=getData(KEYS.acts);allActs.push(obj);
   if(await setData(KEYS.acts,allActs)){afterSave('اقدام با موفقیت ثبت شد.');handlePendingPlanConversion(obj.id)}
 }
 function findSimilar(obj,threshold){
-  threshold=threshold||0.2;
+  threshold=threshold||0.4;
   var acts=getData(KEYS.acts);var nd=normText(obj.description);var res=[];
   acts.forEach(a=>{
     if(a.topicId!==obj.topicId)return;
@@ -1433,6 +1502,7 @@ function showSimilarBlockModal(sims,obj){
 }
 function afterSave(msg){
   if(msg)showAlert(msg,'success');
+  setActivityEditMode(false);
   $('act_id').value='';$('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';$('act_end_date').value='';$('act_private_desc').value='';
   $('act_location_select').value='دفتر اصفهان';$('act_location_other').value='';$('act_location_other').classList.add('hidden');
   $('act_only_for_me').checked=false;
@@ -1484,6 +1554,9 @@ function editAct(id){
   var session=getSession();var priv=session.role==='admin'||session.role==='manager';
   if(!priv&&a.createdBy!==session.personId&&a.participants.indexOf(session.personId)===-1){showAlert('اجازه ویرایش ندارید.','error');return}
   showSection('activity');
+  // فعال‌سازی حالت ویرایش (پنهان‌سازی سرتیتر/راهنما و نمایش دکمه انصراف)
+  setActivityEditMode(true);
+  
   $('act_id').value=a.id;$('act_start_date').value=a.date;$('act_end_date').value=a.endDate||'';
   $('act_start_time').value=a.startTime||'';$('act_end_time').value=a.endTime||'';
   $('act_topic').value=a.topicId;$('act_importance').value=a.importance;$('act_desc').value=a.description;
@@ -1678,6 +1751,7 @@ function convertPlanToActivity(id){
   $('plan_convert_banner').classList.remove('hidden');$('plan_convert_banner').style.display='flex';
   $('plan_convert_title').textContent=p.title;
   showSection('activity');
+  setActivityEditMode(false);
   $('act_id').value='';
   $('act_start_date').value=p.proposedDate||getTodayJalali();
   $('act_end_date').value='';
@@ -1724,7 +1798,7 @@ function gatherReportData(){
   var ta=jalaliToTimestamp(from),tb=jalaliToTimestamp(to);if(tb<ta)return null;
   
   var list=getData(KEYS.acts).filter(x=>{
-    if(x.onlyForMe) return false; // 💡 حذف اقدامات شخصی از گزارش
+    if(x.onlyForMe) return false;
     if(personId&&(!x.participants||x.participants.indexOf(personId)===-1))return false;
     if(topicId&&x.topicId!==topicId)return false;
     if(imp&&x.importance!==imp)return false;
@@ -2060,14 +2134,13 @@ async function startApp(){
 async function init(){
   initTheme();
   document.addEventListener('click',closePopups);
-  const supabaseReady=await initSupabaseClients(); // استفاده از تابع چندسروری (Async)
+  const supabaseReady=await initSupabaseClients();
 
-  // چراغ راهنمای اتصال: حالت اولیه + شروع پایش دوره‌ای
+  // چراغ راهنمای اتصال: پایش دوره‌ای (اگر کلاینتی موجود باشد)
   if(supabaseReady){
-    setConnectionStatus('checking');
     startConnectionMonitor();
   }else{
-    setConnectionStatus('offline');
+    applyConnectionUI(computeConnectionState([]));
   }
 
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
@@ -2104,6 +2177,12 @@ async function init(){
   ['cal_person','cal_month','cal_year'].forEach(k=>on(k,'change',renderCalendar));
   on('calendar_container','click',e=>{var c=e.target.closest('.day-cell');if(!c)return;showSection('activity');$('act_start_date').value=c.dataset.date;resetActivityForm(true)});
 
+  // دکمهٔ پیوستن در نمای هفته
+  on('week_grid','click',e=>{
+    var btn=e.target.closest('[data-week-join]');
+    if(btn)joinActivity(btn.dataset.weekJoin);
+  });
+
   on('btn_save_plan','click',savePlan);
   on('btn_cancel_plan','click',resetPlanForm);
   $('plan_list_container').addEventListener('click',async(e)=>{
@@ -2119,6 +2198,7 @@ async function init(){
 
   on('btn_save_act','click',saveActivity);
   on('btn_reset_act','click',()=>resetActivityForm(true));
+  on('btn_cancel_edit_act','click',cancelEditAct);
   ['act_start_date','act_start_time','act_end_date','act_end_time'].forEach(k=>on(k,'change',updateCalculatedHours));
   on('act_start_date','change',()=>{updateCalculatedHours();renderDayActs()});
   delegate('day_acts_container',(a,id)=>{if(a==='edit')editAct(id);else if(a==='delete')deleteAct(id);else if(a==='join')joinActivity(id)});
