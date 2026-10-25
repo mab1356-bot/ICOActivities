@@ -44,7 +44,17 @@ button,input,select,textarea{font-family:inherit;font-size:var(--fbase);color:in
 .user-chip .user-name{font-weight:700;color:var(--text);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .online-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
 .online-dot.online{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
+.online-dot.offline{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.online-dot.checking{background:var(--warning);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.login-conn-status{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:var(--r-md);font-size:var(--fmd);font-family:var(--font-main);margin-bottom:16px;border:1px solid;transition:all var(--tbase);line-height:1.6}
+.login-conn-status.online{background:var(--successS);color:var(--successI);border-color:var(--success)}
+.login-conn-status.offline{background:var(--dangerS);color:var(--dangerI);border-color:var(--danger)}
+.login-conn-status.checking{background:var(--surface3);color:var(--text2);border-color:var(--border)}
+.login-conn-status .conn-dot{display:inline-block;width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--text3);transition:all .3s}
+.login-conn-status.online .conn-dot{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
+.login-conn-status.offline .conn-dot{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.login-conn-status.checking .conn-dot{background:var(--warning);animation:pulse 1s infinite}
 .layout{display:grid;grid-template-columns:230px 1fr;gap:var(--s4)}
 .nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s2);position:sticky;top:90px;height:max-content;box-shadow:var(--e1);max-height:calc(100vh - 110px);overflow-y:auto}
 .nav button{display:flex;width:100%;align-items:center;gap:10px;text-align:right;background:transparent;color:var(--text2);margin:2px 0;font-weight:600;border-radius:var(--r-md);padding:10px 12px;justify-content:flex-start;font-size:var(--fmd);border:0;cursor:pointer;transition:all var(--tfast);position:relative}
@@ -226,6 +236,10 @@ tbody tr:last-child td{border-bottom:0}
 <div id="login_modal" class="auth-root" style="display:none">
   <div class="auth-card">
     <div style="text-align:center;font-size:44px;margin-bottom:8px">📊</div>
+    <div id="login_conn_box" class="login-conn-status checking">
+      <span class="conn-dot"></span>
+      <span id="login_conn_text">در حال بررسی اتصال...</span>
+    </div>
     <h2 id="login_title" class="auth-title">ورود به سیستم</h2>
     <p id="login_msg" class="auth-sub">لطفاً نام کاربری و کلمه عبور خود را وارد کنید.</p>
     <div id="login_form">
@@ -258,7 +272,7 @@ tbody tr:last-child td{border-bottom:0}
     </div>
     <div class="top-actions">
       <button class="btn-icon" onclick="toggleTheme()" id="themeBtn" title="تغییر تم">🌙</button>
-      <span class="online-dot online" id="onlineDot" title="آنلاین"></span>
+      <span class="online-dot checking" id="onlineDot" title="در حال بررسی..."></span>
       <button class="btn btn-sm btn-success" id="btn_sync_cloud" style="display:none">🔄 بروزرسانی</button>
       <div class="user-chip" id="user_info" style="display:none">
         <span class="user-name" id="current_user"></span>
@@ -657,21 +671,93 @@ async function initSupabaseClients() {
     return supabaseClients.length > 0;
 }
 
-async function testSupabaseConnection() {
-    if (supabaseClients.length === 0) {
-        return { ok: false, message: 'هیچ کلاینت متصلی وجود ندارد.' };
+/* ─────────────────────────────────────────────────────────────
+   چراغ راهنمای اتصال به دیتابیس
+   ───────────────────────────────────────────────────────────── */
+let _connTimer = null;
+
+function setConnectionStatus(status, serverName) {
+    // چراغ هدر
+    const dot = $('onlineDot');
+    if (dot) {
+        dot.classList.remove('online', 'offline', 'checking');
+        dot.classList.add(status);
+        dot.title = status === 'online'
+            ? ('آنلاین' + (serverName ? ' — ' + serverName : ''))
+            : status === 'offline'
+                ? 'آفلاین — اتصال به دیتابیس برقرار نیست'
+                : 'در حال بررسی اتصال...';
     }
+    // چراغ صفحه ورود
+    const box = $('login_conn_box');
+    const text = $('login_conn_text');
+    if (box) {
+        box.classList.remove('online', 'offline', 'checking');
+        box.classList.add(status);
+    }
+    if (text) {
+        if (status === 'online') {
+            text.textContent = '✅ اتصال به دیتابیس برقرار است' + (serverName ? ' (' + serverName + ')' : '');
+        } else if (status === 'offline') {
+            text.textContent = '⛔ اتصال به دیتابیس برقرار نیست — ورود آنلاین ممکن نیست';
+        } else {
+            text.textContent = '⏳ در حال بررسی اتصال...';
+        }
+    }
+}
+
+async function checkDbConnection() {
+    if (!supabaseClients || supabaseClients.length === 0) {
+        setConnectionStatus('offline');
+        return false;
+    }
+    setConnectionStatus('checking');
     for (const server of supabaseClients) {
         try {
             const { error } = await server.client.from('persons').select('id').limit(1);
             if (!error) {
                 activeServerName = server.name;
+                setConnectionStatus('online', server.name);
+                return true;
+            }
+        } catch (e) {
+            console.warn(`[Conn] Check failed for ${server.name}:`, e.message);
+        }
+    }
+    setConnectionStatus('offline');
+    return false;
+}
+
+function startConnectionMonitor() {
+    if (_connTimer) clearInterval(_connTimer);
+    _connTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            checkDbConnection();
+        }
+    }, 60000);
+    window.addEventListener('online', () => checkDbConnection());
+    window.addEventListener('offline', () => setConnectionStatus('offline'));
+}
+
+async function testSupabaseConnection() {
+    if (supabaseClients.length === 0) {
+        setConnectionStatus('offline');
+        return { ok: false, message: 'هیچ کلاینت متصلی وجود ندارد.' };
+    }
+    setConnectionStatus('checking');
+    for (const server of supabaseClients) {
+        try {
+            const { error } = await server.client.from('persons').select('id').limit(1);
+            if (!error) {
+                activeServerName = server.name;
+                setConnectionStatus('online', server.name);
                 return { ok: true, server: server.name };
             }
         } catch (e) {
             console.warn(`[Multi-Server] Connection test failed for ${server.name}:`, e.message);
         }
     }
+    setConnectionStatus('offline');
     return { ok: false, message: 'اتصال به تمام سرورها برقرار نشد.' };
 }
 
@@ -758,7 +844,12 @@ async function setData(key,data){
   const results=await Promise.allSettled(promises);
   const anySuccess=results.some(r=>r.status==='fulfilled'&&r.value===true);
 
-  if(!anySuccess){showAlert('خطا در ذخیره‌سازی ابری: هیچ‌کدام از سرورها پاسخ ندادند.','error');return false;}
+  if(!anySuccess){
+    setConnectionStatus('offline');
+    showAlert('خطا در ذخیره‌سازی ابری: هیچ‌کدام از سرورها پاسخ ندادند.','error');
+    return false;
+  }
+  setConnectionStatus('online', activeServerName);
   return true;
 }
 
@@ -794,6 +885,7 @@ async function syncFromCloud(showMessage){
   if(btn&&showMessage){btn.textContent='🔄 بروزرسانی';btn.disabled=false}
   
   if(anySuccess){
+    setConnectionStatus('online', activeServerName);
     if(showMessage)showAlert('اطلاعات از سرورها دریافت و همگام‌سازی شد.','success');
     try{
       refreshDropdowns();renderPersons();renderTopics();renderImportance();
@@ -802,6 +894,7 @@ async function syncFromCloud(showMessage){
     }catch(e){}
     return{ok:true};
   }else{
+    setConnectionStatus('offline');
     if(showMessage)showAlert('خطا در دریافت اطلاعات از تمام سرورها.','error');
     return{ok:false};
   }
@@ -1968,6 +2061,14 @@ async function init(){
   initTheme();
   document.addEventListener('click',closePopups);
   const supabaseReady=await initSupabaseClients(); // استفاده از تابع چندسروری (Async)
+
+  // چراغ راهنمای اتصال: حالت اولیه + شروع پایش دوره‌ای
+  if(supabaseReady){
+    setConnectionStatus('checking');
+    startConnectionMonitor();
+  }else{
+    setConnectionStatus('offline');
+  }
 
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
   on('btn_sync_cloud','click',()=>syncFromCloud(true));
