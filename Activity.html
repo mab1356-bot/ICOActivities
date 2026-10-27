@@ -42,27 +42,19 @@ button,input,select,textarea{font-family:inherit;font-size:var(--fbase);color:in
 .top-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .user-chip{display:flex;align-items:center;gap:6px;background:var(--surface3);padding:4px 6px 4px 10px;border-radius:20px;font-size:var(--fsm)}
 .user-chip .user-name{font-weight:700;color:var(--text);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.online-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
+.online-dot.online{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
+.online-dot.offline{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.online-dot.checking{background:var(--warning);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-.conn-dots{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;background:var(--surface3);border-radius:20px;font-size:10px;font-family:var(--font-main);border:1px solid var(--border)}
-.conn-dot-item{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--text2);transition:color .3s;cursor:help}
-.conn-dot-item::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
-.conn-dot-item.checking::before{background:var(--warning);animation:pulse 1s infinite}
-.conn-dot-item.online::before{background:var(--success);box-shadow:0 0 6px var(--success)}
-.conn-dot-item.offline::before{background:var(--danger);box-shadow:0 0 6px var(--danger)}
-.conn-dot-item.online{color:var(--successI)}
-.conn-dot-item.offline{color:var(--dangerI)}
-.login-conn-status{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:var(--r-md);font-size:var(--fmd);font-family:var(--font-main);margin-bottom:16px;border:1px solid;transition:all var(--tbase);line-height:1.6}
+.login-conn-status{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:var(--r-md);font-size:var(--fmd);font-family:var(--font-main);margin-bottom:16px;border:1px solid;transition:all var(--tbase);line-height:1.6}
 .login-conn-status.online{background:var(--successS);color:var(--successI);border-color:var(--success)}
 .login-conn-status.offline{background:var(--dangerS);color:var(--dangerI);border-color:var(--danger)}
-.login-conn-status.partial{background:var(--warningS);color:var(--warningI);border-color:var(--warning)}
 .login-conn-status.checking{background:var(--surface3);color:var(--text2);border-color:var(--border)}
-.conn-line{display:flex;align-items:center;gap:8px;justify-content:flex-start}
-.conn-dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all .3s}
-.conn-dot.checking{background:var(--warning);animation:pulse 1s infinite}
-.conn-dot.online{background:var(--success);box-shadow:0 0 6px var(--success)}
-.conn-dot.offline{background:var(--danger);box-shadow:0 0 6px var(--danger)}
-.conn-label{font-weight:700;white-space:nowrap}
-@media (max-width:700px){.conn-dot-item .dot-label{display:none}.conn-dots{padding:4px 8px;gap:6px}}
+.login-conn-status .conn-dot{display:inline-block;width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--text3);transition:all .3s}
+.login-conn-status.online .conn-dot{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
+.login-conn-status.offline .conn-dot{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.login-conn-status.checking .conn-dot{background:var(--warning);animation:pulse 1s infinite}
 .layout{display:grid;grid-template-columns:230px 1fr;gap:var(--s4)}
 .nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s2);position:sticky;top:90px;height:max-content;box-shadow:var(--e1);max-height:calc(100vh - 110px);overflow-y:auto}
 .nav button{display:flex;width:100%;align-items:center;gap:10px;text-align:right;background:transparent;color:var(--text2);margin:2px 0;font-weight:600;border-radius:var(--r-md);padding:10px 12px;justify-content:flex-start;font-size:var(--fmd);border:0;cursor:pointer;transition:all var(--tfast);position:relative}
@@ -247,7 +239,10 @@ tbody tr:last-child td{border-bottom:0}
 <div id="login_modal" class="auth-root" style="display:none">
   <div class="auth-card">
     <div style="text-align:center;font-size:44px;margin-bottom:8px">📊</div>
-    <div id="login_conn_box" class="login-conn-status checking"></div>
+    <div id="login_conn_box" class="login-conn-status checking">
+      <span class="conn-dot"></span>
+      <span id="login_conn_text">در حال بررسی اتصال...</span>
+    </div>
     <h2 id="login_title" class="auth-title">ورود به سیستم</h2>
     <p id="login_msg" class="auth-sub">لطفاً نام کاربری و کلمه عبور خود را وارد کنید.</p>
     <div id="login_form">
@@ -280,7 +275,7 @@ tbody tr:last-child td{border-bottom:0}
     </div>
     <div class="top-actions">
       <button class="btn-icon" onclick="toggleTheme()" id="themeBtn" title="تغییر تم">🌙</button>
-      <span class="conn-dots" id="connDots" title="وضعیت اتصال دیتابیس"></span>
+      <span class="online-dot checking" id="onlineDot" title="در حال بررسی..."></span>
       <button class="btn btn-sm btn-success" id="btn_sync_cloud" style="display:none">🔄 بروزرسانی</button>
       <div class="user-chip" id="user_info" style="display:none">
         <span class="user-name" id="current_user"></span>
@@ -545,7 +540,7 @@ tbody tr:last-child td{border-bottom:0}
 
       <div id="section-settings" class="card hidden">
         <h2>💾 پشتیبان‌گیری و بازیابی</h2>
-        <div class="alert alert-success" style="display:block;margin-bottom:15px">دیتابیس شما به سرورهای ابری متصل است.</div>
+        <div class="alert alert-success" style="display:block;margin-bottom:15px">دیتابیس شما به سرور ابری Supabase متصل است.</div>
         <div class="form-group"><button class="btn btn-success" style="width:100%" id="btn_export">دریافت فایل پشتیبان (JSON)</button></div>
         <div class="form-group" style="margin-top:30px;border-top:1px solid var(--border);padding-top:20px">
           <label>بازیابی و ادغام فایل JSON:</label>
@@ -593,252 +588,114 @@ tbody tr:last-child td{border-bottom:0}
 'use strict';
 
 /* ─────────────────────────────────────────────────────────────
-   سیستم مدیریت اتصال به چند سرور (Supabase & Nhost)
+   سیستم مدیریت اتصال به Supabase
    ───────────────────────────────────────────────────────────── */
-let supabaseClients = [];
-let activeServerName = '';
-let nhostClient = null;
+let supabaseClient = null;
+let activeServerName = 'Supabase';
 
-// آداپتور برای استفاده از Nhost (با GraphQL) به شکلی شبیه Supabase
-async function createNhostAdapter(subdomain, region) {
-    try {
-        // بارگذاری داینامیک کتابخانه رسمی Nhost
-        const { createClient } = await import("https://esm.sh/@nhost/nhost-js");
-        nhostClient = createClient({ subdomain, region });
-        console.log(`[Nhost] Client initialized for subdomain: ${subdomain}`);
-        
-        return {
-            name: 'Nhost',
-            from: function(tableName) {
-                return {
-                    select: async (columns = '*') => {
-                        const query = `query Get_${tableName} { ${tableName} { ${columns === '*' ? 'id' : columns} } }`;
-                        try {
-                            const response = await nhostClient.graphql.request(query);
-                            if (response.error) throw new Error(response.error.message);
-                            return { data: response.data[tableName], error: null };
-                        } catch (err) {
-                            return { data: null, error: { message: err.message } };
-                        }
-                    },
-                    upsert: async (dataArray) => {
-                        // در Nhost برای سادگی از insert استفاده می‌کنیم
-                        // (برای Upsert واقعی نیاز به تعریف conflict است)
-                        const mutation = `mutation Insert_${tableName}($objects: [${tableName}_insert_input!]!) { insert_${tableName}(objects: $objects) { affected_rows } }`;
-                        try {
-                            const response = await nhostClient.graphql.request(mutation, { objects: dataArray });
-                            if (response.error) throw new Error(response.error.message);
-                            return { error: null };
-                        } catch (err) {
-                            return { error: { message: err.message } };
-                        }
-                    },
-                    delete: () => ({
-                        eq: async (column, value) => {
-                            const mutation = `mutation Delete_${tableName}($where: ${tableName}_bool_exp!) { delete_${tableName}(where: $where) { affected_rows } }`;
-                            try {
-                                const response = await nhostClient.graphql.request(mutation, { where: { [column]: { _eq: value } } });
-                                if (response.error) throw new Error(response.error.message);
-                                return { error: null };
-                            } catch (err) {
-                                return { error: { message: err.message } };
-                            }
-                        }
-                    }),
-                    order: function() { return this; }
-                };
-            }
-        };
-    } catch (e) {
-        console.error('[Nhost] Failed to load client:', e);
-        return null;
-    }
-}
-
-async function initSupabaseClients() {
+async function initSupabaseClient() {
     if (!window.supabase) {
         window.supabaseInitError = "کتابخانه Supabase لود نشد.";
         return false;
     }
     
-    const servers = (window.APP_CONFIG && window.APP_CONFIG.SERVERS) || [];
-    if (servers.length === 0) {
-        window.supabaseInitError = "هیچ سروری در config.js تعریف نشده است.";
-        return false;
-    }
-    
-    supabaseClients = [];
-    for (const server of servers) {
-        if (server.type === 'nhost') {
-            const adapter = await createNhostAdapter(server.subdomain, server.region);
-            if (adapter) supabaseClients.push({ name: server.name, client: adapter });
-        } else if (server.url && server.key && !server.url.includes('YOUR_')) {
-            const client = window.supabase.createClient(server.url, server.key);
-            supabaseClients.push({ name: server.name, client: client });
+    let cfg = null;
+    if (window.APP_CONFIG) {
+        if (window.APP_CONFIG.SERVERS && window.APP_CONFIG.SERVERS.length > 0) {
+            // پشتیبانی از ساختار قبلی که در آن SERVERS وجود داشت
+            cfg = window.APP_CONFIG.SERVERS.find(s => s.type !== 'nhost') || window.APP_CONFIG.SERVERS[0];
+        } else if (window.APP_CONFIG.SUPABASE_URL) {
+            cfg = { url: window.APP_CONFIG.SUPABASE_URL, key: window.APP_CONFIG.SUPABASE_ANON_KEY };
         }
     }
-    
-    console.log(`[Multi-Server] Initialized ${supabaseClients.length} client(s).`);
-    return supabaseClients.length > 0;
+
+    if (!cfg || !cfg.url || !cfg.key || cfg.url.includes('YOUR_')) {
+        window.supabaseInitError = "تنظیمات Supabase در config.js ناقص است.";
+        return false;
+    }
+
+    try {
+        supabaseClient = window.supabase.createClient(cfg.url, cfg.key);
+        console.log("[Supabase] Client initialized successfully.");
+        return true;
+    } catch (e) {
+        console.error("[Supabase] Failed to initialize:", e);
+        return false;
+    }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   چراغ راهنمای اتصال به دیتابیس (دو دایره: اصلی + جایگزین)
+   چراغ راهنمای اتصال به دیتابیس
    ───────────────────────────────────────────────────────────── */
 let _connTimer = null;
-let _connDotsRendered = false;
 
-function ensureConnectionDotsRendered() {
-  if (_connDotsRendered) return;
-  renderConnectionDots();
-  renderLoginConnectionRows();
-  _connDotsRendered = true;
-}
-
-function renderConnectionDots() {
-  const container = $('connDots');
-  if (!container) return;
-  if (!supabaseClients || supabaseClients.length === 0) {
-    container.innerHTML = '<span class="conn-dot-item offline" title="هیچ سروری تعریف نشده"><span class="dot-label">—</span></span>';
-    return;
-  }
-  const labels = ['اصلی', 'جایگزین', 'سوم', 'چهارم', 'پنجم'];
-  container.innerHTML = supabaseClients.map((s, i) => {
-    const label = labels[i] || ('سرور ' + (i+1));
-    return `<span class="conn-dot-item checking" id="dot-${i}" title="${esc(s.name)}"><span class="dot-label">${label}</span></span>`;
-  }).join('');
-}
-
-function renderLoginConnectionRows() {
-  const box = $('login_conn_box');
-  if (!box) return;
-  if (!supabaseClients || supabaseClients.length === 0) {
-    box.innerHTML = '<div class="conn-line"><span class="conn-dot offline"></span><span>⛔ هیچ دیتابیسی تعریف نشده است</span></div>';
-    return;
-  }
-  const labels = ['اصلی', 'جایگزین', 'سوم', 'چهارم', 'پنجم'];
-  box.innerHTML = supabaseClients.map((s, i) => {
-    const label = labels[i] || ('سرور ' + (i+1));
-    return `<div class="conn-line">
-      <span class="conn-dot checking" id="login-dot-${i}"></span>
-      <span class="conn-label">${label} (${esc(s.name)}):</span>
-      <span id="login-status-${i}">در حال بررسی...</span>
-    </div>`;
-  }).join('');
-}
-
-function setAllChecking() {
-  ensureConnectionDotsRendered();
-  (supabaseClients || []).forEach((s, i) => {
-    const dot = document.getElementById('dot-' + i);
+function setConnectionStatus(status, serverName) {
+    const dot = $('onlineDot');
     if (dot) {
-      dot.classList.remove('online', 'offline');
-      dot.classList.add('checking');
+        dot.classList.remove('online', 'partial', 'offline', 'checking');
+        dot.classList.add(status);
+        dot.title = status === 'online'
+            ? ('آنلاین' + (serverName ? ' — ' + serverName : ''))
+            : status === 'offline'
+                ? 'آفلاین — اتصال به دیتابیس برقرار نیست'
+                : 'در حال بررسی اتصال...';
     }
-    const loginDot = document.getElementById('login-dot-' + i);
-    if (loginDot) {
-      loginDot.classList.remove('online', 'offline');
-      loginDot.classList.add('checking');
+    
+    const box = $('login_conn_box');
+    const text = $('login_conn_text');
+    if (box) {
+        box.classList.remove('online', 'partial', 'offline', 'checking');
+        box.classList.add(status);
     }
-    const status = document.getElementById('login-status-' + i);
-    if (status) status.textContent = 'در حال بررسی...';
-  });
-  const box = $('login_conn_box');
-  if (box) {
-    box.classList.remove('online', 'partial', 'offline');
-    box.classList.add('checking');
-  }
-}
-
-function applyConnectionUI(perServerResults) {
-  ensureConnectionDotsRendered();
-  if (!perServerResults) perServerResults = [];
-
-  perServerResults.forEach((r, i) => {
-    const dot = document.getElementById('dot-' + i);
-    if (dot) {
-      dot.classList.remove('online', 'offline', 'checking');
-      dot.classList.add(r.ok ? 'online' : 'offline');
-      dot.title = r.name + ': ' + (r.ok ? 'متصل' : 'قطع');
+    if (text) {
+        if (status === 'online') {
+            text.textContent = '✅ اتصال به دیتابیس برقرار است' + (serverName ? ' (' + serverName + ')' : '');
+        } else if (status === 'offline') {
+            text.textContent = '⛔ اتصال به دیتابیس برقرار نیست — ورود آنلاین ممکن نیست';
+        } else {
+            text.textContent = '⏳ در حال بررسی اتصال...';
+        }
     }
-    const loginDot = document.getElementById('login-dot-' + i);
-    if (loginDot) {
-      loginDot.classList.remove('online', 'offline', 'checking');
-      loginDot.classList.add(r.ok ? 'online' : 'offline');
-    }
-    const status = document.getElementById('login-status-' + i);
-    if (status) status.textContent = r.ok ? 'متصل ✅' : 'قطع ⛔';
-  });
-
-  const box = $('login_conn_box');
-  if (box) {
-    box.classList.remove('online', 'partial', 'offline', 'checking');
-    if (perServerResults.length === 0) {
-      box.classList.add('offline');
-    } else {
-      const onlineCount = perServerResults.filter(r => r.ok).length;
-      if (onlineCount === 0) box.classList.add('offline');
-      else if (onlineCount === perServerResults.length) box.classList.add('online');
-      else box.classList.add('partial');
-    }
-  }
 }
 
 async function checkDbConnection() {
-  ensureConnectionDotsRendered();
-  if (!supabaseClients || supabaseClients.length === 0) {
-    applyConnectionUI([]);
-    return { allOnline: false, anyOnline: false, results: [] };
-  }
-  setAllChecking();
-
-  const results = [];
-  for (const server of supabaseClients) {
-    let ok = false;
-    try {
-      const { error } = await server.client.from('persons').select('id').limit(1);
-      ok = !error;
-    } catch (e) {
-      console.warn(`[Conn] Check failed for ${server.name}:`, e.message);
+    if (!supabaseClient) {
+        setConnectionStatus('offline');
+        return false;
     }
-    results.push({ name: server.name, ok });
-  }
-
-  applyConnectionUI(results);
-  const online = results.filter(r => r.ok);
-  if (online[0]) activeServerName = online[0].name;
-
-  return {
-    allOnline: results.every(r => r.ok),
-    anyOnline: online.length > 0,
-    results
-  };
+    setConnectionStatus('checking');
+    try {
+        const { error } = await supabaseClient.from('persons').select('id').limit(1);
+        if (!error) {
+            setConnectionStatus('online', activeServerName);
+            return true;
+        }
+    } catch (e) {
+        console.warn(`[Conn] Check failed:`, e.message);
+    }
+    setConnectionStatus('offline');
+    return false;
 }
 
 function startConnectionMonitor() {
-  ensureConnectionDotsRendered();
-  setAllChecking();
-  if (_connTimer) clearInterval(_connTimer);
-  _connTimer = setInterval(() => {
-    if (document.visibilityState === 'visible') checkDbConnection();
-  }, 60000);
-  window.addEventListener('online', () => checkDbConnection());
-  window.addEventListener('offline', () => {
-    const fakeResults = (supabaseClients || []).map(s => ({ name: s.name, ok: false }));
-    applyConnectionUI(fakeResults);
-  });
-  // بررسی اولیه بلافاصله پس از راه‌اندازی
-  setTimeout(() => checkDbConnection(), 200);
+    if (_connTimer) clearInterval(_connTimer);
+    _connTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            checkDbConnection();
+        }
+    }, 60000);
+    window.addEventListener('online', () => checkDbConnection());
+    window.addEventListener('offline', () => setConnectionStatus('offline'));
+    setTimeout(() => checkDbConnection(), 200);
 }
 
 async function testSupabaseConnection() {
-  const res = await checkDbConnection();
-  return {
-    ok: res.anyOnline,
-    allOnline: res.allOnline,
-    server: activeServerName,
-    message: res.anyOnline ? '' : 'اتصال به تمام سرورها برقرار نشد.'
-  };
+    const ok = await checkDbConnection();
+    return {
+        ok: ok,
+        server: activeServerName,
+        message: ok ? '' : 'اتصال به سرور برقرار نشد.'
+    };
 }
 
 function $(id){return document.getElementById(id)}
@@ -908,72 +765,62 @@ function fromDB(key,item){
 
 async function setData(key,data){
   localStorage.setItem(key,JSON.stringify(data));
-  if(supabaseClients.length===0)return true;
-  const tableName=TABLE_MAP[key];
-  if(!tableName)return true;
-  const supabaseData=data.map(item=>toDB(key,item));
+  if(!supabaseClient) return true;
   
-  const promises=supabaseClients.map(async(server)=>{
-    try{
-      const{error}=await server.client.from(tableName).upsert(supabaseData);
-      if(error){console.warn(`[Multi-Server] Save failed on ${server.name}: ${error.message}`);return false;}
-      return true;
-    }catch(e){console.warn(`[Multi-Server] Exception on ${server.name}:`, e.message);return false;}
-  });
-
-  const results=await Promise.allSettled(promises);
-  const anySuccess=results.some(r=>r.status==='fulfilled'&&r.value===true);
-
-  if(!anySuccess){
-    showAlert('خطا در ذخیره‌سازی ابری: هیچ‌کدام از سرورها پاسخ ندادند.','error');
+  const tableName=TABLE_MAP[key];
+  if(!tableName) return true;
+  
+  const dbData=data.map(item=>toDB(key,item));
+  
+  try{
+    const { error } = await supabaseClient.from(tableName).upsert(dbData);
+    if(error){
+      showAlert('خطا در ذخیره‌سازی ابری: ' + error.message, 'error');
+      setTimeout(() => checkDbConnection(), 1500);
+      return false;
+    }
+    setConnectionStatus('online', activeServerName);
+    return true;
+  }catch(e){
+    showAlert('خطا در برقراری ارتباط با سرور: ' + e.message, 'error');
     setTimeout(() => checkDbConnection(), 1500);
     return false;
   }
-  return true;
 }
 
 async function syncFromCloud(showMessage){
-  if(showMessage===undefined)showMessage=true;
-  if(supabaseClients.length===0){
-    applyConnectionUI([]);
+  if(showMessage===undefined) showMessage=true;
+  if(!supabaseClient){
+    setConnectionStatus('offline');
     return{ok:false};
   }
 
   const btn=$('btn_sync_cloud');
   if(btn&&showMessage){btn.textContent='⏳...';btn.disabled=true}
   
-  const serverResults=[];
-  for(const server of supabaseClients){
-    let serverOk=false;
-    try{
-      for(let localKey in TABLE_MAP){
-        const tableName=TABLE_MAP[localKey];
-        const{data,error}=await server.client.from(tableName).select('*');
-        if(!error&&data){
-          const converted=data.map(item=>fromDB(localKey,item));
-          const currentData=getData(localKey);
-          if(converted.length>currentData.length){
-            localStorage.setItem(localKey,JSON.stringify(converted));
-            console.log(`[Multi-Server] Updated ${localKey} from ${server.name}`);
-          }
-          serverOk=true;
+  let anySuccess = false;
+  try{
+    for(let localKey in TABLE_MAP){
+      const tableName=TABLE_MAP[localKey];
+      const { data, error } = await supabaseClient.from(tableName).select('*');
+      if(!error && data){
+        const converted=data.map(item=>fromDB(localKey,item));
+        const currentData=getData(localKey);
+        if(converted.length > currentData.length || showMessage){
+          localStorage.setItem(localKey,JSON.stringify(converted));
         }
+        anySuccess = true;
       }
-    }catch(e){
-      console.warn(`[Multi-Server] Sync failed for ${server.name}:`,e.message);
     }
-    serverResults.push({name:server.name,ok:serverOk});
+  }catch(e){
+    console.warn(`[Sync] Failed:`,e.message);
   }
 
   if(btn&&showMessage){btn.textContent='🔄 بروزرسانی';btn.disabled=false}
-
-  applyConnectionUI(serverResults);
-  const online=serverResults.filter(r=>r.ok);
-  if(online[0])activeServerName=online[0].name;
-
-  const anySuccess=serverResults.some(r=>r.ok);
+  
   if(anySuccess){
-    if(showMessage)showAlert('اطلاعات از سرورها دریافت و همگام‌سازی شد.','success');
+    setConnectionStatus('online', activeServerName);
+    if(showMessage)showAlert('اطلاعات از سرور دریافت و همگام‌سازی شد.','success');
     try{
       refreshDropdowns();renderPersons();renderTopics();renderImportance();
       renderHolidays();renderCalendar();renderRecords();renderDayActs();
@@ -981,7 +828,8 @@ async function syncFromCloud(showMessage){
     }catch(e){}
     return{ok:true};
   }else{
-    if(showMessage)showAlert('خطا در دریافت اطلاعات از تمام سرورها.','error');
+    setConnectionStatus('offline');
+    if(showMessage)showAlert('خطا در دریافت اطلاعات از سرور.','error');
     return{ok:false};
   }
 }
@@ -1158,10 +1006,8 @@ function renderPersons(){
 async function deletePerson(id){
   if(!confirm('حذف کاربر باعث حذف نام او از اقدامات می‌شود. مطمئن؟'))return;
   if(id===getSession().personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
-  if(supabaseClients.length>0){
-    for(let server of supabaseClients){
-      try{await server.client.from('persons').delete().eq('id',id);}catch(e){}
-    }
+  if(supabaseClient){
+    try{await supabaseClient.from('persons').delete().eq('id',id);}catch(e){}
   }
   setData(KEYS.persons,getData(KEYS.persons).filter(p=>p.id!==id));
   const acts=getData(KEYS.acts);let changed=false;
@@ -1189,10 +1035,8 @@ async function deleteTopic(id){
   var used=getData(KEYS.acts).filter(a=>a.topicId===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده و قابل حذف نیست.');return}
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClients.length>0){
-    for(let server of supabaseClients){
-      try{await server.client.from('topics').delete().eq('id',id);}catch(e){}
-    }
+  if(supabaseClient){
+    try{await supabaseClient.from('topics').delete().eq('id',id);}catch(e){}
   }
   setData(KEYS.topics,getData(KEYS.topics).filter(t=>t.id!==id));
   renderTopics();refreshDropdowns();showAlert('حذف شد.','success');
@@ -1226,10 +1070,8 @@ async function deleteImportance(id){
   var used=getData(KEYS.acts).filter(a=>a.importance===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده.','error');return}
   if(!confirm('از حذف «'+lv.name+'» مطمئن هستید؟'))return;
-  if(supabaseClients.length>0){
-    for(let server of supabaseClients){
-      try{await server.client.from('importance_levels').delete().eq('id',id);}catch(e){}
-    }
+  if(supabaseClient){
+    try{await supabaseClient.from('importance_levels').delete().eq('id',id);}catch(e){}
   }
   setData(KEYS.importance,levels.filter(x=>x.id!==id));
   renderImportance();refreshDropdowns();showAlert('حذف شد.','success');
@@ -1258,10 +1100,8 @@ async function saveHoliday(){
 }
 async function deleteHoliday(id){
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClients.length>0){
-    for(let server of supabaseClients){
-      try{await server.client.from('holidays').delete().eq('id',id);}catch(e){}
-    }
+  if(supabaseClient){
+    try{await supabaseClient.from('holidays').delete().eq('id',id);}catch(e){}
   }
   setData(KEYS.holidays,getData(KEYS.holidays).filter(h=>h.id!==id));renderHolidays();showAlert('حذف شد.','success');
 }
@@ -1426,7 +1266,6 @@ function onLocationChange() {
   }
 }
 
-// فعال/غیرفعال کردن حالت ویرایش در فرم اقدام
 function setActivityEditMode(isEdit) {
   var hdr = $('activity_form_header');
   if (hdr) hdr.classList.toggle('hidden', isEdit);
@@ -1625,10 +1464,8 @@ async function deleteAct(id){
   var session=getSession();var priv=session.role==='admin'||session.role==='manager';
   if(!priv){if(a.createdBy!==session.personId){showAlert('اجازه حذف ندارید.','error');return}if(a.participants.length>1){showAlert('شرکت‌کننده دیگر دارد.','error');return}}
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClients.length>0){
-    for(let server of supabaseClients){
-      try{await server.client.from('activities').delete().eq('id',id);}catch(e){}
-    }
+  if(supabaseClient){
+    try{await supabaseClient.from('activities').delete().eq('id',id);}catch(e){}
   }
   setData(KEYS.acts,getData(KEYS.acts).filter(x=>x.id!==id));
   if($('act_id').value===id)resetActivityForm(true);
@@ -1731,10 +1568,8 @@ async function deletePlan(id){
   var p=getData(KEYS.planning).find(x=>x.id===id);if(!p)return;
   if(p.status==='converted'){showAlert('موضوع تبدیل‌شده قابل حذف نیست.','warning');return}
   if(!confirm('حذف «'+p.title+'»؟'))return;
-  if(supabaseClients.length>0){
-    for(let server of supabaseClients){
-      try{await server.client.from('planning_topics').delete().eq('id',id);}catch(e){}
-    }
+  if(supabaseClient){
+    try{await supabaseClient.from('planning_topics').delete().eq('id',id);}catch(e){}
   }
   setData(KEYS.planning,getData(KEYS.planning).filter(x=>x.id!==id));
   renderPlanning();updatePlanningBadge();showAlert('حذف شد.','success');
@@ -2050,7 +1885,7 @@ async function handleLogin(){
   const username=val('login_username'),password=val('login_password');
   if(!username||!password){showAlert('نام کاربری و رمز الزامی.');return}
   showAlert('در حال بررسی...','success');
-  if(supabaseClients.length>0)await syncFromCloud(false);
+  if(supabaseClient)await syncFromCloud(false);
   const persons=getData(KEYS.persons);
   const p=persons.find(x=>x.username===username);
   if(!p||!p.passwordHash){showAlert('❌ نام کاربری یا رمز اشتباه.','error');return}
@@ -2173,14 +2008,12 @@ async function startApp(){
 async function init(){
   initTheme();
   document.addEventListener('click',closePopups);
-  const supabaseReady=await initSupabaseClients();
+  const supabaseReady=await initSupabaseClient();
 
-  // چراغ راهنمای اتصال (دو دایره: اصلی + جایگزین)
   if(supabaseReady){
     startConnectionMonitor();
   }else{
-    ensureConnectionDotsRendered();
-    applyConnectionUI([]);
+    setConnectionStatus('offline');
   }
 
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
@@ -2217,7 +2050,6 @@ async function init(){
   ['cal_person','cal_month','cal_year'].forEach(k=>on(k,'change',renderCalendar));
   on('calendar_container','click',e=>{var c=e.target.closest('.day-cell');if(!c)return;showSection('activity');$('act_start_date').value=c.dataset.date;resetActivityForm(true)});
 
-  // دکمهٔ پیوستن در نمای هفته
   on('week_grid','click',e=>{
     var btn=e.target.closest('[data-week-join]');
     if(btn)joinActivity(btn.dataset.weekJoin);
