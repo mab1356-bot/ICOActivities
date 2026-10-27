@@ -754,7 +754,7 @@ function toDB(key,item){
     res.createdby=item.createdBy;delete res.createdBy;
     res.createdat=item.createdAt;delete res.createdAt;
     res.privatedescription=item.privateDescription;delete res.privateDescription;
-    res.onlyforme=item.onlyForMe;delete res.onlyForMe;
+    res.onlyforme=item.onlyforme;delete res.onlyforme;
   }
   else if(key==='actbk_importance'){res.is_key=item.isKey===true;delete res.isKey}
   else if(key==='actbk_planning'){res.proposeddate=item.proposedDate;delete res.proposedDate;res.importanceid=item.importanceId;delete res.importanceId;res.locationhint=item.locationHint;delete res.locationHint;res.createdby=item.createdBy;delete res.createdBy;res.createdat=item.createdAt;delete res.createdAt;res.convertedactivityid=item.convertedActivityId;delete res.convertedActivityId;res.convertedat=item.convertedAt;delete res.convertedAt;res.cancelreason=item.cancelReason;delete res.cancelReason}
@@ -772,7 +772,7 @@ function fromDB(key,item){
     res.createdBy=item.createdby;delete res.createdby;
     res.createdAt=item.createdat;delete res.createdat;
     res.privateDescription=item.privatedescription;delete res.privatedescription;
-    res.onlyForMe=item.onlyforme===true;delete res.onlyforme;
+    res.onlyforme=item.onlyforme===true;delete res.onlyforme;
   }
   else if(key==='actbk_importance'){res.isKey=item.is_key===true;delete res.is_key}
   else if(key==='actbk_planning'){res.proposedDate=item.proposeddate;delete res.proposeddate;res.importanceId=item.importanceid;delete res.importanceid;res.locationHint=item.locationhint;delete res.locationhint;res.createdBy=item.createdby;delete res.createdby;res.createdAt=item.createdat;delete res.createdat;res.convertedActivityId=item.convertedactivityid;delete res.convertedactivityid;res.convertedAt=item.convertedat;delete res.convertedat;res.cancelReason=item.cancelreason;delete res.cancelreason}
@@ -881,7 +881,7 @@ function migrateData(){
     if(!a.createdBy&&a.participants&&a.participants.length>0){a.createdBy=a.participants[0];changed=true}
     if(a.location===undefined){a.location='';changed=true}
     if(a.privateDescription===undefined){a.privateDescription='';changed=true}
-    if(a.onlyForMe===undefined){a.onlyForMe=false;changed=true}
+    if(a.onlyforme===undefined){a.onlyforme=false;changed=true}
   });
   if(changed)setData(KEYS.acts,acts);
   var persons=getData(KEYS.persons),pc=false;
@@ -1189,7 +1189,7 @@ function renderCalendar(){
     if(da.length>0)dayStatus='<div class="day-status">'+da.length+' اقدام'+(hrs>0?'<br>'+fmtHours(hrs):'')+'</div>';
     
     var cellClass='day-cell';
-    var hasPrivate = da.some(a => a.onlyForMe);
+    var hasPrivate = da.some(a => a.onlyforme);
     
     if(isHol) cellClass+=' holiday';
     else if(hasPrivate) cellClass+=' has-private';
@@ -1230,13 +1230,13 @@ function renderWeekView(){
       dayActs.forEach(a=>{
         var pNames=a.participants.map(pid=>personName(pid)).join('، ');
         var isJoined=selfId&&a.participants.indexOf(selfId)!==-1;
-        html+='<div class="week-activity" style="border-right:3px solid '+getImpColor(a.importance)+';'+(a.onlyForMe?'background:var(--warningS);':'')+'">';
+        html+='<div class="week-activity" style="border-right:3px solid '+getImpColor(a.importance)+';'+(a.onlyforme?'background:var(--warningS);':'')+'">';
         html+='<div class="week-activity-title">'+esc(topicName(a.topicId))+'</div>';
         if(a.startTime)html+='<div class="week-activity-time">⏰ '+esc(a.startTime)+' - '+esc(a.endTime)+' • '+esc(fmtHours(a.hours))+'</div>';
         html+='<div class="week-activity-desc">'+esc(a.description.length>80?a.description.substring(0,80)+'...':a.description)+'</div>';
         if(a.location)html+='<div class="week-activity-meta">📍 '+esc(a.location)+'</div>';
         html+='<div class="week-activity-meta">👥 '+esc(pNames)+'</div>';
-        if(a.onlyForMe) html+='<div class="week-activity-imp"><span class="badge badge-warning">👤 فقط من</span></div>';
+        if(a.onlyforme) html+='<div class="week-activity-imp"><span class="badge badge-warning">👤 فقط من</span></div>';
         else html+='<div class="week-activity-imp">'+impBadge(a.importance)+'</div>';
         if(!isJoined) {
           html+='<button class="week-join-btn" data-week-join="'+esc(a.id)+'">🤝 پیوستن</button>';
@@ -1321,7 +1321,7 @@ async function saveActivity(){
   
   var location = val('act_location_select');
   if (location === 'سایر') location = val('act_location_other') || 'سایر';
-  var onlyForMe = $('act_only_for_me').checked;
+  var onlyforme = $('act_only_for_me').checked;
 
   var privateDescription=val('act_private_desc');
   
@@ -1343,7 +1343,7 @@ async function saveActivity(){
     id:id||('a'+Date.now()+Math.floor(Math.random()*1000)),
     date:normJ(sd),endDate:normJ(ed),startTime:st,endTime:et,
     topicId,importance:imp,description:desc,location,privateDescription,hours,
-    participants:checkedParticipants, onlyForMe:onlyForMe
+    participants:checkedParticipants, onlyforme:onlyforme
   };
   
   if(id){
@@ -1439,7 +1439,7 @@ function renderDayActs(){
     else{if(a.createdBy===session.personId)btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> ';if(a.createdBy===session.personId&&a.participants.length<=1)btns+='<button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>'}
     
     var titleStr = esc(a.description);
-    if (a.onlyForMe) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
+    if (a.onlyforme) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
 
     h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+titleStr+'</td>';
     h+='<td data-label="توضیحات تکمیلی">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
@@ -1473,7 +1473,7 @@ function editAct(id){
     $('act_location_other').value = '';
   }
 
-  $('act_only_for_me').checked = a.onlyForMe === true;
+  $('act_only_for_me').checked = a.onlyforme === true;
   $('act_private_desc').value = a.privateDescription || '';
   populateParticipants(a.participants);updateCalculatedHours();renderDayActs();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1527,7 +1527,7 @@ function renderRecords(){
     else btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button>';
     
     var titleStr = esc(a.description);
-    if (a.onlyForMe) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
+    if (a.onlyforme) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
 
     h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+titleStr+'</td>';
     h+='<td data-label="توضیحات تکمیلی">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
@@ -1688,7 +1688,7 @@ function gatherReportData(){
   var ta=jalaliToTimestamp(from),tb=jalaliToTimestamp(to);if(tb<ta)return null;
   
   var list=getData(KEYS.acts).filter(x=>{
-    if(x.onlyForMe) return false;
+    if(x.onlyforme) return false;
     if(personId&&(!x.participants||x.participants.indexOf(personId)===-1))return false;
     if(topicId&&x.topicId!==topicId)return false;
     if(imp&&x.importance!==imp)return false;
