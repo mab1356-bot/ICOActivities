@@ -746,7 +746,16 @@ function getData(k){try{var v=JSON.parse(localStorage.getItem(k)||'[]');return A
 function toDB(key,item){
   var res=Object.assign({},item);
   if(key==='actbk_persons'){res.firstname=item.firstName;delete res.firstName;res.lastname=item.lastName;delete res.lastName;res.personnelid=item.personnelId;delete res.personnelId;res.passwordhash=item.passwordHash;delete res.passwordHash}
-  else if(key==='actbk_activities'){res.enddate=item.endDate;delete res.endDate;res.starttime=item.startTime;delete res.startTime;res.endtime=item.endTime;delete res.endTime;res.topicid=item.topicId;delete res.topicId;res.createdby=item.createdBy;delete res.createdBy;res.createdat=item.createdAt;delete res.createdAt;res.privatedescription=item.privateDescription;delete res.privateDescription}
+  else if(key==='actbk_activities'){
+    res.enddate=item.endDate;delete res.endDate;
+    res.starttime=item.startTime;delete res.startTime;
+    res.endtime=item.endTime;delete res.endTime;
+    res.topicid=item.topicId;delete res.topicId;
+    res.createdby=item.createdBy;delete res.createdBy;
+    res.createdat=item.createdAt;delete res.createdAt;
+    res.privatedescription=item.privateDescription;delete res.privateDescription;
+    res.onlyforme=item.onlyForMe;delete res.onlyForMe;
+  }
   else if(key==='actbk_importance'){res.is_key=item.isKey===true;delete res.isKey}
   else if(key==='actbk_planning'){res.proposeddate=item.proposedDate;delete res.proposedDate;res.importanceid=item.importanceId;delete res.importanceId;res.locationhint=item.locationHint;delete res.locationHint;res.createdby=item.createdBy;delete res.createdBy;res.createdat=item.createdAt;delete res.createdAt;res.convertedactivityid=item.convertedActivityId;delete res.convertedActivityId;res.convertedat=item.convertedAt;delete res.convertedAt;res.cancelreason=item.cancelReason;delete res.cancelReason}
   delete res.created_at;
@@ -755,7 +764,16 @@ function toDB(key,item){
 function fromDB(key,item){
   var res=Object.assign({},item);
   if(key==='actbk_persons'){res.firstName=item.firstname;delete res.firstname;res.lastName=item.lastname;delete res.lastname;res.personnelId=item.personnelid;delete res.personnelid;res.passwordHash=item.passwordhash;delete res.passwordhash}
-  else if(key==='actbk_activities'){res.endDate=item.enddate;delete res.enddate;res.startTime=item.starttime;delete res.starttime;res.endTime=item.endtime;delete res.endtime;res.topicId=item.topicid;delete res.topicid;res.createdBy=item.createdby;delete res.createdby;res.createdAt=item.createdat;delete res.createdat;res.privateDescription=item.privatedescription;delete res.privatedescription}
+  else if(key==='actbk_activities'){
+    res.endDate=item.enddate;delete res.enddate;
+    res.startTime=item.starttime;delete res.starttime;
+    res.endTime=item.endtime;delete res.endtime;
+    res.topicId=item.topicid;delete res.topicid;
+    res.createdBy=item.createdby;delete res.createdby;
+    res.createdAt=item.createdat;delete res.createdat;
+    res.privateDescription=item.privatedescription;delete res.privatedescription;
+    res.onlyForMe=item.onlyforme===true;delete res.onlyforme;
+  }
   else if(key==='actbk_importance'){res.isKey=item.is_key===true;delete res.is_key}
   else if(key==='actbk_planning'){res.proposedDate=item.proposeddate;delete res.proposeddate;res.importanceId=item.importanceid;delete res.importanceid;res.locationHint=item.locationhint;delete res.locationhint;res.createdBy=item.createdby;delete res.createdby;res.createdAt=item.createdat;delete res.createdat;res.convertedActivityId=item.convertedactivityid;delete res.convertedactivityid;res.convertedAt=item.convertedat;delete res.convertedat;res.cancelReason=item.cancelreason;delete res.cancelreason}
   return res;
@@ -1305,7 +1323,6 @@ async function saveActivity(){
   if (location === 'سایر') location = val('act_location_other') || 'سایر';
   var onlyForMe = $('act_only_for_me').checked;
 
-  // توضیحات تکمیلی برای همه قابل ثبت است
   var privateDescription=val('act_private_desc');
   
   var checkedParticipants=getSelectedParticipants();var session=getSession();
