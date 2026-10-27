@@ -2,7 +2,7 @@
    Service Worker — ثبت فعالیت ماهانه
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.1.6';
+const CACHE_VERSION = 'actbk-v1.1.8';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
