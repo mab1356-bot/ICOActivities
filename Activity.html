@@ -822,27 +822,58 @@ function fromDB(key,item){
 }
 
 async function setData(key,data){
-  localStorage.setItem(key,JSON.stringify(data));
-  if(!supabaseClient) return true;
-  
   const tableName=TABLE_MAP[key];
-  if(!tableName) return true;
+  if(!tableName){
+    localStorage.setItem(key,JSON.stringify(data));
+    return true;
+  }
+  
+  const previousState = localStorage.getItem(key);
+  localStorage.setItem(key,JSON.stringify(data));
+  
+  if(!supabaseClient) return true;
   
   const dbData=data.map(item=>toDB(key,item));
   
   try{
-    const { error } = await supabaseClient.from(tableName).upsert(dbData, { onConflict: 'id' });
+    // استفاده از select() برای تایید اینکه واقعاً ذخیره شده
+    const { data: resultData, error } = await supabaseClient
+      .from(tableName)
+      .upsert(dbData, { onConflict: 'id' })
+      .select();
+    
     if(error){
-      showAlert('خطا در ذخیره‌سازی ابری: ' + error.message, 'error');
-      setTimeout(() => checkDbConnection(), 1500);
-      return false;
+      showAlert('❌ خطا در ذخیره‌سازی ابری:\n' + error.message, 'error');
+      if (navigator.onLine) {
+        if(previousState !== null) localStorage.setItem(key, previousState);
+        else localStorage.removeItem(key);
+        return false;
+      }
+      return true;
     }
+    
+    // بررسی اینکه آیا تمام رکوردها ذخیره شدند
+    if (resultData && resultData.length < dbData.length) {
+      const blocked = dbData.length - resultData.length;
+      showAlert('⚠️ هشدار: ' + blocked + ' رکورد از ' + dbData.length + ' رکورد ذخیره نشد.\n\nدلیل: در Supabase، دسترسی INSERT/UPDATE برای جدول "' + tableName + '" و نقش anon فعال نیست.\n\nرفع: در Supabase Dashboard → Authentication → Policies، سیاست INSERT و UPDATE را فعال کنید.', 'warning');
+      if (navigator.onLine) {
+        if(previousState !== null) localStorage.setItem(key, previousState);
+        else localStorage.removeItem(key);
+        return false;
+      }
+    }
+    
     setConnectionStatus('online', activeServerName);
     return true;
   }catch(e){
-    showAlert('خطا در برقراری ارتباط با سرور: ' + e.message, 'error');
-    setTimeout(() => checkDbConnection(), 1500);
-    return false;
+    if (navigator.onLine) {
+      showAlert('❌ خطا در برقراری ارتباط با سرور: ' + e.message, 'error');
+      if(previousState !== null) localStorage.setItem(key, previousState);
+      else localStorage.removeItem(key);
+      setTimeout(() => checkDbConnection(), 1500);
+      return false;
+    }
+    return true;
   }
 }
 
@@ -856,18 +887,38 @@ async function syncFromCloud(showMessage){
   const btn=$('btn_sync_cloud');
   if(btn&&showMessage){btn.textContent='⏳...';btn.disabled=true}
   
-  let anySuccess = false;
-  try{
-    for(let localKey in TABLE_MAP){
-      const tableName=TABLE_MAP[localKey];
-      const localData=getData(localKey);
-      if(localData.length > 0){
-        const dbData = localData.map(item=>toDB(localKey,item));
-        const { error } = await supabaseClient.from(tableName).upsert(dbData, { onConflict: 'id' });
-        if(error) console.warn(`[Sync] Push error for ${localKey}:`, error.message);
+  let pushFailed = false;
+  let pushDetails = [];
+  
+  // 1. ارسال اطلاعات محلی به سرور (Push) با بررسی دقیق
+  for(let localKey in TABLE_MAP){
+    const tableName=TABLE_MAP[localKey];
+    const localData=getData(localKey);
+    if(localData.length > 0){
+      const dbData = localData.map(item=>toDB(localKey,item));
+      try {
+        const { data: resultData, error } = await supabaseClient
+          .from(tableName)
+          .upsert(dbData, { onConflict: 'id' })
+          .select();
+        
+        if(error){
+          pushFailed = true;
+          pushDetails.push(tableName + ': ' + error.message);
+        } else if (resultData && resultData.length < dbData.length) {
+          pushFailed = true;
+          const blocked = dbData.length - resultData.length;
+          pushDetails.push(tableName + ': ' + blocked + ' رکورد ذخیره نشد (RLS)');
+        }
+      } catch(e) {
+        pushFailed = true;
+        pushDetails.push(tableName + ': ' + e.message);
       }
     }
+  }
 
+  // 2. دریافت اطلاعات از سرور (Pull)
+  if (!pushFailed) {
     for(let localKey in TABLE_MAP){
       const tableName=TABLE_MAP[localKey];
       const { data, error } = await supabaseClient.from(tableName).select('*');
@@ -876,16 +927,13 @@ async function syncFromCloud(showMessage){
         localStorage.setItem(localKey, JSON.stringify(converted));
       }
     }
-    anySuccess = true;
-  }catch(e){
-    console.warn(`[Sync] Failed:`,e.message);
   }
 
   if(btn&&showMessage){btn.textContent='🔄 بروزرسانی';btn.disabled=false}
   
-  if(anySuccess){
+  if(!pushFailed){
     setConnectionStatus('online', activeServerName);
-    if(showMessage)showAlert('همگام‌سازی انجام شد: اطلاعات کلاینت ارسال و اطلاعات سرور دریافت شد.','success');
+    if(showMessage)showAlert('همگام‌سازی کامل انجام شد.','success');
     try{
       refreshDropdowns();renderPersons();renderTopics();renderImportance();
       renderHolidays();renderCalendar();renderRecords();renderDayActs();
@@ -894,7 +942,7 @@ async function syncFromCloud(showMessage){
     return{ok:true};
   }else{
     setConnectionStatus('offline');
-    if(showMessage)showAlert('خطا در همگام‌سازی اطلاعات.','error');
+    if(showMessage)showAlert('⚠️ همگام‌سازی ناقص:\n\n' + pushDetails.join('\n') + '\n\nدسترسی INSERT/UPDATE در Supabase را بررسی کنید.','warning');
     return{ok:false};
   }
 }
@@ -942,7 +990,7 @@ var alertTimer=null;
 function showAlert(msg,type){
   var box=$('alert-box');if(!box){alert(msg);return}
   box.className='alert alert-'+(type||'error');box.textContent=msg;box.style.display='block';
-  clearTimeout(alertTimer);alertTimer=setTimeout(()=>{box.style.display='none'},10000);
+  clearTimeout(alertTimer);alertTimer=setTimeout(()=>{box.style.display='none'},15000);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function closePopups(){var p=document.querySelectorAll('.datepicker-popup');for(var i=0;i<p.length;i++)if(p[i].parentNode)p[i].parentNode.removeChild(p[i])}
@@ -1068,10 +1116,14 @@ function renderPersons(){
 async function deletePerson(id){
   if(!confirm('حذف کاربر باعث حذف نام او از اقدامات می‌شود. مطمئن؟'))return;
   if(id===getSession().personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
-  if(supabaseClient){
-    try{await supabaseClient.from('persons').delete().eq('id',id);}catch(e){}
+  
+  if(supabaseClient && navigator.onLine){
+    const { data: deleted, error } = await supabaseClient.from('persons').delete().eq('id',id).select();
+    if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
+    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول persons فعال نیست.','error');return;}
   }
-  setData(KEYS.persons,getData(KEYS.persons).filter(p=>p.id!==id));
+  
+  localStorage.setItem(KEYS.persons, JSON.stringify(getData(KEYS.persons).filter(p=>p.id!==id)));
   const acts=getData(KEYS.acts);let changed=false;
   acts.forEach(a=>{if(a.participants&&a.participants.indexOf(id)!==-1){a.participants=a.participants.filter(pid=>pid!==id);changed=true}});
   if(changed)await setData(KEYS.acts,acts);
@@ -1097,10 +1149,14 @@ async function deleteTopic(id){
   var used=getData(KEYS.acts).filter(a=>a.topicId===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده و قابل حذف نیست.');return}
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClient){
-    try{await supabaseClient.from('topics').delete().eq('id',id);}catch(e){}
+  
+  if(supabaseClient && navigator.onLine){
+    const { data: deleted, error } = await supabaseClient.from('topics').delete().eq('id',id).select();
+    if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
+    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول topics فعال نیست.','error');return;}
   }
-  setData(KEYS.topics,getData(KEYS.topics).filter(t=>t.id!==id));
+  
+  localStorage.setItem(KEYS.topics, JSON.stringify(getData(KEYS.topics).filter(t=>t.id!==id)));
   renderTopics();refreshDropdowns();showAlert('حذف شد.','success');
 }
 
@@ -1132,10 +1188,14 @@ async function deleteImportance(id){
   var used=getData(KEYS.acts).filter(a=>a.importance===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده.','error');return}
   if(!confirm('از حذف «'+lv.name+'» مطمئن هستید؟'))return;
-  if(supabaseClient){
-    try{await supabaseClient.from('importance_levels').delete().eq('id',id);}catch(e){}
+  
+  if(supabaseClient && navigator.onLine){
+    const { data: deleted, error } = await supabaseClient.from('importance_levels').delete().eq('id',id).select();
+    if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
+    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول importance_levels فعال نیست.','error');return;}
   }
-  setData(KEYS.importance,levels.filter(x=>x.id!==id));
+  
+  localStorage.setItem(KEYS.importance, JSON.stringify(levels.filter(x=>x.id!==id)));
   renderImportance();refreshDropdowns();showAlert('حذف شد.','success');
 }
 function renderImportance(){
@@ -1162,10 +1222,15 @@ async function saveHoliday(){
 }
 async function deleteHoliday(id){
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClient){
-    try{await supabaseClient.from('holidays').delete().eq('id',id);}catch(e){}
+  
+  if(supabaseClient && navigator.onLine){
+    const { data: deleted, error } = await supabaseClient.from('holidays').delete().eq('id',id).select();
+    if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
+    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول holidays فعال نیست.','error');return;}
   }
-  setData(KEYS.holidays,getData(KEYS.holidays).filter(h=>h.id!==id));renderHolidays();showAlert('حذف شد.','success');
+  
+  localStorage.setItem(KEYS.holidays, JSON.stringify(getData(KEYS.holidays).filter(h=>h.id!==id)));
+  renderHolidays();showAlert('حذف شد.','success');
 }
 function renderHolidays(){
   var holidays=getData(KEYS.holidays);holidays.sort((a,b)=>jalaliToTimestamp(a.date)-jalaliToTimestamp(b.date));
@@ -1518,6 +1583,7 @@ function afterSave(msg){
 async function joinActivity(id){
   var acts=getData(KEYS.acts);var session=getSession();if(!session)return;
   var found=false;
+  var originalActs = JSON.parse(JSON.stringify(acts));
   for(var i=0;i<acts.length;i++){
     if(acts[i].id===id){
       if(!acts[i].participants) acts[i].participants=[];
@@ -1528,16 +1594,18 @@ async function joinActivity(id){
       break;
     }
   }
-  if(found){
-    if(await setData(KEYS.acts,acts)){
-      showAlert('به شرکت‌کنندگان اضافه شدید.','success');
-      renderDayActs();renderRecords();renderCalendar();renderWeekView();
-      // بستن مدال باز
-      var overlays = document.querySelectorAll('.modal-overlay');
-      overlays.forEach(o => { if (o.innerHTML.includes('جزئیات اقدام') || o.innerHTML.includes('پیوستن به اقدام')) o.remove(); });
-    }
-  } else {
+  
+  if(!found){
     showAlert('از قبل در این اقدام هستید.','warning');
+    return;
+  }
+  
+  if(await setData(KEYS.acts,acts)){
+    showAlert('به شرکت‌کنندگان اضافه شدید.','success');
+    renderDayActs();renderRecords();renderCalendar();renderWeekView();
+  } else {
+    localStorage.setItem(KEYS.acts, JSON.stringify(originalActs));
+    renderDayActs();renderRecords();renderCalendar();renderWeekView();
   }
 }
 
@@ -1628,12 +1696,18 @@ async function deleteAct(id){
   var session=getSession();var priv=session.role==='admin'||session.role==='manager';
   if(!priv){if(a.createdBy!==session.personId){showAlert('اجازه حذف ندارید.','error');return}if(a.participants.length>1){showAlert('شرکت‌کننده دیگر دارد.','error');return}}
   if(!confirm('از حذف مطمئن هستید؟'))return;
-  if(supabaseClient){
-    try{await supabaseClient.from('activities').delete().eq('id',id);}catch(e){}
+  
+  if(supabaseClient && navigator.onLine){
+    const { data: deleted, error } = await supabaseClient.from('activities').delete().eq('id',id).select();
+    if(error){showAlert('❌ خطا در حذف:\n'+error.message,'error');return;}
+    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد!\n\nرکورد در Supabase باقی مانده است. دلیل: دسترسی DELETE برای جدول activities و نقش anon فعال نیست.\n\nرفع: در Supabase → Authentication → Policies → جدول activities، یک سیاست DELETE بسازید و USING را true قرار دهید.','error');return;}
   }
-  setData(KEYS.acts,getData(KEYS.acts).filter(x=>x.id!==id));
+  
+  localStorage.setItem(KEYS.acts, JSON.stringify(getData(KEYS.acts).filter(x=>x.id!==id)));
+  
   if($('act_id').value===id)resetActivityForm(true);
-  renderDayActs();showAlert('حذف شد.','success');
+  renderDayActs();
+  showAlert('اقدام با موفقیت حذف شد.','success');
 }
 
 function renderRecords(){
@@ -1741,10 +1815,14 @@ async function deletePlan(id){
   var p=getData(KEYS.planning).find(x=>x.id===id);if(!p)return;
   if(p.status==='converted'){showAlert('موضوع تبدیل‌شده قابل حذف نیست.','warning');return}
   if(!confirm('حذف «'+p.title+'»؟'))return;
-  if(supabaseClient){
-    try{await supabaseClient.from('planning_topics').delete().eq('id',id);}catch(e){}
+  
+  if(supabaseClient && navigator.onLine){
+    const { data: deleted, error } = await supabaseClient.from('planning_topics').delete().eq('id',id).select();
+    if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
+    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول planning_topics فعال نیست.','error');return;}
   }
-  setData(KEYS.planning,getData(KEYS.planning).filter(x=>x.id!==id));
+  
+  localStorage.setItem(KEYS.planning, JSON.stringify(getData(KEYS.planning).filter(x=>x.id!==id)));
   renderPlanning();updatePlanningBadge();showAlert('حذف شد.','success');
 }
 function renderPlanning(){
