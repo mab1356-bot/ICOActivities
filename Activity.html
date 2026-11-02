@@ -118,22 +118,21 @@ tbody tr:last-child td{border-bottom:0}
 .day-status{font-size:11px;margin-top:4px;color:var(--text2);font-weight:600}
 .holiday-title{font-size:11px;color:var(--danger);font-family:var(--font-main);margin-top:2px;font-weight:700}
 
-/* نمای هفته (جدولی) */
+/* نمای هفته (جدولی فشرده) */
 .week-nav{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:10px;background:var(--surface2);border-radius:var(--r-md);border:1px solid var(--border)}
 .week-nav #week_label{flex:1;text-align:center;font-weight:800;font-family:var(--font-main);font-size:var(--fmd);color:var(--primaryI);min-width:200px}
 .week-grid-wrap { overflow-x: auto; width: 100%; border: 1px solid var(--border); border-radius: var(--r-md); }
 .week-grid-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 800px; }
-.week-grid-table th, .week-grid-table td { border: 1px solid var(--border); padding: 4px; vertical-align: top; }
+.week-grid-table th, .week-grid-table td { border: 1px solid var(--border); padding: 2px; vertical-align: top; }
 .week-grid-table th { background: var(--surface2); text-align: center; position: relative; padding-bottom: 24px; font-family: var(--font-main); }
 .week-grid-table .btn-add-week { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; font-size: 12px; background: var(--primary); color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
 .week-grid-table .btn-add-week:hover { background: var(--primaryH); }
-.hour-cell { width: 60px; text-align: center; font-weight: bold; background: var(--surface3); vertical-align: middle; }
-.slot-cell { height: 60px; position: relative; vertical-align: top; }
-.slot-act { border-right: 3px solid var(--primary); background: var(--surface2); padding: 4px; margin-bottom: 4px; border-radius: 4px; position: relative; font-family: var(--font-body); }
-.slot-act-title { font-weight: 800; color: var(--primaryI); font-size: 10px; padding-left: 16px; }
-.slot-act-desc { font-size: 10px; margin-top: 2px; line-height: 1.3; }
-.slot-act-meta { font-size: 9px; color: var(--text2); margin-top: 2px; }
-.slot-act .btn-edit-week { width: 14px; height: 14px; font-size: 8px; top: 2px; left: 2px; position: absolute; background: var(--warning); color: #fff; border: 0; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.hour-cell { width: 50px; text-align: center; font-weight: bold; background: var(--surface3); vertical-align: middle; font-size: 10px;}
+.slot-cell { height: 40px; position: relative; vertical-align: top; }
+.slot-act { cursor: pointer; border-right: 3px solid var(--primary); background: var(--surface2); padding: 2px 4px; margin-bottom: 2px; border-radius: 4px; font-family: var(--font-body); position: relative; transition: all 0.2s; }
+.slot-act:hover { background: var(--surface3); }
+.slot-act-desc { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 14px; }
+.slot-act .btn-edit-week { width: 14px; height: 14px; font-size: 8px; top: 2px; left: 2px; position: absolute; background: var(--warning); color: #fff; border: 0; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
 
 .date-picker,.time-picker{cursor:pointer;background:var(--surface)}
 .datepicker-popup{position:absolute;right:0;top:100%;z-index:1000;background:var(--surface);border:1px solid var(--borderS);border-radius:var(--r-md);box-shadow:var(--e3);padding:15px;width:290px;max-width:95vw;direction:rtl}
@@ -1283,20 +1282,15 @@ function renderWeekView(){
       
       html+='<td class="slot-cell">';
       dayActs.forEach(a=>{
-        var isJoined=selfId&&a.participants.indexOf(selfId)!==-1;
         var canEdit=isPriv()||a.createdBy===selfId;
         var color=getImpColor(a.importance);
         
-        html+='<div class="slot-act" style="border-right-color:'+color+';'+(a.onlyforme?'background:var(--warningS);':'')+'">';
+        html+='<div class="slot-act" onclick="window.showActivityDetails(\''+esc(a.id)+'\')" style="border-right-color:'+color+';'+(a.onlyforme?'background:var(--warningS);':'')+'">';
         if(canEdit){
-            html+='<button class="btn-edit-week" onclick="window.editAct(\''+esc(a.id)+'\')" title="ویرایش">✏️</button>';
+            html+='<button class="btn-edit-week" onclick="event.stopPropagation(); window.editAct(\''+esc(a.id)+'\')" title="ویرایش">✏️</button>';
         }
-        html+='<div class="slot-act-title">'+esc(topicName(a.topicId))+'</div>';
-        html+='<div class="slot-act-desc">'+esc(a.description.length>60?a.description.substring(0,60)+'...':a.description)+'</div>';
-        html+='<div class="slot-act-meta">⏰ '+esc(a.startTime)+' - '+esc(a.endTime)+'</div>';
-        if(!isJoined){
-           html+='<button class="week-join-btn" data-week-join="'+esc(a.id)+'" style="padding:2px;margin-top:2px;font-size:9px">🤝 پیوستن</button>';
-        }
+        // فقط شرح اقدام را به صورت خلاصه نمایش می‌دهیم
+        html+='<div class="slot-act-desc">'+esc(a.description)+'</div>';
         html+='</div>';
       });
       html+='</td>';
@@ -1305,6 +1299,40 @@ function renderWeekView(){
   });
   html+='</tbody></table>';
   container.innerHTML=html;
+}
+
+function showActivityDetails(id) {
+    var a = findById(getData(KEYS.acts), id);
+    if (!a) return;
+    var pNames = a.participants.map(pid => personName(pid)).join('، ');
+    
+    var html = '<div class="modal">';
+    html += '<h3>' + esc(topicName(a.topicId)) + '</h3>';
+    
+    var dStr = (a.endDate && a.endDate !== a.date) ? esc(a.date) + ' تا ' + esc(a.endDate) : esc(a.date);
+    html += '<div class="form-group"><label>تاریخ:</label><div>' + dStr + '</div></div>';
+    html += '<div class="form-group"><label>ساعت:</label><div>' + esc(a.startTime) + ' - ' + esc(a.endTime) + ' (' + esc(fmtHours(a.hours)) + ')</div></div>';
+    html += '<div class="form-group"><label>شرح اقدام:</label><div style="background:var(--surface2);padding:10px;border-radius:6px;line-height:1.8">' + esc(a.description) + '</div></div>';
+    html += '<div class="form-group"><label>محل برگزاری:</label><div>' + esc(a.location || '—') + '</div></div>';
+    html += '<div class="form-group"><label>شرکت‌کنندگان:</label><div><span class="chip">' + esc(pNames) + '</span></div></div>';
+    html += '<div class="form-group"><label>درجه اهمیت:</label><div>' + impBadge(a.importance) + '</div></div>';
+    
+    if (a.privateDescription) {
+        html += '<div class="form-group"><label>توضیحات تکمیلی:</label><div style="background:var(--surface2);padding:10px;border-radius:6px;">' + esc(a.privateDescription) + '</div></div>';
+    }
+    
+    if (a.onlyforme) {
+        html += '<div class="alert alert-warning" style="display:block;margin-top:10px;">👤 این اقدام فقط برای شما ثبت شده است.</div>';
+    }
+
+    html += '<div class="modal-actions" style="margin-top:20px;"><button class="btn btn-secondary" onclick="this.closest(\'.modal-overlay\').remove()">بستن</button></div>';
+    html += '</div>';
+    
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = html;
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
 }
 
 function openNewActivityForDate(dateStr) {
@@ -2246,6 +2274,7 @@ window.renderPlanning = renderPlanning;
 window.onLocationChange = onLocationChange;
 window.editAct = editAct; 
 window.openNewActivityForDate = openNewActivityForDate;
+window.showActivityDetails = showActivityDetails;
 
 })();
 </script>
