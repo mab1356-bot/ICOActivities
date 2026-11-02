@@ -269,7 +269,7 @@ tbody tr:last-child td{border-bottom:0}
     <div id="setup_form" class="hidden">
       <div class="form-group"><label>نام:</label><input type="text" id="setup_first"></div>
       <div class="form-group"><label>نام خانوادگی:</label><input type="text" id="setup_last"></div>
-      <div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="setup_pid"></div>
+      <div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="setup_pid" maxlength="6" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
       <div class="form-group"><label>نام کاربری:</label><input type="text" id="setup_username" autocomplete="username"></div>
       <div class="form-group"><label>کلمه عبور (حداقل ۴ کاراکتر):</label><input type="password" id="setup_password" autocomplete="new-password"></div>
       <button class="btn btn-success" style="width:100%" id="btn_setup">ایجاد حساب ادمین</button>
@@ -325,7 +325,7 @@ tbody tr:last-child td{border-bottom:0}
         <div class="form-row">
           <div class="form-group"><label>نام:</label><input type="text" id="p_first_name"></div>
           <div class="form-group"><label>نام خانوادگی:</label><input type="text" id="p_last_name"></div>
-          <div class="form-group"><label>شماره پرسنلی (الزامی):</label><input type="text" id="p_personnel_id"></div>
+          <div class="form-group"><label>شماره پرسنلی (الزامی):</label><input type="text" id="p_personnel_id" maxlength="6" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="حداکثر ۶ رقم"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>نام کاربری:</label><input type="text" id="p_username" autocomplete="off"></div>
@@ -762,7 +762,7 @@ function fireChange(el){try{el.dispatchEvent(new Event('change',{bubbles:true}))
 function getSession(){try{return JSON.parse(sessionStorage.getItem('actbk_session')||'null')}catch(e){return null}}
 function setSession(s){sessionStorage.setItem('actbk_session',JSON.stringify(s))}
 function clearSession(){sessionStorage.removeItem('actbk_session')}
-function isAdmin(){var s=getSession();return s&&s.role==='admin'}
+function isAdmin(){var s=getSession();return s&&(s.role==='admin'||s.role==='superadmin')}
 function isPriv(){var s=getSession();return s&&(s.role==='admin'||s.role==='manager'||s.role==='superadmin')}
 
 const THEME_KEY='actbk_theme';
@@ -799,6 +799,14 @@ const TABLE_MAP={'actbk_persons':'persons','actbk_topics':'topics','actbk_activi
 const DEFAULT_IMPORTANCE=[{id:'current',name:'اقدام جاری',color:'#3498db',isKey:false},{id:'important',name:'مهم',color:'#f39c12',isKey:false},{id:'very_important',name:'خیلی مهم',color:'#e74c3c',isKey:true}];
 
 function getData(k){try{var v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}}
+
+function sortPersonsById(persons) {
+    return persons.sort((a, b) => {
+        const idA = Number(a.personnelId) || 0;
+        const idB = Number(b.personnelId) || 0;
+        return idA - idB;
+    });
+}
 
 function toDB(key,item){
   var res=Object.assign({},item);
@@ -1002,7 +1010,8 @@ function showAlert(msg,type){
 function closePopups(){var p=document.querySelectorAll('.datepicker-popup');for(var i=0;i<p.length;i++)if(p[i].parentNode)p[i].parentNode.removeChild(p[i])}
 
 function refreshDropdowns(){
-  var persons=getData(KEYS.persons),i,j,pd=document.querySelectorAll('.person-dropdown');
+  var persons = sortPersonsById(getData(KEYS.persons));
+  var i,j,pd=document.querySelectorAll('.person-dropdown');
   for(i=0;i<pd.length;i++){
     var s=pd[i],cur=s.value,allowAll=s.dataset.all==='1';
     var html='<option value="">'+(allowAll?'همه':'انتخاب کنید...')+'</option>';
@@ -1050,7 +1059,8 @@ function showSection(id){
 
 function populateParticipants(preselected){
   var container=$('participants_checkboxes');if(!container)return;
-  var persons=getData(KEYS.persons);var session=getSession();if(!session)return;
+  var persons=sortPersonsById(getData(KEYS.persons));
+  var session=getSession();if(!session)return;
   var isPrivileged=(session.role==='admin'||session.role==='manager'||session.role==='superadmin');var selfId=session.personId;
   if(!preselected||!preselected.length)preselected=[selfId];
   if(!persons.length){container.innerHTML='<p style="padding:10px;color:#999">هنوز کاربری ثبت نشده است.</p>';return}
@@ -1089,6 +1099,7 @@ async function savePerson(){
   const id=val('p_id');const first=val('p_first_name'),last=val('p_last_name'),pid=val('p_personnel_id');
   const username=val('p_username'),password=val('p_password'),role=val('p_role');
   if(!first||!last||!pid){showAlert('نام، نام خانوادگی و شماره پرسنلی الزامی است.');return}
+  if(isNaN(pid) || pid.length > 6){showAlert('شماره پرسنلی باید یک عدد حداکثر ۶ رقمی باشد.');return}
   if(!username){showAlert('نام کاربری الزامی است.');return}
   const persons=getData(KEYS.persons);
   if(persons.some(p=>p.username===username&&p.id!==id)){showAlert('این نام کاربری قبلاً ثبت شده.');return}
@@ -1116,7 +1127,8 @@ function editPerson(id){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderPersons(){
-  const persons=getData(KEYS.persons),acts=getData(KEYS.acts),c=$('person_list_container');
+  const persons=sortPersonsById(getData(KEYS.persons));
+  const acts=getData(KEYS.acts),c=$('person_list_container');
   if(!persons.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">هنوز کاربری ثبت نشده.</p>';return}
   let h='<table><tr><th>نام</th><th>نام خانوادگی</th><th>شماره پرسنلی</th><th>نام کاربری</th><th>نقش</th><th>تعداد اقدام</th><th>عملیات</th></tr>';
   persons.forEach(p=>{
@@ -2167,6 +2179,7 @@ async function handleSetup(){
   const first=val('setup_first'),last=val('setup_last'),pid=val('setup_pid');
   const username=val('setup_username'),password=val('setup_password');
   if(!first||!last||!pid||!username||!password){showAlert('همه فیلدها الزامی.');return}
+  if(isNaN(pid) || pid.length > 6){showAlert('شماره پرسنلی باید یک عدد حداکثر ۶ رقمی باشد.');return}
   if(password.length<4){showAlert('رمز حداقل ۴ کاراکتر.');return}
   const persons=getData(KEYS.persons);
   if(persons.some(p=>p.username===username)){showAlert('نام کاربری تکراری.');return}
