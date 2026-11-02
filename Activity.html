@@ -187,6 +187,16 @@ tbody tr:last-child td{border-bottom:0}
 #print_area{display:none}
 @page{size:A4 landscape;margin:1cm}
 @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body>*:not(#print_area){display:none!important}#print_area{display:block!important;width:100%}.db-details-page{page-break-before:always!important;break-before:page!important}.db-columns{page-break-inside:avoid}tr{page-break-inside:avoid}.no-print{display:none!important}}
+
+/* استایل‌های جدول فشرده (سوابق و اقدامات روز) */
+.records-table { table-layout: fixed; width: 100%; min-width: 100% !important; font-size: 11px; border-collapse: collapse; }
+.records-table th, .records-table td { padding: 6px 4px !important; white-space: normal !important; word-break: break-word; text-align: center; border: 1px solid var(--border); vertical-align: middle;}
+.records-table th { background: var(--surface2); font-size: 10px; color: var(--text2); font-weight: 700; }
+.records-table .btn-icon-sm { padding: 4px; font-size: 12px; line-height: 1; border-radius: 4px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin: 1px; }
+.records-table .btn-icon-sm.btn-warning { background: var(--warning); color: #fff; }
+.records-table .btn-icon-sm.btn-danger { background: var(--danger); color: #fff; }
+.records-table .btn-icon-sm.btn-success { background: var(--success); color: #fff; }
+
 @media (max-width:900px){
   .app{padding:var(--s3)}
   .top{position:static;padding:12px}
@@ -207,14 +217,7 @@ tbody tr:last-child td{border-bottom:0}
   .dashboard-report{padding:10px}
   .db-header h1{font-size:18px!important}
   .db-kpi-val{font-size:20px}
-  table{min-width:0;border-collapse:separate;border-spacing:0 8px}
-  table thead{display:none}
-  table,table tbody,table tr,table td{display:block;width:100%}
-  table tr{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:8px;margin-bottom:10px}
-  table td{text-align:right;border-bottom:1px solid var(--border);padding:8px 12px;white-space:normal;display:flex;justify-content:space-between;align-items:center;gap:8px}
-  table td:last-child{border-bottom:0;flex-direction:column;align-items:stretch;gap:6px}
-  table td::before{content:attr(data-label);font-weight:700;font-size:var(--fsm);color:var(--text2)}
-
+  
   /* استثنا کردن جدول تقویم از حالت بلوکی موبایل */
   .calendar-table { display: table !important; min-width: 500px !important; border-collapse: collapse !important; border-spacing: 0 !important; }
   .calendar-table thead { display: table-header-group !important; }
@@ -229,6 +232,14 @@ tbody tr:last-child td{border-bottom:0}
   .week-grid-table tbody { display: table-row-group !important; }
   .week-grid-table tr { display: table-row !important; border: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
   .week-grid-table th, .week-grid-table td { display: table-cell !important; border: 1px solid var(--border) !important; padding: 4px !important; text-align: center !important; }
+
+  /* استثنا کردن جدول سوابق */
+  .records-table { display: table !important; min-width: 600px !important; border-collapse: collapse !important; border-spacing: 0 !important; }
+  .records-table thead { display: table-header-group !important; }
+  .records-table tbody { display: table-row-group !important; }
+  .records-table tr { display: table-row !important; border: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+  .records-table th, .records-table td { display: table-cell !important; border: 1px solid var(--border) !important; padding: 6px 4px !important; text-align: center !important; }
+  .records-table td::before { content: none !important; }
 }
 @media (max-width:480px){
   .top{padding:6px 8px}
@@ -1501,25 +1512,37 @@ function renderDayActs(){
   var acts=getData(KEYS.acts).filter(a=>a.date===date||(a.endDate&&jalaliToTimestamp(date)>=jalaliToTimestamp(a.date)&&jalaliToTimestamp(date)<=jalaliToTimestamp(a.endDate)));
   acts.sort((a,b)=>(getImpOrder(b.importance)-getImpOrder(a.importance))||((a.createdAt||0)-(b.createdAt||0)));
   if(!acts.length){c.innerHTML='<p style="padding:20px;text-align:center;color:var(--text3)">برای این روز اقدامی ثبت نشده.</p>';return}
-  var headers='<th>تاریخ</th><th>موضوع</th><th>محل</th><th>مدت</th><th>اهمیت</th><th>شرح</th><th>📝 توضیحات تکمیلی</th><th>شرکت‌کنندگان</th><th>عملیات</th>';
-  var h='<table><tr>'+headers+'</tr>';
+  
+  var headers='<th style="width:6%;">تاریخ</th><th style="width:8%;">موضوع</th><th style="width:8%;">محل</th><th style="width:5%;">مدت</th><th style="width:7%;">اهمیت</th><th style="width:20%;">شرح</th><th style="width:15%;">📝 توضیحات تکمیلی</th><th style="width:12%;">شرکت‌کنندگان</th><th style="width:7%;">عملیات</th>';
+  var h='<table class="records-table"><thead><tr>'+headers+'</tr></thead><tbody>';
+  
   acts.forEach(a=>{
     var dStr=(a.endDate&&a.endDate!==a.date)?esc(a.date)+' تا '+esc(a.endDate):esc(a.date);
     if(a.startTime)dStr+=' ('+esc(a.startTime)+' تا '+esc(a.endTime)+')';
     var parts=a.participants.map(pid=>personName(pid)).join('، ');
     var isJoined=a.participants.indexOf(session.personId)!==-1;var btns='';
-    if(session.role==='admin'||session.role==='manager'){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
-    else if(!isJoined){btns+='<button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
-    else{if(a.createdBy===session.personId)btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> ';if(a.createdBy===session.personId&&a.participants.length<=1)btns+='<button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>'}
+    
+    if(session.role==='admin'||session.role==='manager'){
+        btns+='<button class="btn-icon-sm btn-warning" data-action="edit" data-id="'+esc(a.id)+'" title="ویرایش">✏️</button> ';
+        btns+='<button class="btn-icon-sm btn-danger" data-action="delete" data-id="'+esc(a.id)+'" title="حذف">🗑️</button>';
+        if(!isJoined)btns+=' <button class="btn-icon-sm btn-success" data-action="join" data-id="'+esc(a.id)+'" title="پیوستن">🤝</button>';
+    }
+    else if(!isJoined){
+        btns+='<button class="btn-icon-sm btn-success" data-action="join" data-id="'+esc(a.id)+'" title="پیوستن">🤝</button>';
+    }
+    else{
+        if(a.createdBy===session.personId)btns+='<button class="btn-icon-sm btn-warning" data-action="edit" data-id="'+esc(a.id)+'" title="ویرایش">✏️</button> ';
+        if(a.createdBy===session.personId&&a.participants.length<=1)btns+='<button class="btn-icon-sm btn-danger" data-action="delete" data-id="'+esc(a.id)+'" title="حذف">🗑️</button>';
+    }
     
     var titleStr = esc(a.description);
     if (a.onlyforme) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
 
-    h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+titleStr+'</td>';
-    h+='<td data-label="توضیحات تکمیلی">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
-    h+='<td data-label="شرکت‌کنندگان"><span class="chip">'+esc(parts)+'</span></td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap">'+btns+'</td></tr>';
+    h+='<tr><td>'+dStr+'</td><td>'+esc(topicName(a.topicId))+'</td><td>'+esc(a.location||'—')+'</td><td>'+esc(fmtHours(a.hours))+'</td><td>'+impBadge(a.importance)+'</td><td style="text-align:right">'+titleStr+'</td>';
+    h+='<td style="text-align:right">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
+    h+='<td><span class="chip">'+esc(parts)+'</span></td><td>'+btns+'</td></tr>';
   });
-  c.innerHTML=h+'</table>';
+  c.innerHTML=h+'</tbody></table>';
 }
 function editAct(id){
   var a=findById(getData(KEYS.acts),id);if(!a)return;
@@ -1593,26 +1616,38 @@ function renderRecords(){
   var c=$('records_list_container');
   if(!list.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">رکوردی یافت نشد.</p>';return}
   var session=getSession();
-  var headers='<th>تاریخ</th><th>موضوع</th><th>محل</th><th>مدت</th><th>اهمیت</th><th>شرح</th><th>📝 توضیحات تکمیلی</th><th>شرکت‌کنندگان</th><th>ثبت‌کننده</th><th>عملیات</th>';
-  var h='<table><tr>'+headers+'</tr>';
+  
+  var headers='<th style="width:6%;">تاریخ</th><th style="width:8%;">موضوع</th><th style="width:8%;">محل</th><th style="width:5%;">مدت</th><th style="width:7%;">اهمیت</th><th style="width:20%;">شرح</th><th style="width:15%;">📝 توضیحات تکمیلی</th><th style="width:12%;">شرکت‌کنندگان</th><th style="width:7%;">ثبت‌کننده</th><th style="width:12%;">عملیات</th>';
+  
+  var h='<table class="records-table"><thead><tr>'+headers+'</tr></thead><tbody>';
+  
   list.forEach(a=>{
     var dStr=(a.endDate&&a.endDate!==a.date)?esc(a.date)+' تا '+esc(a.endDate):esc(a.date);
     if(a.startTime)dStr+=' ('+esc(a.startTime)+' تا '+esc(a.endTime)+')';
     var parts=a.participants.map(pid=>personName(pid)).join('، ');
     var creator=a.createdBy?personName(a.createdBy):'-';
     var isJoined=a.participants.indexOf(session.personId)!==-1;var btns='';
-    if(session.role==='admin'||session.role==='manager'){btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button> <button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(a.id)+'">حذف</button>';if(!isJoined)btns+=' <button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
-    else if(!isJoined){btns+='<button class="btn btn-success btn-sm" data-action="join" data-id="'+esc(a.id)+'">پیوستن</button>'}
-    else btns+='<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(a.id)+'">ویرایش</button>';
+    
+    if(session.role==='admin'||session.role==='manager'){
+        btns+='<button class="btn-icon-sm btn-warning" data-action="edit" data-id="'+esc(a.id)+'" title="ویرایش">✏️</button> ';
+        btns+='<button class="btn-icon-sm btn-danger" data-action="delete" data-id="'+esc(a.id)+'" title="حذف">🗑️</button>';
+        if(!isJoined)btns+=' <button class="btn-icon-sm btn-success" data-action="join" data-id="'+esc(a.id)+'" title="پیوستن">🤝</button>';
+    }
+    else if(!isJoined){
+        btns+='<button class="btn-icon-sm btn-success" data-action="join" data-id="'+esc(a.id)+'" title="پیوستن">🤝</button>';
+    }
+    else{
+        btns+='<button class="btn-icon-sm btn-warning" data-action="edit" data-id="'+esc(a.id)+'" title="ویرایش">✏️</button>';
+    }
     
     var titleStr = esc(a.description);
     if (a.onlyforme) titleStr += ' <span class="badge badge-warning" style="font-size:10px">👤 فقط من</span>';
 
-    h+='<tr><td data-label="تاریخ">'+dStr+'</td><td data-label="موضوع">'+esc(topicName(a.topicId))+'</td><td data-label="محل">'+esc(a.location||'—')+'</td><td data-label="مدت">'+esc(fmtHours(a.hours))+'</td><td data-label="اهمیت">'+impBadge(a.importance)+'</td><td data-label="شرح">'+titleStr+'</td>';
-    h+='<td data-label="توضیحات تکمیلی">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
-    h+='<td data-label="شرکت‌کنندگان"><span class="chip">'+esc(parts)+'</span></td><td data-label="ثبت‌کننده"><small>'+esc(creator)+'</small></td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap">'+btns+'</td></tr>';
+    h+='<tr><td>'+dStr+'</td><td>'+esc(topicName(a.topicId))+'</td><td>'+esc(a.location||'—')+'</td><td>'+esc(fmtHours(a.hours))+'</td><td>'+impBadge(a.importance)+'</td><td style="text-align:right">'+titleStr+'</td>';
+    h+='<td style="text-align:right">'+(a.privateDescription?esc(a.privateDescription):'<span style="color:var(--text3)">—</span>')+'</td>';
+    h+='<td><span class="chip">'+esc(parts)+'</span></td><td>'+esc(creator)+'</td><td>'+btns+'</td></tr>';
   });
-  c.innerHTML=h+'</table>';
+  c.innerHTML=h+'</tbody></table>';
 }
 
 const PLAN_STATUS={draft:{label:'ثبت اولیه',color:'#64748b',icon:'📥'},coordinating:{label:'در حال هماهنگی',color:'#d97706',icon:'🔄'},ready:{label:'آماده برنامه‌ریزی',color:'#2563eb',icon:'✅'},converted:{label:'تبدیل‌شده',color:'#059669',icon:'🔗'},cancelled:{label:'منصرف‌شده',color:'#dc2626',icon:'❌'}};
