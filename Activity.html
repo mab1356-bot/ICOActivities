@@ -89,6 +89,7 @@ tbody tr:hover{background:var(--surface2)}
 tbody tr:last-child td{border-bottom:0}
 .badge{padding:3px 9px;border-radius:12px;font-size:var(--fsm);font-weight:700;display:inline-flex;align-items:center;gap:4px;color:#fff;white-space:nowrap;font-family:var(--font-main)}
 .badge-role-admin{background:var(--danger)}.badge-role-manager{background:var(--purple)}.badge-role-user{background:#64748b}
+.badge-role-superadmin{background:#c9a227}
 .chip{background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:2px 8px;font-size:var(--fsm);color:var(--text2);display:inline-block;margin:2px}
 .alert{padding:12px 14px;border-radius:var(--r-md);margin-bottom:15px;display:none;font-size:var(--fmd);font-family:var(--font-main);border:1px solid;animation:slideDown .2s ease-out;white-space:pre-line}
 @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
@@ -264,7 +265,6 @@ tbody tr:last-child td{border-bottom:0}
       <div class="form-group"><label>نام کاربری:</label><input type="text" id="login_username" autocomplete="username"></div>
       <div class="form-group"><label>کلمه عبور:</label><input type="password" id="login_password" autocomplete="current-password"></div>
       <button class="btn btn-success" style="width:100%" id="btn_login">ورود</button>
-      <button class="btn btn-warning hidden" style="width:100%;margin-top:8px" id="btn_offline_login">🔓 ورود آفلاین</button>
     </div>
     <div id="setup_form" class="hidden">
       <div class="form-group"><label>نام:</label><input type="text" id="setup_first"></div>
@@ -314,7 +314,7 @@ tbody tr:last-child td{border-bottom:0}
       <button data-target="activity"><span class="nav-icon">➕</span>ثبت اقدام</button>
       <button data-target="records" data-manager-only="1"><span class="nav-icon">📋</span>سوابق</button>
       <button data-target="reports" data-manager-only="1"><span class="nav-icon">📊</span>گزارش‌گیری</button>
-      <button data-target="settings" data-admin-only="1"><span class="nav-icon">💾</span>پشتیبان‌گیری</button>
+      <button data-target="settings" data-superadmin-only="1"><span class="nav-icon">💾</span>پشتیبان‌گیری</button>
     </aside>
     <main class="content">
       <div id="alert-box" class="alert"></div>
@@ -331,7 +331,7 @@ tbody tr:last-child td{border-bottom:0}
           <div class="form-group"><label>نام کاربری:</label><input type="text" id="p_username" autocomplete="off"></div>
           <div class="form-group"><label>کلمه عبور:</label><input type="password" id="p_password" autocomplete="new-password"></div>
           <div class="form-group"><label>نقش:</label>
-            <select id="p_role"><option value="user">کاربر عادی</option><option value="manager">مدیر</option><option value="admin">ادمین</option></select>
+            <select id="p_role"><option value="user">کاربر عادی</option><option value="manager">مدیر</option><option value="admin">ادمین</option><option value="superadmin">سوپر ادمین</option></select>
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -558,7 +558,7 @@ tbody tr:last-child td{border-bottom:0}
 
       <div id="section-settings" class="card hidden">
         <h2>💾 پشتیبان‌گیری و بازیابی</h2>
-        <div class="alert alert-success" style="display:block;margin-bottom:15px">دیتابیس شما به سرور ابری Supabase متصل است.</div>
+        <div class="alert alert-success" style="display:block;margin-bottom:15px">دسترسی شما به عنوان سوپر ادمین تایید شد. می‌توانید از دیتابیس پشتیبان تهیه کنید.</div>
         <div class="form-group"><button class="btn btn-success" style="width:100%" id="btn_export">دریافت فایل پشتیبان (JSON)</button></div>
         <div class="form-group" style="margin-top:30px;border-top:1px solid var(--border);padding-top:20px">
           <label>بازیابی و ادغام فایل JSON:</label>
@@ -665,7 +665,7 @@ function loadAppVersion() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   چراغ راهنمای اتصال به دیتابیس
+   چراغ راهنمای اتصال و مدیریت قطعی شبکه
    ───────────────────────────────────────────────────────────── */
 let _connTimer = null;
 
@@ -692,6 +692,11 @@ function setConnectionStatus(status, serverName) {
             text.textContent = '✅ اتصال به دیتابیس برقرار است' + (serverName ? ' (' + serverName + ')' : '');
         } else if (status === 'offline') {
             text.textContent = '⛔ اتصال به دیتابیس برقرار نیست — ورود آنلاین ممکن نیست';
+            if (getSession()) {
+                clearSession();
+                showAlert('ارتباط با سرور قطع شد. لطفاً مجدداً وارد شوید.', 'error');
+                setTimeout(() => { $('login_modal').style.display='flex'; $('main_app').style.display='none'; $('user_info').style.display='none'; }, 2000);
+            }
         } else {
             text.textContent = '⏳ در حال بررسی اتصال...';
         }
@@ -724,8 +729,18 @@ function startConnectionMonitor() {
             checkDbConnection();
         }
     }, 60000);
+    
     window.addEventListener('online', () => checkDbConnection());
-    window.addEventListener('offline', () => setConnectionStatus('offline'));
+    window.addEventListener('offline', () => {
+        setConnectionStatus('offline');
+        if (getSession()) {
+            clearSession();
+            showAlert('اتصال اینترنت قطع شد. لطفاً دوباره وارد شوید.', 'error');
+            setTimeout(() => {
+                $('login_modal').style.display='flex'; $('main_app').style.display='none'; $('user_info').style.display='none';
+            }, 2000);
+        }
+    });
     setTimeout(() => checkDbConnection(), 200);
 }
 
@@ -748,7 +763,7 @@ function getSession(){try{return JSON.parse(sessionStorage.getItem('actbk_sessio
 function setSession(s){sessionStorage.setItem('actbk_session',JSON.stringify(s))}
 function clearSession(){sessionStorage.removeItem('actbk_session')}
 function isAdmin(){var s=getSession();return s&&s.role==='admin'}
-function isPriv(){var s=getSession();return s&&(s.role==='admin'||s.role==='manager')}
+function isPriv(){var s=getSession();return s&&(s.role==='admin'||s.role==='manager'||s.role==='superadmin')}
 
 const THEME_KEY='actbk_theme';
 function initTheme(){var t=localStorage.getItem(THEME_KEY)||'light';document.documentElement.setAttribute('data-theme',t);var b=$('themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙'}
@@ -887,38 +902,22 @@ async function syncFromCloud(showMessage){
   const btn=$('btn_sync_cloud');
   if(btn&&showMessage){btn.textContent='⏳...';btn.disabled=true}
   
-  let pushFailed = false;
-  let pushDetails = [];
-  
-  // 1. ارسال اطلاعات محلی به سرور (Push) با بررسی دقیق
-  for(let localKey in TABLE_MAP){
-    const tableName=TABLE_MAP[localKey];
-    const localData=getData(localKey);
-    if(localData.length > 0){
-      const dbData = localData.map(item=>toDB(localKey,item));
-      try {
-        const { data: resultData, error } = await supabaseClient
-          .from(tableName)
-          .upsert(dbData, { onConflict: 'id' })
-          .select();
-        
-        if(error){
-          pushFailed = true;
-          pushDetails.push(tableName + ': ' + error.message);
-        } else if (resultData && resultData.length < dbData.length) {
-          pushFailed = true;
-          const blocked = dbData.length - resultData.length;
-          pushDetails.push(tableName + ': ' + blocked + ' رکورد ذخیره نشد (RLS)');
-        }
-      } catch(e) {
-        pushFailed = true;
-        pushDetails.push(tableName + ': ' + e.message);
-      }
+  let anySuccess = false;
+  try{
+    // به‌روزرسانی اجباری نقش سوپر ادمین قبل از دریافت
+    let persons = getData(KEYS.persons);
+    let adminChanged = false;
+    persons.forEach(p => {
+       if (p.id === 'p1792663888605641' && p.role !== 'superadmin') {
+           p.role = 'superadmin';
+           adminChanged = true;
+       }
+    });
+    if (adminChanged) {
+        await supabaseClient.from('persons').upsert([toDB('actbk_persons', persons.find(p=>p.id==='p1792663888605641'))], { onConflict: 'id' });
     }
-  }
 
-  // 2. دریافت اطلاعات از سرور (Pull)
-  if (!pushFailed) {
+    // دریافت اطلاعات از سرور (Pull) برای همه جداول
     for(let localKey in TABLE_MAP){
       const tableName=TABLE_MAP[localKey];
       const { data, error } = await supabaseClient.from(tableName).select('*');
@@ -927,13 +926,16 @@ async function syncFromCloud(showMessage){
         localStorage.setItem(localKey, JSON.stringify(converted));
       }
     }
+    anySuccess = true;
+  }catch(e){
+    console.warn(`[Sync] Failed:`,e.message);
   }
 
   if(btn&&showMessage){btn.textContent='🔄 بروزرسانی';btn.disabled=false}
   
-  if(!pushFailed){
+  if(anySuccess){
     setConnectionStatus('online', activeServerName);
-    if(showMessage)showAlert('همگام‌سازی کامل انجام شد.','success');
+    if(showMessage)showAlert('اطلاعات از سرور دریافت شد.','success');
     try{
       refreshDropdowns();renderPersons();renderTopics();renderImportance();
       renderHolidays();renderCalendar();renderRecords();renderDayActs();
@@ -942,7 +944,7 @@ async function syncFromCloud(showMessage){
     return{ok:true};
   }else{
     setConnectionStatus('offline');
-    if(showMessage)showAlert('⚠️ همگام‌سازی ناقص:\n\n' + pushDetails.join('\n') + '\n\nدسترسی INSERT/UPDATE در Supabase را بررسی کنید.','warning');
+    if(showMessage)showAlert('خطا در دریافت اطلاعات از سرور.','error');
     return{ok:false};
   }
 }
@@ -972,8 +974,12 @@ function migrateData(){
     if(a.onlyforme===undefined){a.onlyforme=false;changed=true}
   });
   if(changed)setData(KEYS.acts,acts);
+  
   var persons=getData(KEYS.persons),pc=false;
-  persons.forEach(function(p){if(!p.role){p.role='user';pc=true}});
+  persons.forEach(function(p){
+     if(!p.role){p.role='user';pc=true}
+     if(p.id==='p1792663888605641' && p.role!=='superadmin'){p.role='superadmin';pc=true}
+  });
   if(pc)setData(KEYS.persons,persons);
 }
 async function seedImportance(){
@@ -1045,7 +1051,7 @@ function showSection(id){
 function populateParticipants(preselected){
   var container=$('participants_checkboxes');if(!container)return;
   var persons=getData(KEYS.persons);var session=getSession();if(!session)return;
-  var isPrivileged=(session.role==='admin'||session.role==='manager');var selfId=session.personId;
+  var isPrivileged=(session.role==='admin'||session.role==='manager'||session.role==='superadmin');var selfId=session.personId;
   if(!preselected||!preselected.length)preselected=[selfId];
   if(!persons.length){container.innerHTML='<p style="padding:10px;color:#999">هنوز کاربری ثبت نشده است.</p>';return}
   var html='';
@@ -1061,13 +1067,22 @@ function getSelectedParticipants(){var arr=[];document.querySelectorAll('#partic
 
 function applyPermissions(){
   const s=getSession();if(!s)return;
-  const admin=s.role==='admin';const priv=admin||s.role==='manager';
+  const isSuperAdmin=s.role==='superadmin';
+  const admin=s.role==='admin'||isSuperAdmin;
+  const priv=admin||s.role==='manager';
+  
+  document.querySelectorAll('[data-superadmin-only]').forEach(el=>{el.style.display=isSuperAdmin?'':'none'});
   document.querySelectorAll('[data-admin-only]').forEach(el=>{el.style.display=admin?'':'none'});
   document.querySelectorAll('[data-manager-only]').forEach(el=>{el.style.display=priv?'':'none'});
-  $('btn_sync_cloud').style.display=priv?'':'none';
-  const roleLabel=admin?'ادمین':(s.role==='manager'?'مدیر':'کاربر');
+  
+  $('btn_sync_cloud').style.display=''; // دکمه بروزرسانی برای همه
+  const roleLabel=isSuperAdmin?'سوپر ادمین':(admin?'ادمین':(s.role==='manager'?'مدیر':'کاربر'));
   $('current_user').textContent=s.name+' — '+roleLabel;$('user_info').style.display='';
-  if(!priv){['rec_person','rep_person'].forEach(id=>{const el=$(id);if(el){el.value=s.personId;el.disabled=true}});const calEl=$('cal_person');if(calEl){calEl.value='';calEl.disabled=false}}
+  
+  if(!priv){
+    ['rec_person','rep_person'].forEach(id=>{const el=$(id);if(el){el.value=s.personId;el.disabled=true}});
+    const calEl=$('cal_person');if(calEl){calEl.value='';calEl.disabled=false}
+  }
 }
 
 async function savePerson(){
@@ -1109,6 +1124,7 @@ function renderPersons(){
     let rb='<span class="badge badge-role-user">کاربر</span>';
     if(p.role==='admin')rb='<span class="badge badge-role-admin">ادمین</span>';
     else if(p.role==='manager')rb='<span class="badge badge-role-manager">مدیر</span>';
+    else if(p.role==='superadmin')rb='<span class="badge badge-role-superadmin">سوپر ادمین</span>';
     h+=`<tr><td data-label="نام">${esc(p.firstName)}</td><td data-label="نام خانوادگی">${esc(p.lastName)}</td><td data-label="شماره پرسنلی">${esc(p.personnelId)}</td><td data-label="نام کاربری">${esc(p.username||'-')}</td><td data-label="نقش">${rb}</td><td data-label="تعداد">${n}</td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-warning btn-sm" data-action="edit" data-id="${esc(p.id)}">ویرایش</button><button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(p.id)}">حذف</button></td></tr>`;
   });
   c.innerHTML=h+'</table>';
@@ -1633,7 +1649,7 @@ function renderDayActs(){
     var parts=a.participants.map(pid=>personName(pid)).join('، ');
     var isJoined=a.participants.indexOf(session.personId)!==-1;var btns='';
     
-    if(session.role==='admin'||session.role==='manager'){
+    if(session.role==='admin'||session.role==='manager'||session.role==='superadmin'){
         btns+='<button class="btn-icon-sm btn-warning" data-action="edit" data-id="'+esc(a.id)+'" title="ویرایش">✏️</button> ';
         btns+='<button class="btn-icon-sm btn-danger" data-action="delete" data-id="'+esc(a.id)+'" title="حذف">🗑️</button>';
         if(!isJoined)btns+=' <button class="btn-icon-sm btn-success" data-action="join" data-id="'+esc(a.id)+'" title="پیوستن">🤝</button>';
@@ -1657,7 +1673,7 @@ function renderDayActs(){
 }
 function editAct(id){
   var a=findById(getData(KEYS.acts),id);if(!a)return;
-  var session=getSession();var priv=session.role==='admin'||session.role==='manager';
+  var session=getSession();var priv=session.role==='admin'||session.role==='manager'||session.role==='superadmin';
   if(!priv&&a.createdBy!==session.personId&&a.participants.indexOf(session.personId)===-1){showAlert('اجازه ویرایش ندارید.','error');return}
   showSection('activity');
   setActivityEditMode(true);
@@ -1693,7 +1709,7 @@ function editAct(id){
 }
 async function deleteAct(id){
   var a=findById(getData(KEYS.acts),id);if(!a)return;
-  var session=getSession();var priv=session.role==='admin'||session.role==='manager';
+  var session=getSession();var priv=session.role==='admin'||session.role==='manager'||session.role==='superadmin';
   if(!priv){if(a.createdBy!==session.personId){showAlert('اجازه حذف ندارید.','error');return}if(a.participants.length>1){showAlert('شرکت‌کننده دیگر دارد.','error');return}}
   if(!confirm('از حذف مطمئن هستید؟'))return;
   
@@ -1745,7 +1761,7 @@ function renderRecords(){
     var creator=a.createdBy?personName(a.createdBy):'-';
     var isJoined=a.participants.indexOf(session.personId)!==-1;var btns='';
     
-    if(session.role==='admin'||session.role==='manager'){
+    if(session.role==='admin'||session.role==='manager'||session.role==='superadmin'){
         btns+='<button class="btn-icon-sm btn-warning" data-action="edit" data-id="'+esc(a.id)+'" title="ویرایش">✏️</button> ';
         btns+='<button class="btn-icon-sm btn-danger" data-action="delete" data-id="'+esc(a.id)+'" title="حذف">🗑️</button>';
         if(!isJoined)btns+=' <button class="btn-icon-sm btn-success" data-action="join" data-id="'+esc(a.id)+'" title="پیوستن">🤝</button>';
@@ -2117,7 +2133,6 @@ function renderDatepickerPopup(popup,year,month,input){
 
 async function showLogin(){
   $('login_modal').style.display='flex';$('main_app').style.display='none';$('user_info').style.display='none';
-  $('btn_offline_login').classList.add('hidden');
   const connTest=await testSupabaseConnection();
   if(connTest.ok)await syncFromCloud(false);
   const persons=getData(KEYS.persons);
@@ -2128,11 +2143,13 @@ async function showLogin(){
   }else{
     var errMsg=connTest.message||'خطای ناشناخته';
     $('login_msg').innerHTML='<div class="alert alert-error" style="display:block;margin-bottom:12px"><b>⚠️ خطا در اتصال:</b><br>'+esc(errMsg)+'</div>';
-    if(hasAdmin){$('login_form').classList.remove('hidden');$('setup_form').classList.add('hidden');$('btn_offline_login').classList.remove('hidden');$('login_title').textContent='ورود (آفلاین)'}
-    else{$('login_form').classList.add('hidden');$('setup_form').classList.add('hidden');$('login_title').textContent='نیازمند فایل پشتیبان'}
+    $('login_form').classList.add('hidden');$('setup_form').classList.add('hidden');
+    $('login_title').textContent='عدم اتصال به سرور';
+    $('btn_login').disabled = true;
   }
 }
 async function handleLogin(){
+  if(!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return;}
   const username=val('login_username'),password=val('login_password');
   if(!username||!password){showAlert('نام کاربری و رمز الزامی.');return}
   showAlert('در حال بررسی...','success');
@@ -2145,19 +2162,8 @@ async function handleLogin(){
   setSession({personId:p.id,username:p.username,role:p.role||'user',name:p.firstName+' '+p.lastName});
   $('login_modal').style.display='none';await startApp();
 }
-function handleOfflineLogin(){
-  const username=val('login_username'),password=val('login_password');
-  if(!username||!password){showAlert('نام کاربری و رمز الزامی.','error');return}
-  const persons=getData(KEYS.persons);const p=persons.find(x=>x.username===username);
-  if(!p||!p.passwordHash){showAlert('❌ کاربر یافت نشد.','error');return}
-  hashPassword(password,username).then(async function(hash){
-    if(hash!==p.passwordHash){showAlert('❌ رمز اشتباه.','error');return}
-    setSession({personId:p.id,username:p.username,role:p.role||'user',name:p.firstName+' '+p.lastName});
-    $('login_modal').style.display='none';await startApp();
-    showAlert('✅ ورود آفلاین موفق.','success');
-  });
-}
 async function handleSetup(){
+  if(!navigator.onLine){showAlert('برای ایجاد حساب باید به اینترنت متصل باشید.','error');return;}
   const first=val('setup_first'),last=val('setup_last'),pid=val('setup_pid');
   const username=val('setup_username'),password=val('setup_password');
   if(!first||!last||!pid||!username||!password){showAlert('همه فیلدها الزامی.');return}
@@ -2280,7 +2286,6 @@ async function init(){
 
   on('btn_login','click',handleLogin);
   on('btn_setup','click',handleSetup);
-  on('btn_offline_login','click',handleOfflineLogin);
   on('btn_login_import','click',()=>$('login_import_file').click());
   on('login_import_file','change',handleLoginImport);
   on('btn_retry_connection','click',()=>showLogin());
