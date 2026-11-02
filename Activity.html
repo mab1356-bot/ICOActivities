@@ -105,21 +105,19 @@ tbody tr:last-child td{border-bottom:0}
 .participant-item input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--primary);flex-shrink:0}
 .participant-item.self-item{background:var(--successS);font-weight:bold}
 
-/* تقویم ماهانه */
 .calendar-table{table-layout:fixed;min-width:100%}
 .calendar-table th,.calendar-table td{border:1px solid var(--border);height:85px;vertical-align:top;padding:5px}
 .calendar-table th{background:var(--primary);color:#fff;text-align:center;height:auto;font-size:var(--fsm);font-family:var(--font-main)}
 .day-cell{cursor:pointer;transition:.2s;background:var(--surface);position:relative;border-radius:var(--r-sm)}
 .day-cell:hover{background:var(--primaryS)}
 .day-cell.holiday{background:var(--dangerS)}
-.day-cell.has-log{background:var(--successS)} /* سبز: اقدام وجود دارد، کاربر حضور ندارد */
-.day-cell.has-participation{background:#e0f2fe; border-color:#7dd3fc} /* آبی: اقدام وجود دارد و کاربر حضور دارد */
-.day-cell.has-private{background:var(--warningS); border-color:var(--warning)} /* زرد: فقط برای من */
+.day-cell.has-log{background:var(--successS)}
+.day-cell.has-participation{background:#e0f2fe; border-color:#7dd3fc}
+.day-cell.has-private{background:var(--warningS); border-color:var(--warning)}
 .day-number{font-size:18px;font-family:var(--font-main);font-weight:800}
 .day-status{font-size:11px;margin-top:4px;color:var(--text2);font-weight:600}
 .holiday-title{font-size:11px;color:var(--danger);font-family:var(--font-main);margin-top:2px;font-weight:700}
 
-/* نمای هفته (جدولی فشرده) */
 .week-nav{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:10px;background:var(--surface2);border-radius:var(--r-md);border:1px solid var(--border)}
 .week-nav #week_label{flex:1;text-align:center;font-weight:800;font-family:var(--font-main);font-size:var(--fmd);color:var(--primaryI);min-width:200px}
 .week-grid-wrap { overflow-x: auto; width: 100%; border: 1px solid var(--border); border-radius: var(--r-md); }
@@ -188,7 +186,6 @@ tbody tr:last-child td{border-bottom:0}
 @page{size:A4 landscape;margin:1cm}
 @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body>*:not(#print_area){display:none!important}#print_area{display:block!important;width:100%}.db-details-page{page-break-before:always!important;break-before:page!important}.db-columns{page-break-inside:avoid}tr{page-break-inside:avoid}.no-print{display:none!important}}
 
-/* استایل‌های جدول فشرده (سوابق و اقدامات روز) */
 .records-table { table-layout: fixed; width: 100%; min-width: 100% !important; font-size: 11px; border-collapse: collapse; }
 .records-table th, .records-table td { padding: 6px 4px !important; white-space: normal !important; word-break: break-word; text-align: center; border: 1px solid var(--border); vertical-align: middle;}
 .records-table th { background: var(--surface2); font-size: 10px; color: var(--text2); font-weight: 700; }
@@ -218,7 +215,6 @@ tbody tr:last-child td{border-bottom:0}
   .db-header h1{font-size:18px!important}
   .db-kpi-val{font-size:20px}
   
-  /* استثنا کردن جدول تقویم از حالت بلوکی موبایل */
   .calendar-table { display: table !important; min-width: 500px !important; border-collapse: collapse !important; border-spacing: 0 !important; }
   .calendar-table thead { display: table-header-group !important; }
   .calendar-table tbody { display: table-row-group !important; }
@@ -226,14 +222,12 @@ tbody tr:last-child td{border-bottom:0}
   .calendar-table th, .calendar-table td { display: table-cell !important; border: 1px solid var(--border) !important; padding: 2px !important; text-align: center !important; }
   .calendar-table td::before { content: none !important; }
   
-  /* استثنا کردن جدول هفته */
   .week-grid-table { display: table !important; }
   .week-grid-table thead { display: table-header-group !important; }
   .week-grid-table tbody { display: table-row-group !important; }
   .week-grid-table tr { display: table-row !important; border: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
   .week-grid-table th, .week-grid-table td { display: table-cell !important; border: 1px solid var(--border) !important; padding: 4px !important; text-align: center !important; }
 
-  /* استثنا کردن جدول سوابق */
   .records-table { display: table !important; min-width: 600px !important; border-collapse: collapse !important; border-spacing: 0 !important; }
   .records-table thead { display: table-header-group !important; }
   .records-table tbody { display: table-row-group !important; }
@@ -259,6 +253,7 @@ tbody tr:last-child td{border-bottom:0}
       <span class="conn-dot"></span>
       <span id="login_conn_text">در حال بررسی اتصال...</span>
     </div>
+    <div id="login_alert_box" class="alert"></div>
     <h2 id="login_title" class="auth-title">ورود به سیستم</h2>
     <p id="login_msg" class="auth-sub">لطفاً نام کاربری و کلمه عبور خود را وارد کنید.</p>
     <div id="login_form">
@@ -570,7 +565,6 @@ tbody tr:last-child td{border-bottom:0}
   </div>
 </div>
 
-<!-- Modal: Change Password -->
 <div id="modal_change_password" class="modal-overlay hidden">
   <div class="modal" style="max-width:420px">
     <h3>🔑 تغییر رمز عبور</h3>
@@ -606,14 +600,14 @@ tbody tr:last-child td{border-bottom:0}
 'use strict';
 
 /* ─────────────────────────────────────────────────────────────
-   سیستم مدیریت اتصال به Supabase
+   سیستم مدیریت اتصال به دیتابیس
    ───────────────────────────────────────────────────────────── */
-let supabaseClient = null;
-let activeServerName = 'Supabase';
+let dbClient = null;
+let activeServerName = '';
 
-async function initSupabaseClient() {
+async function initDbClient() {
     if (!window.supabase) {
-        window.supabaseInitError = "کتابخانه Supabase لود نشد.";
+        window.dbInitError = "کتابخانه اتصال لود نشد.";
         return false;
     }
     
@@ -621,22 +615,25 @@ async function initSupabaseClient() {
     if (window.APP_CONFIG) {
         if (window.APP_CONFIG.SERVERS && window.APP_CONFIG.SERVERS.length > 0) {
             cfg = window.APP_CONFIG.SERVERS.find(s => s.type !== 'nhost') || window.APP_CONFIG.SERVERS[0];
-        } else if (window.APP_CONFIG.SUPABASE_URL) {
-            cfg = { url: window.APP_CONFIG.SUPABASE_URL, key: window.APP_CONFIG.SUPABASE_ANON_KEY };
+        } else if (window.APP_CONFIG.DB_URL || window.APP_CONFIG.SUPABASE_URL) {
+            cfg = {
+                url: window.APP_CONFIG.DB_URL || window.APP_CONFIG.SUPABASE_URL,
+                key: window.APP_CONFIG.DB_ANON_KEY || window.APP_CONFIG.SUPABASE_ANON_KEY
+            };
         }
     }
 
     if (!cfg || !cfg.url || !cfg.key || cfg.url.includes('YOUR_')) {
-        window.supabaseInitError = "تنظیمات Supabase در config.js ناقص است.";
+        window.dbInitError = "تنظیمات اتصال در config.js ناقص است.";
         return false;
     }
 
     try {
-        supabaseClient = window.supabase.createClient(cfg.url, cfg.key);
-        console.log("[Supabase] Client initialized successfully.");
+        dbClient = window.supabase.createClient(cfg.url, cfg.key);
+        console.log("[DB] Client initialized successfully.");
         return true;
     } catch (e) {
-        console.error("[Supabase] Failed to initialize:", e);
+        console.error("[DB] Failed to initialize:", e);
         return false;
     }
 }
@@ -704,13 +701,13 @@ function setConnectionStatus(status, serverName) {
 }
 
 async function checkDbConnection() {
-    if (!supabaseClient) {
+    if (!dbClient) {
         setConnectionStatus('offline');
         return false;
     }
     setConnectionStatus('checking');
     try {
-        const { error } = await supabaseClient.from('persons').select('id').limit(1);
+        const { error } = await dbClient.from('persons').select('id').limit(1);
         if (!error) {
             setConnectionStatus('online', activeServerName);
             return true;
@@ -744,7 +741,7 @@ function startConnectionMonitor() {
     setTimeout(() => checkDbConnection(), 200);
 }
 
-async function testSupabaseConnection() {
+async function testDbConnection() {
     const ok = await checkDbConnection();
     return {
         ok: ok,
@@ -854,19 +851,18 @@ async function setData(key,data){
   const previousState = localStorage.getItem(key);
   localStorage.setItem(key,JSON.stringify(data));
   
-  if(!supabaseClient) return true;
+  if(!dbClient) return true;
   
   const dbData=data.map(item=>toDB(key,item));
   
   try{
-    // استفاده از select() برای تایید اینکه واقعاً ذخیره شده
-    const { data: resultData, error } = await supabaseClient
+    const { data: resultData, error } = await dbClient
       .from(tableName)
       .upsert(dbData, { onConflict: 'id' })
       .select();
     
     if(error){
-      showAlert('❌ خطا در ذخیره‌سازی ابری:\n' + error.message, 'error');
+      showAlert('❌ خطا در ذخیره‌سازی اطلاعات:\n' + error.message, 'error');
       if (navigator.onLine) {
         if(previousState !== null) localStorage.setItem(key, previousState);
         else localStorage.removeItem(key);
@@ -875,10 +871,9 @@ async function setData(key,data){
       return true;
     }
     
-    // بررسی اینکه آیا تمام رکوردها ذخیره شدند
     if (resultData && resultData.length < dbData.length) {
       const blocked = dbData.length - resultData.length;
-      showAlert('⚠️ هشدار: ' + blocked + ' رکورد از ' + dbData.length + ' رکورد ذخیره نشد.\n\nدلیل: در Supabase، دسترسی INSERT/UPDATE برای جدول "' + tableName + '" و نقش anon فعال نیست.\n\nرفع: در Supabase Dashboard → Authentication → Policies، سیاست INSERT و UPDATE را فعال کنید.', 'warning');
+      showAlert('⚠️ هشدار: ' + blocked + ' رکورد از ' + dbData.length + ' رکورد ذخیره نشد.\n\nدلیل: دسترسی INSERT/UPDATE برای جدول "' + tableName + '" و نقش anon فعال نیست.\n\nرفع: در پنل مدیریت دیتابیس → بخش سیاست‌ها (Policies)، سیاست INSERT و UPDATE را فعال کنید.', 'warning');
       if (navigator.onLine) {
         if(previousState !== null) localStorage.setItem(key, previousState);
         else localStorage.removeItem(key);
@@ -902,7 +897,7 @@ async function setData(key,data){
 
 async function syncFromCloud(showMessage){
   if(showMessage===undefined) showMessage=true;
-  if(!supabaseClient){
+  if(!dbClient){
     setConnectionStatus('offline');
     return{ok:false};
   }
@@ -912,7 +907,6 @@ async function syncFromCloud(showMessage){
   
   let anySuccess = false;
   try{
-    // به‌روزرسانی اجباری نقش سوپر ادمین قبل از دریافت
     let persons = getData(KEYS.persons);
     let adminChanged = false;
     persons.forEach(p => {
@@ -922,13 +916,12 @@ async function syncFromCloud(showMessage){
        }
     });
     if (adminChanged) {
-        await supabaseClient.from('persons').upsert([toDB('actbk_persons', persons.find(p=>p.id==='p1792663888605641'))], { onConflict: 'id' });
+        await dbClient.from('persons').upsert([toDB('actbk_persons', persons.find(p=>p.id==='p1792663888605641'))], { onConflict: 'id' });
     }
 
-    // دریافت اطلاعات از سرور (Pull) برای همه جداول
     for(let localKey in TABLE_MAP){
       const tableName=TABLE_MAP[localKey];
-      const { data, error } = await supabaseClient.from(tableName).select('*');
+      const { data, error } = await dbClient.from(tableName).select('*');
       if(!error && data){
         const converted = data.map(item=>fromDB(localKey,item));
         localStorage.setItem(localKey, JSON.stringify(converted));
@@ -1001,11 +994,23 @@ function normText(s){return String(s||'').toLowerCase().replace(/[يى]/g,'ی').
 function simScore(a,b){var x=normText(a),y=normText(b);if(!x||!y)return 0;if(x===y)return 1;if(x.indexOf(y)>=0||y.indexOf(x)>=0)return .9;var tx=x.split(' '),ty=y.split(' '),sx={},sy={},k,uni=0,inter=0;tx.forEach(t=>{if(t)sx[t]=1});ty.forEach(t=>{if(t)sy[t]=1});for(k in sx){uni++;if(sy[k])inter++}for(k in sy){if(!sx[k])uni++}return uni?inter/uni:0}
 
 var alertTimer=null;
+var loginAlertTimer=null;
 function showAlert(msg,type){
-  var box=$('alert-box');if(!box){alert(msg);return}
-  box.className='alert alert-'+(type||'error');box.textContent=msg;box.style.display='block';
-  clearTimeout(alertTimer);alertTimer=setTimeout(()=>{box.style.display='none'},15000);
-  window.scrollTo({top:0,behavior:'smooth'});
+  var lm=$('login_modal');
+  var isLogin = !!(lm && lm.style.display && lm.style.display!=='none');
+  var box = isLogin ? $('login_alert_box') : $('alert-box');
+  if(!box){alert(msg);return}
+  box.className='alert alert-'+(type||'error');
+  box.textContent=msg;
+  box.style.display='block';
+  if(isLogin){
+    clearTimeout(loginAlertTimer);
+    loginAlertTimer=setTimeout(()=>{box.style.display='none'},15000);
+  } else {
+    clearTimeout(alertTimer);
+    alertTimer=setTimeout(()=>{box.style.display='none'},15000);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
 }
 function closePopups(){var p=document.querySelectorAll('.datepicker-popup');for(var i=0;i<p.length;i++)if(p[i].parentNode)p[i].parentNode.removeChild(p[i])}
 
@@ -1085,7 +1090,7 @@ function applyPermissions(){
   document.querySelectorAll('[data-admin-only]').forEach(el=>{el.style.display=admin?'':'none'});
   document.querySelectorAll('[data-manager-only]').forEach(el=>{el.style.display=priv?'':'none'});
   
-  $('btn_sync_cloud').style.display=''; // دکمه بروزرسانی برای همه
+  $('btn_sync_cloud').style.display='';
   const roleLabel=isSuperAdmin?'سوپر ادمین':(admin?'ادمین':(s.role==='manager'?'مدیر':'کاربر'));
   $('current_user').textContent=s.name+' — '+roleLabel;$('user_info').style.display='';
   
@@ -1145,8 +1150,8 @@ async function deletePerson(id){
   if(!confirm('حذف کاربر باعث حذف نام او از اقدامات می‌شود. مطمئن؟'))return;
   if(id===getSession().personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
   
-  if(supabaseClient && navigator.onLine){
-    const { data: deleted, error } = await supabaseClient.from('persons').delete().eq('id',id).select();
+  if(dbClient && navigator.onLine){
+    const { data: deleted, error } = await dbClient.from('persons').delete().eq('id',id).select();
     if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
     if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول persons فعال نیست.','error');return;}
   }
@@ -1178,8 +1183,8 @@ async function deleteTopic(id){
   if(used>0){showAlert('در '+used+' اقدام استفاده شده و قابل حذف نیست.');return}
   if(!confirm('از حذف مطمئن هستید؟'))return;
   
-  if(supabaseClient && navigator.onLine){
-    const { data: deleted, error } = await supabaseClient.from('topics').delete().eq('id',id).select();
+  if(dbClient && navigator.onLine){
+    const { data: deleted, error } = await dbClient.from('topics').delete().eq('id',id).select();
     if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
     if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول topics فعال نیست.','error');return;}
   }
@@ -1217,8 +1222,8 @@ async function deleteImportance(id){
   if(used>0){showAlert('در '+used+' اقدام استفاده شده.','error');return}
   if(!confirm('از حذف «'+lv.name+'» مطمئن هستید؟'))return;
   
-  if(supabaseClient && navigator.onLine){
-    const { data: deleted, error } = await supabaseClient.from('importance_levels').delete().eq('id',id).select();
+  if(dbClient && navigator.onLine){
+    const { data: deleted, error } = await dbClient.from('importance_levels').delete().eq('id',id).select();
     if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
     if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول importance_levels فعال نیست.','error');return;}
   }
@@ -1251,8 +1256,8 @@ async function saveHoliday(){
 async function deleteHoliday(id){
   if(!confirm('از حذف مطمئن هستید؟'))return;
   
-  if(supabaseClient && navigator.onLine){
-    const { data: deleted, error } = await supabaseClient.from('holidays').delete().eq('id',id).select();
+  if(dbClient && navigator.onLine){
+    const { data: deleted, error } = await dbClient.from('holidays').delete().eq('id',id).select();
     if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
     if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول holidays فعال نیست.','error');return;}
   }
@@ -1327,10 +1332,9 @@ function renderCalendar(){
     var hasParticipated = da.some(a => a.participants && a.participants.indexOf(session.personId) !== -1);
     
     if(isHol) cellClass+=' holiday';
-    else if(hasPrivate) cellClass+=' has-private'; // زرد
-    else if(hasParticipated) cellClass+=' has-participation'; // آبی
-    else if(da.length>0) cellClass+=' has-log'; // سبز
-    // اگر هیچکدام، سفید (پیش‌فرض) می‌ماند
+    else if(hasPrivate) cellClass+=' has-private';
+    else if(hasParticipated) cellClass+=' has-participation';
+    else if(da.length>0) cellClass+=' has-log';
 
     h+='<td class="'+cellClass+'" data-date="'+ds+'"><div class="day-number">'+day+'</div>'+holTitle+dayStatus+'</td>';
     if((first+day)%7===0&&day!==days)h+='</tr><tr>';
@@ -1725,10 +1729,10 @@ async function deleteAct(id){
   if(!priv){if(a.createdBy!==session.personId){showAlert('اجازه حذف ندارید.','error');return}if(a.participants.length>1){showAlert('شرکت‌کننده دیگر دارد.','error');return}}
   if(!confirm('از حذف مطمئن هستید؟'))return;
   
-  if(supabaseClient && navigator.onLine){
-    const { data: deleted, error } = await supabaseClient.from('activities').delete().eq('id',id).select();
+  if(dbClient && navigator.onLine){
+    const { data: deleted, error } = await dbClient.from('activities').delete().eq('id',id).select();
     if(error){showAlert('❌ خطا در حذف:\n'+error.message,'error');return;}
-    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد!\n\nرکورد در Supabase باقی مانده است. دلیل: دسترسی DELETE برای جدول activities و نقش anon فعال نیست.\n\nرفع: در Supabase → Authentication → Policies → جدول activities، یک سیاست DELETE بسازید و USING را true قرار دهید.','error');return;}
+    if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد!\n\nرکورد در سرور باقی مانده است. دلیل: دسترسی DELETE برای جدول activities و نقش anon فعال نیست.\n\nرفع: در پنل مدیریت دیتابیس → بخش سیاست‌ها (Policies) → جدول activities، یک سیاست DELETE بسازید و USING را true قرار دهید.','error');return;}
   }
   
   localStorage.setItem(KEYS.acts, JSON.stringify(getData(KEYS.acts).filter(x=>x.id!==id)));
@@ -1844,8 +1848,8 @@ async function deletePlan(id){
   if(p.status==='converted'){showAlert('موضوع تبدیل‌شده قابل حذف نیست.','warning');return}
   if(!confirm('حذف «'+p.title+'»؟'))return;
   
-  if(supabaseClient && navigator.onLine){
-    const { data: deleted, error } = await supabaseClient.from('planning_topics').delete().eq('id',id).select();
+  if(dbClient && navigator.onLine){
+    const { data: deleted, error } = await dbClient.from('planning_topics').delete().eq('id',id).select();
     if(error){showAlert('❌ خطا در حذف: '+error.message,'error');return;}
     if(!deleted || deleted.length===0){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول planning_topics فعال نیست.','error');return;}
   }
@@ -2145,15 +2149,17 @@ function renderDatepickerPopup(popup,year,month,input){
 
 async function showLogin(){
   $('login_modal').style.display='flex';$('main_app').style.display='none';$('user_info').style.display='none';
-  const connTest=await testSupabaseConnection();
+  var lb=$('login_alert_box'); if(lb){lb.style.display='none';lb.textContent='';lb.className='alert';}
+  $('btn_login').disabled=false;
+  const connTest=await testDbConnection();
   if(connTest.ok)await syncFromCloud(false);
   const persons=getData(KEYS.persons);
-  const hasAdmin=persons.some(p=>p.username&&p.role==='admin');
+  const hasAdmin=persons.some(p=>p.username&&(p.role==='admin'||p.role==='superadmin'));
   if(connTest.ok){
     if(!hasAdmin){$('login_form').classList.add('hidden');$('setup_form').classList.remove('hidden');$('login_title').textContent='ایجاد حساب ادمین اولیه';$('login_msg').innerHTML='👋 به برنامه خوش آمدید.<br>لطفاً اولین حساب ادمین را ایجاد کنید.'}
     else{$('login_form').classList.remove('hidden');$('setup_form').classList.add('hidden');$('login_title').textContent='ورود به سیستم';$('login_msg').textContent='لطفاً نام کاربری و کلمه عبور خود را وارد کنید.'}
   }else{
-    var errMsg=connTest.message||'خطای ناشناخته';
+    var errMsg = window.dbInitError || connTest.message || 'خطای ناشناخته';
     $('login_msg').innerHTML='<div class="alert alert-error" style="display:block;margin-bottom:12px"><b>⚠️ خطا در اتصال:</b><br>'+esc(errMsg)+'</div>';
     $('login_form').classList.add('hidden');$('setup_form').classList.add('hidden');
     $('login_title').textContent='عدم اتصال به سرور';
@@ -2161,16 +2167,36 @@ async function showLogin(){
   }
 }
 async function handleLogin(){
-  if(!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return;}
-  const username=val('login_username'),password=val('login_password');
-  if(!username||!password){showAlert('نام کاربری و رمز الزامی.');return}
-  showAlert('در حال بررسی...','success');
-  if(supabaseClient)await syncFromCloud(false);
+  if(!navigator.onLine){
+    showAlert('⛔ برای ورود باید به اینترنت متصل باشید.','error');
+    return;
+  }
+  const username=val('login_username').trim();
+  const password=val('login_password');
+  if(!username && !password){showAlert('⚠️ نام کاربری و کلمه عبور را وارد کنید.','warning');return;}
+  if(!username){showAlert('⚠️ نام کاربری را وارد کنید.','warning');return;}
+  if(!password){showAlert('⚠️ کلمه عبور را وارد کنید.','warning');return;}
+  showAlert('⏳ در حال بررسی اطلاعات...','info');
+  if(dbClient)await syncFromCloud(false);
   const persons=getData(KEYS.persons);
+  if(!persons || persons.length===0){
+    showAlert('⚠️ هیچ کاربری در سیستم یافت نشد.\n\n• اگر برای اولین بار وارد می‌شوید، از دکمه «🔄 تلاش مجدد برای اتصال» استفاده کنید.\n• در غیر این صورت با مدیر سیستم تماس بگیرید.','error');
+    return;
+  }
   const p=persons.find(x=>x.username===username);
-  if(!p||!p.passwordHash){showAlert('❌ نام کاربری یا رمز اشتباه.','error');return}
+  if(!p){
+    showAlert('❌ کاربری با نام کاربری «'+username+'» یافت نشد.','error');
+    return;
+  }
+  if(!p.passwordHash){
+    showAlert('⚠️ برای این حساب هنوز رمز عبوری تعریف نشده است. با مدیر سیستم تماس بگیرید.','warning');
+    return;
+  }
   const hash=await hashPassword(password,username);
-  if(hash!==p.passwordHash){showAlert('❌ نام کاربری یا رمز اشتباه.','error');return}
+  if(hash!==p.passwordHash){
+    showAlert('❌ کلمه عبور نادرست است.','error');
+    return;
+  }
   setSession({personId:p.id,username:p.username,role:p.role||'user',name:p.firstName+' '+p.lastName});
   $('login_modal').style.display='none';await startApp();
 }
@@ -2273,18 +2299,17 @@ async function startApp(){
   if(!$('rep_to').value)$('rep_to').value=getTodayJalali();
   populateParticipants();renderPersons();renderImportance();renderCalendar();updateCalculatedHours();updatePlanningBadge();
   
-  // صفحه پیش‌فرض پس از ورود، تقویم ماهانه است
   showSection('calendar');
 }
 
 async function init(){
   initTheme();
   document.addEventListener('click',closePopups);
-  loadAppVersion(); // فراخوانی تابع نمایش نسخه
+  loadAppVersion();
   
-  const supabaseReady=await initSupabaseClient();
+  const dbReady=await initDbClient();
 
-  if(supabaseReady){
+  if(dbReady){
     startConnectionMonitor();
   }else{
     setConnectionStatus('offline');
@@ -2365,7 +2390,7 @@ async function init(){
 
   const session=getSession();
   if(!session){await showLogin();return}
-  if(supabaseReady)await syncFromCloud(false);
+  if(dbReady)await syncFromCloud(false);
   const persons=getData(KEYS.persons);
   const p=persons.find(x=>x.id===session.personId);
   if(!p){clearSession();await showLogin();return}
@@ -2374,7 +2399,6 @@ async function init(){
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 
-/* ── Expose functions used in inline HTML handlers ── */
 window.toggleNav = toggleNav;
 window.toggleTheme = toggleTheme;
 window.onWeekModeChange = onWeekModeChange;
@@ -2383,7 +2407,7 @@ window.weekGoToday = weekGoToday;
 window.cancelPendingConversion = cancelPendingConversion;
 window.renderPlanning = renderPlanning;
 window.onLocationChange = onLocationChange;
-window.editAct = editAct; 
+window.editAct = editAct;
 window.openNewActivityForDate = openNewActivityForDate;
 window.showActivityDetails = showActivityDetails;
 window.joinActivityFromModal = joinActivityFromModal;

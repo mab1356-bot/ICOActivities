@@ -1,8 +1,9 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
+   نسخه: actbk-v1.3.2
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.3.1';
+const CACHE_VERSION = 'actbk-v1.3.2';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
@@ -56,7 +57,8 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  if (req.url.includes('supabase.co') || req.url.includes('/rest/v1/')) return;
+  // رد کردن تمام فراخوانی‌های API دیتابیس/احراز هویت از کش
+  if (/\/(rest|auth|storage|functions)\/v\d+\//.test(req.url)) return;
 
   if (req.mode === 'navigate') {
     event.respondWith(
