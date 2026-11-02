@@ -111,8 +111,8 @@ tbody tr:last-child td{border-bottom:0}
 .day-cell{cursor:pointer;transition:.2s;background:var(--surface);position:relative;border-radius:var(--r-sm)}
 .day-cell:hover{background:var(--primaryS)}
 .day-cell.holiday{background:var(--dangerS)}
-.day-cell.has-log{background:var(--successS)} /* سبز: ایجادکننده */
-.day-cell.has-participation{background:#e0f2fe; border-color:#7dd3fc} /* آبی: شرکت‌کننده */
+.day-cell.has-log{background:var(--successS)} /* سبز: اقدام وجود دارد، کاربر حضور ندارد */
+.day-cell.has-participation{background:#e0f2fe; border-color:#7dd3fc} /* آبی: اقدام وجود دارد و کاربر حضور دارد */
 .day-cell.has-private{background:var(--warningS); border-color:var(--warning)} /* زرد: فقط برای من */
 .day-number{font-size:18px;font-family:var(--font-main);font-weight:800}
 .day-status{font-size:11px;margin-top:4px;color:var(--text2);font-weight:600}
@@ -1231,13 +1231,13 @@ function renderCalendar(){
     
     var cellClass='day-cell';
     var hasPrivate = da.some(a => a.onlyforme);
-    var hasOwn = da.some(a => a.createdBy === session.personId);
-    var hasParticipated = da.some(a => a.participants && a.participants.indexOf(session.personId) !== -1 && a.createdBy !== session.personId);
+    var hasParticipated = da.some(a => a.participants && a.participants.indexOf(session.personId) !== -1);
     
     if(isHol) cellClass+=' holiday';
-    else if(hasPrivate) cellClass+=' has-private';
-    else if(hasOwn) cellClass+=' has-log';
-    else if(hasParticipated) cellClass+=' has-participation';
+    else if(hasPrivate) cellClass+=' has-private'; // زرد
+    else if(hasParticipated) cellClass+=' has-participation'; // آبی
+    else if(da.length>0) cellClass+=' has-log'; // سبز
+    // اگر هیچکدام، سفید (پیش‌فرض) می‌ماند
 
     h+='<td class="'+cellClass+'" data-date="'+ds+'"><div class="day-number">'+day+'</div>'+holTitle+dayStatus+'</td>';
     if((first+day)%7===0&&day!==days)h+='</tr><tr>';
@@ -1289,7 +1289,6 @@ function renderWeekView(){
         if(canEdit){
             html+='<button class="btn-edit-week" onclick="event.stopPropagation(); window.editAct(\''+esc(a.id)+'\')" title="ویرایش">✏️</button>';
         }
-        // فقط شرح اقدام را به صورت خلاصه نمایش می‌دهیم
         html+='<div class="slot-act-desc">'+esc(a.description)+'</div>';
         html+='</div>';
       });
@@ -1305,6 +1304,8 @@ function showActivityDetails(id) {
     var a = findById(getData(KEYS.acts), id);
     if (!a) return;
     var pNames = a.participants.map(pid => personName(pid)).join('، ');
+    var session = getSession();
+    var isJoined = session && a.participants.indexOf(session.personId) !== -1;
     
     var html = '<div class="modal">';
     html += '<h3>' + esc(topicName(a.topicId)) + '</h3>';
@@ -1325,7 +1326,12 @@ function showActivityDetails(id) {
         html += '<div class="alert alert-warning" style="display:block;margin-top:10px;">👤 این اقدام فقط برای شما ثبت شده است.</div>';
     }
 
-    html += '<div class="modal-actions" style="margin-top:20px;"><button class="btn btn-secondary" onclick="this.closest(\'.modal-overlay\').remove()">بستن</button></div>';
+    html += '<div class="modal-actions" style="margin-top:20px;">';
+    html += '<button class="btn btn-secondary" onclick="this.closest(\'.modal-overlay\').remove()">بستن</button>';
+    if (!isJoined) {
+        html += '<button class="btn btn-success" onclick="window.joinActivityFromModal(\'' + a.id + '\')">🤝 پیوستن به اقدام</button>';
+    }
+    html += '</div>';
     html += '</div>';
     
     var overlay = document.createElement('div');
@@ -1526,10 +1532,19 @@ async function joinActivity(id){
     if(await setData(KEYS.acts,acts)){
       showAlert('به شرکت‌کنندگان اضافه شدید.','success');
       renderDayActs();renderRecords();renderCalendar();renderWeekView();
+      // بستن مدال باز
+      var overlays = document.querySelectorAll('.modal-overlay');
+      overlays.forEach(o => { if (o.innerHTML.includes('جزئیات اقدام') || o.innerHTML.includes('پیوستن به اقدام')) o.remove(); });
     }
   } else {
     showAlert('از قبل در این اقدام هستید.','warning');
   }
+}
+
+async function joinActivityFromModal(id) {
+    await joinActivity(id);
+    var overlays = document.querySelectorAll('.modal-overlay');
+    overlays.forEach(o => o.remove());
 }
 
 function renderDayActs(){
@@ -2275,6 +2290,7 @@ window.onLocationChange = onLocationChange;
 window.editAct = editAct; 
 window.openNewActivityForDate = openNewActivityForDate;
 window.showActivityDetails = showActivityDetails;
+window.joinActivityFromModal = joinActivityFromModal;
 
 })();
 </script>
