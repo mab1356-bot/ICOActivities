@@ -103,41 +103,38 @@ tbody tr:last-child td{border-bottom:0}
 .participant-item:last-child{border-bottom:none}
 .participant-item input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--primary);flex-shrink:0}
 .participant-item.self-item{background:var(--successS);font-weight:bold}
+
+/* تقویم ماهانه */
 .calendar-table{table-layout:fixed;min-width:100%}
 .calendar-table th,.calendar-table td{border:1px solid var(--border);height:85px;vertical-align:top;padding:5px}
 .calendar-table th{background:var(--primary);color:#fff;text-align:center;height:auto;font-size:var(--fsm);font-family:var(--font-main)}
 .day-cell{cursor:pointer;transition:.2s;background:var(--surface);position:relative;border-radius:var(--r-sm)}
 .day-cell:hover{background:var(--primaryS)}
 .day-cell.holiday{background:var(--dangerS)}
-.day-cell.has-log{background:var(--successS)}
-.day-cell.has-private {background: var(--warningS); border-color: var(--warning);}
+.day-cell.has-log{background:var(--successS)} /* سبز: ایجادکننده */
+.day-cell.has-participation{background:#e0f2fe; border-color:#7dd3fc} /* آبی: شرکت‌کننده */
+.day-cell.has-private{background:var(--warningS); border-color:var(--warning)} /* زرد: فقط برای من */
 .day-number{font-size:18px;font-family:var(--font-main);font-weight:800}
 .day-status{font-size:11px;margin-top:4px;color:var(--text2);font-weight:600}
 .holiday-title{font-size:11px;color:var(--danger);font-family:var(--font-main);margin-top:2px;font-weight:700}
+
+/* نمای هفته (جدولی) */
 .week-nav{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;padding:10px;background:var(--surface2);border-radius:var(--r-md);border:1px solid var(--border)}
 .week-nav #week_label{flex:1;text-align:center;font-weight:800;font-family:var(--font-main);font-size:var(--fmd);color:var(--primaryI);min-width:200px}
-.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:12px}
-.week-day{border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);overflow:hidden;min-height:200px;display:flex;flex-direction:column}
-.week-day.today{border-color:var(--primary);box-shadow:0 0 0 2px var(--ring)}
-.week-day.holiday .week-day-head{background:var(--dangerS);color:var(--dangerI)}
-.week-day-head{padding:8px 10px;background:var(--surface2);border-bottom:1px solid var(--border);text-align:center;position:relative}
-.week-day-name{font-weight:800;font-family:var(--font-main);font-size:var(--fmd)}
-.week-day-date{font-size:11px;color:var(--text2);margin-top:2px}
-.week-day-holiday{font-size:10px;color:var(--danger);margin-top:2px;font-weight:700}
-.btn-add-week{position:absolute;left:4px;top:50%;transform:translateY(-50%);background:var(--primary);color:#fff;border:0;border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:all var(--tfast)}
-.btn-add-week:hover{background:var(--primaryH)}
-.week-day-body{padding:8px;flex:1;display:flex;flex-direction:column;gap:6px}
-.week-empty{color:var(--text3);text-align:center;font-size:11px;padding:16px 4px}
-.week-activity{padding:6px 8px;background:var(--surface2);border-radius:var(--r-sm);font-size:11px;position:relative}
-.week-activity-title{font-weight:800;color:var(--primaryI);margin-bottom:3px;padding-left:22px;}
-.week-activity-time,.week-activity-meta{color:var(--text2);font-size:10px;margin-top:2px}
-.week-activity-desc{color:var(--text);margin-top:2px;line-height:1.5}
-.week-activity-imp{margin-top:4px}
-.btn-edit-week{position:absolute;top:4px;left:4px;background:var(--warning);color:#fff;border:0;border-radius:4px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;transition:all var(--tfast);z-index:10}
-.btn-edit-week:hover{background:#b45309}
-.week-join-btn{display:block;width:100%;margin-top:6px;padding:5px 8px;font-size:10px;background:var(--success);color:#fff;border:0;border-radius:var(--r-sm);cursor:pointer;font-family:var(--font-main);font-weight:700;transition:all var(--tfast)}
-.week-join-btn:hover{background:#047857;filter:brightness(1.05)}
-.week-join-btn:active{transform:translateY(1px)}
+.week-grid-wrap { overflow-x: auto; width: 100%; border: 1px solid var(--border); border-radius: var(--r-md); }
+.week-grid-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 800px; }
+.week-grid-table th, .week-grid-table td { border: 1px solid var(--border); padding: 4px; vertical-align: top; }
+.week-grid-table th { background: var(--surface2); text-align: center; position: relative; padding-bottom: 24px; font-family: var(--font-main); }
+.week-grid-table .btn-add-week { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; font-size: 12px; background: var(--primary); color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+.week-grid-table .btn-add-week:hover { background: var(--primaryH); }
+.hour-cell { width: 60px; text-align: center; font-weight: bold; background: var(--surface3); vertical-align: middle; }
+.slot-cell { height: 60px; position: relative; vertical-align: top; }
+.slot-act { border-right: 3px solid var(--primary); background: var(--surface2); padding: 4px; margin-bottom: 4px; border-radius: 4px; position: relative; font-family: var(--font-body); }
+.slot-act-title { font-weight: 800; color: var(--primaryI); font-size: 10px; padding-left: 16px; }
+.slot-act-desc { font-size: 10px; margin-top: 2px; line-height: 1.3; }
+.slot-act-meta { font-size: 9px; color: var(--text2); margin-top: 2px; }
+.slot-act .btn-edit-week { width: 14px; height: 14px; font-size: 8px; top: 2px; left: 2px; position: absolute; background: var(--warning); color: #fff; border: 0; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
 .date-picker,.time-picker{cursor:pointer;background:var(--surface)}
 .datepicker-popup{position:absolute;right:0;top:100%;z-index:1000;background:var(--surface);border:1px solid var(--borderS);border-radius:var(--r-md);box-shadow:var(--e3);padding:15px;width:290px;max-width:95vw;direction:rtl}
 .dp-nav{display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:10px}
@@ -210,8 +207,6 @@ tbody tr:last-child td{border-bottom:0}
   .dashboard-report{padding:10px}
   .db-header h1{font-size:18px!important}
   .db-kpi-val{font-size:20px}
-  .week-grid{grid-template-columns:1fr}
-  .week-day{min-height:auto}
   table{min-width:0;border-collapse:separate;border-spacing:0 8px}
   table thead{display:none}
   table,table tbody,table tr,table td{display:block;width:100%}
@@ -227,6 +222,13 @@ tbody tr:last-child td{border-bottom:0}
   .calendar-table tr { display: table-row !important; border: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
   .calendar-table th, .calendar-table td { display: table-cell !important; border: 1px solid var(--border) !important; padding: 2px !important; text-align: center !important; }
   .calendar-table td::before { content: none !important; }
+  
+  /* استثنا کردن جدول هفته */
+  .week-grid-table { display: table !important; }
+  .week-grid-table thead { display: table-header-group !important; }
+  .week-grid-table tbody { display: table-row-group !important; }
+  .week-grid-table tr { display: table-row !important; border: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+  .week-grid-table th, .week-grid-table td { display: table-cell !important; border: 1px solid var(--border) !important; padding: 4px !important; text-align: center !important; }
 }
 @media (max-width:480px){
   .top{padding:6px 8px}
@@ -403,7 +405,7 @@ tbody tr:last-child td{border-bottom:0}
             <button class="btn btn-secondary btn-sm" onclick="weekShift(1)">هفته بعد ▶</button>
             <span id="week_label"></span>
           </div>
-          <div class="week-grid" id="week_grid"></div>
+          <div class="week-grid-wrap" id="week_grid"></div>
         </div>
       </div>
 
@@ -784,7 +786,7 @@ function toDB(key,item){
     res.createdby=item.createdBy;delete res.createdBy;
     res.createdat=item.createdAt;delete res.createdAt;
     res.privatedescription=item.privateDescription;delete res.privateDescription;
-    res.onlyforme=item.onlyforme;delete res.onlyforme;
+    res.onlyforme=item.onlyforme===true;delete res.onlyforme;
   }
   else if(key==='actbk_importance'){res.is_key=item.isKey===true;delete res.isKey}
   else if(key==='actbk_planning'){res.proposeddate=item.proposedDate;delete res.proposedDate;res.importanceid=item.importanceId;delete res.importanceId;res.locationhint=item.locationHint;delete res.locationHint;res.createdby=item.createdBy;delete res.createdBy;res.createdat=item.createdAt;delete res.createdAt;res.convertedactivityid=item.convertedActivityId;delete res.convertedActivityId;res.convertedat=item.convertedAt;delete res.convertedAt;res.cancelreason=item.cancelReason;delete res.cancelReason}
@@ -819,7 +821,7 @@ async function setData(key,data){
   const dbData=data.map(item=>toDB(key,item));
   
   try{
-    const { error } = await supabaseClient.from(tableName).upsert(dbData);
+    const { error } = await supabaseClient.from(tableName).upsert(dbData, { onConflict: 'id' });
     if(error){
       showAlert('خطا در ذخیره‌سازی ابری: ' + error.message, 'error');
       setTimeout(() => checkDbConnection(), 1500);
@@ -846,18 +848,16 @@ async function syncFromCloud(showMessage){
   
   let anySuccess = false;
   try{
-    // 1. ارسال اطلاعات محلی به سرور (Push)
     for(let localKey in TABLE_MAP){
       const tableName=TABLE_MAP[localKey];
       const localData=getData(localKey);
       if(localData.length > 0){
         const dbData = localData.map(item=>toDB(localKey,item));
-        const { error } = await supabaseClient.from(tableName).upsert(dbData);
+        const { error } = await supabaseClient.from(tableName).upsert(dbData, { onConflict: 'id' });
         if(error) console.warn(`[Sync] Push error for ${localKey}:`, error.message);
       }
     }
 
-    // 2. دریافت اطلاعات از سرور (Pull)
     for(let localKey in TABLE_MAP){
       const tableName=TABLE_MAP[localKey];
       const { data, error } = await supabaseClient.from(tableName).select('*');
@@ -1202,6 +1202,7 @@ function renderCalendar(){
     var sTs=jalaliToTimestamp(a.date);var eTs=a.endDate?jalaliToTimestamp(a.endDate):sTs;
     actMeta.push({a,sTs,eTs});
   });
+  var session=getSession();
   var h='<table class="calendar-table"><thead><tr>';
   DAY_NAMES.forEach(d=>{h+='<th>'+d+'</th>'});
   h+='</tr></thead><tbody><tr>';
@@ -1220,10 +1221,13 @@ function renderCalendar(){
     
     var cellClass='day-cell';
     var hasPrivate = da.some(a => a.onlyforme);
+    var hasOwn = da.some(a => a.createdBy === session.personId);
+    var hasParticipated = da.some(a => a.participants && a.participants.indexOf(session.personId) !== -1 && a.createdBy !== session.personId);
     
     if(isHol) cellClass+=' holiday';
     else if(hasPrivate) cellClass+=' has-private';
-    else if(da.length>0) cellClass+=' has-log';
+    else if(hasOwn) cellClass+=' has-log';
+    else if(hasParticipated) cellClass+=' has-participation';
 
     h+='<td class="'+cellClass+'" data-date="'+ds+'"><div class="day-number">'+day+'</div>'+holTitle+dayStatus+'</td>';
     if((first+day)%7===0&&day!==days)h+='</tr><tr>';
@@ -1232,6 +1236,7 @@ function renderCalendar(){
   c.innerHTML=h+'</tr></tbody></table>';
   $('monthly_summary').innerHTML='<b>خلاصه '+MONTH_NAMES[month-1]+' '+year+':</b> '+monthCount+' اقدام ثبت‌شده • مجموع ساعات: '+fmtHours(monthHours);
 }
+
 function renderWeekView(){
   if(!_weekStart)_weekStart=getWeekStart(getTodayJalali());
   var container=$('week_grid');if(!container)return;
@@ -1242,58 +1247,59 @@ function renderWeekView(){
   var todayStr=getTodayJalali();
   var session=getSession();
   var selfId=session?session.personId:null;
-  var html='';
+  var hours=[7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+
+  var html='<table class="week-grid-table"><thead><tr><th>ساعت</th>';
   days.forEach(ds=>{
     var p=parseJalali(ds);var dow=getJalaliDayOfWeek(p.jy,p.jm,p.jd);
-    var isHol=isHolidayDow(dow)||holMap[ds];var isToday=ds===todayStr;
-    var dayActs=acts.filter(a=>{
-      if(personId&&(!a.participants||a.participants.indexOf(personId)===-1))return false;
-      return a.date===ds||(a.endDate&&jalaliToTimestamp(ds)>=jalaliToTimestamp(a.date)&&jalaliToTimestamp(ds)<=jalaliToTimestamp(a.endDate));
-    });
-    dayActs.sort((a,b)=>(getImpOrder(b.importance)-getImpOrder(a.importance))||((a.startTime||'').localeCompare(b.startTime||'')));
-    var dayName=DAY_NAMES[dow];var cls='week-day';if(isToday)cls+=' today';if(isHol)cls+=' holiday';
-    html+='<div class="'+cls+'"><div class="week-day-head"><div class="week-day-name">'+dayName+'</div><div class="week-day-date">'+p.jd+' '+MONTH_NAMES[p.jm-1]+' '+p.jy+'</div>';
-    // دکمه افزودن اقدام در بالای روز
-    html+='<button class="btn-add-week" onclick="window.openNewActivityForDate(\''+ds+'\')" title="افزودن اقدام جدید">➕</button>';
-    if(holMap[ds])html+='<div class="week-day-holiday">🎉 '+esc(holMap[ds])+'</div>';
-    html+='</div><div class="week-day-body">';
-    if(!dayActs.length){html+='<div class="week-empty">اقدامی ثبت نشده</div>'}
-    else{
+    var isHol=isHolidayDow(dow)||holMap[ds];
+    var cls=isHol?' style="background:var(--dangerS);color:var(--dangerI)"':'';
+    html+='<th'+cls+'><div>'+DAY_NAMES[dow]+'</div><small>'+p.jd+' '+MONTH_NAMES[p.jm-1]+'</small>';
+    html+='<button class="btn-add-week" onclick="window.openNewActivityForDate(\''+ds+'\')" title="افزودن اقدام">➕</button></th>';
+  });
+  html+='</tr></thead><tbody>';
+  
+  hours.forEach(h=>{
+    html+='<tr><td class="hour-cell">'+pad2(h)+':00</td>';
+    days.forEach(ds=>{
+      var dayActs=acts.filter(a=>{
+        if(personId&&(!a.participants||a.participants.indexOf(personId)===-1))return false;
+        if(a.date!==ds&&!(a.endDate&&jalaliToTimestamp(ds)>=jalaliToTimestamp(a.date)&&jalaliToTimestamp(ds)<=jalaliToTimestamp(a.endDate)))return false;
+        if(!a.startTime)return false;
+        var startHour=parseInt(a.startTime.split(':')[0],10);
+        return startHour===h;
+      });
+      
+      html+='<td class="slot-cell">';
       dayActs.forEach(a=>{
-        var pNames=a.participants.map(pid=>personName(pid)).join('، ');
         var isJoined=selfId&&a.participants.indexOf(selfId)!==-1;
-        // بررسی مجوز ویرایش (ایجاد کننده، مدیر یا ادمین)
-        var canEdit = isPriv() || a.createdBy === selfId;
-        html+='<div class="week-activity" style="border-right:3px solid '+getImpColor(a.importance)+';'+(a.onlyforme?'background:var(--warningS);':'')+'">';
+        var canEdit=isPriv()||a.createdBy===selfId;
+        var color=getImpColor(a.importance);
         
-        // دکمه ویرایش
-        if(canEdit) {
+        html+='<div class="slot-act" style="border-right-color:'+color+';'+(a.onlyforme?'background:var(--warningS);':'')+'">';
+        if(canEdit){
             html+='<button class="btn-edit-week" onclick="window.editAct(\''+esc(a.id)+'\')" title="ویرایش">✏️</button>';
         }
-        
-        html+='<div class="week-activity-title">'+esc(topicName(a.topicId))+'</div>';
-        if(a.startTime)html+='<div class="week-activity-time">⏰ '+esc(a.startTime)+' - '+esc(a.endTime)+' • '+esc(fmtHours(a.hours))+'</div>';
-        html+='<div class="week-activity-desc">'+esc(a.description.length>80?a.description.substring(0,80)+'...':a.description)+'</div>';
-        if(a.location)html+='<div class="week-activity-meta">📍 '+esc(a.location)+'</div>';
-        html+='<div class="week-activity-meta">👥 '+esc(pNames)+'</div>';
-        if(a.onlyforme) html+='<div class="week-activity-imp"><span class="badge badge-warning">👤 فقط من</span></div>';
-        else html+='<div class="week-activity-imp">'+impBadge(a.importance)+'</div>';
-        if(!isJoined) {
-          html+='<button class="week-join-btn" data-week-join="'+esc(a.id)+'">🤝 پیوستن</button>';
+        html+='<div class="slot-act-title">'+esc(topicName(a.topicId))+'</div>';
+        html+='<div class="slot-act-desc">'+esc(a.description.length>60?a.description.substring(0,60)+'...':a.description)+'</div>';
+        html+='<div class="slot-act-meta">⏰ '+esc(a.startTime)+' - '+esc(a.endTime)+'</div>';
+        if(!isJoined){
+           html+='<button class="week-join-btn" data-week-join="'+esc(a.id)+'" style="padding:2px;margin-top:2px;font-size:9px">🤝 پیوستن</button>';
         }
         html+='</div>';
       });
-    }
-    html+='</div></div>';
+      html+='</td>';
+    });
+    html+='</tr>';
   });
+  html+='</tbody></table>';
   container.innerHTML=html;
 }
 
-// تابع جدید برای باز کردن فرم ثبت اقدام با تاریخ مشخص
 function openNewActivityForDate(dateStr) {
-  showSection('activity');
-  $('act_start_date').value = dateStr;
-  resetActivityForm(true);
+    showSection('activity');
+    $('act_start_date').value = dateStr;
+    resetActivityForm(true);
 }
 
 function calcDurationHours(startDate,startTime,endDate,endTime){
@@ -1395,12 +1401,18 @@ async function saveActivity(){
   
   if(id){
     var acts=getData(KEYS.acts);
+    var found = false;
     for(var i=0;i<acts.length;i++){
       if(acts[i].id===id){
         obj.createdAt=acts[i].createdAt;
         obj.createdBy=acts[i].createdBy||session.personId;
-        acts[i]=obj;break;
+        acts[i]=obj;
+        found = true;
+        break;
       }
+    }
+    if (!found) {
+      acts.push(obj);
     }
     if(await setData(KEYS.acts,acts)){afterSave('اقدام ویرایش شد.');handlePendingPlanConversion(obj.id)}
     return;
@@ -1461,9 +1473,24 @@ function afterSave(msg){
 async function joinActivity(id){
   var acts=getData(KEYS.acts);var session=getSession();if(!session)return;
   var found=false;
-  for(var i=0;i<acts.length;i++){if(acts[i].id===id){if(acts[i].participants.indexOf(session.personId)===-1){acts[i].participants.push(session.personId);found=true}break}}
-  if(found){if(await setData(KEYS.acts,acts)){showAlert('به شرکت‌کنندگان اضافه شدید.','success');renderDayActs();renderRecords();renderCalendar();renderWeekView();}}
-  else showAlert('از قبل در این اقدام هستید.','warning');
+  for(var i=0;i<acts.length;i++){
+    if(acts[i].id===id){
+      if(!acts[i].participants) acts[i].participants=[];
+      if(acts[i].participants.indexOf(session.personId)===-1){
+        acts[i].participants.push(session.personId);
+        found=true;
+      }
+      break;
+    }
+  }
+  if(found){
+    if(await setData(KEYS.acts,acts)){
+      showAlert('به شرکت‌کنندگان اضافه شدید.','success');
+      renderDayActs();renderRecords();renderCalendar();renderWeekView();
+    }
+  } else {
+    showAlert('از قبل در این اقدام هستید.','warning');
+  }
 }
 
 function renderDayActs(){
@@ -1522,7 +1549,12 @@ function editAct(id){
 
   $('act_only_for_me').checked = a.onlyforme === true;
   $('act_private_desc').value = a.privateDescription || '';
-  populateParticipants(a.participants);updateCalculatedHours();renderDayActs();
+  
+  var parts = a.participants;
+  if (typeof parts === 'string') parts = parts.split(',');
+  if (!parts || !parts.length) parts = [a.createdBy || session.personId];
+  
+  populateParticipants(parts);updateCalculatedHours();renderDayActs();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 async function deleteAct(id){
@@ -2065,7 +2097,9 @@ async function startApp(){
   if(!$('rep_from').value)$('rep_from').value=getTodayJalali();
   if(!$('rep_to').value)$('rep_to').value=getTodayJalali();
   populateParticipants();renderPersons();renderImportance();renderCalendar();updateCalculatedHours();updatePlanningBadge();
-  if(isAdmin())showSection('persons');else showSection('activity');
+  
+  // صفحه پیش‌فرض پس از ورود، تقویم ماهانه است
+  showSection('calendar');
 }
 
 async function init(){
@@ -2175,8 +2209,8 @@ window.weekGoToday = weekGoToday;
 window.cancelPendingConversion = cancelPendingConversion;
 window.renderPlanning = renderPlanning;
 window.onLocationChange = onLocationChange;
-window.editAct = editAct; // برای استفاده در دکمه ویرایش
-window.openNewActivityForDate = openNewActivityForDate; // برای استفاده در دکمه افزودن
+window.editAct = editAct; 
+window.openNewActivityForDate = openNewActivityForDate;
 
 })();
 </script>
