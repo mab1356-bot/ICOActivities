@@ -127,6 +127,21 @@ tbody tr:last-child td{border-bottom:0}
 .week-grid-table .btn-add-week { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; font-size: 12px; background: var(--primary); color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
 .week-grid-table .btn-add-week:hover { background: var(--primaryH); }
 .hour-cell { width: 50px; text-align: center; font-weight: bold; background: var(--surface3); vertical-align: middle; font-size: 10px;}
+/* ثابت کردن ستون ساعت در نمای هفته (سمت راست) */
+.week-grid-table th:first-child,
+.week-grid-table td.hour-cell {
+  position: sticky;
+  right: 0;
+  background: var(--surface3);
+  z-index: 3;
+  /* خط جداکننده + سایه ملایم برای نمایش لایه بالاتر هنگام اسکرول */
+  box-shadow: -1px 0 0 var(--border), -3px 0 6px rgba(0,0,0,0.06);
+}
+
+.week-grid-table th:first-child {
+  background: var(--surface2);
+  z-index: 4;
+}
 .slot-cell { height: 40px; position: relative; vertical-align: top; }
 .slot-act { cursor: pointer; border-right: 3px solid var(--primary); background: var(--surface2); padding: 2px 4px; margin-bottom: 2px; border-radius: 4px; font-family: var(--font-body); position: relative; transition: all 0.2s; }
 .slot-act:hover { background: var(--surface3); }

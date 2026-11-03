@@ -3,7 +3,7 @@
    نسخه: actbk-v1.3.2
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.3.2';
+const CACHE_VERSION = 'actbk-v1.3.3';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
