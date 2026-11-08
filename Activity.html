@@ -260,7 +260,6 @@ tbody tr:last-child td{border-bottom:0}
 </head>
 <body>
 
-<!-- مودال تغییر رمز اجباری (جدید) -->
 <div id="modal_force_change_password" class="modal-overlay hidden" style="z-index: 3000;">
   <div class="modal" style="max-width:450px">
     <h3>🔐 تغییر رمز عبور (اجباری)</h3>
@@ -632,18 +631,12 @@ tbody tr:last-child td{border-bottom:0}
 (function(){
 'use strict';
 
-/* ════════════════════════════════════════════════════════════════
-   ۰) ثابت‌ها و متغیرهای سراسری
-   ════════════════════════════════════════════════════════════════ */
 const MIN_PASSWORD_LEN=6;
 const PERSON_COLS='id,firstname,lastname,personnelid,username,role';
 
 let dbClient=null;          
 let activeServerName='';    
 
-/* ════════════════════════════════════════════════════════════════
-   ۱) ابزارهای عمومی
-   ════════════════════════════════════════════════════════════════ */
 function $(id){return document.getElementById(id)}
 function val(id){var e=$(id);return e?String(e.value).trim():''}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
@@ -743,7 +736,7 @@ async function getFresh(key){if(dbClient&&navigator.onLine)await pullTable(key);
 
 async function setData(key,data){
   var table=TABLE_MAP[key];
-  if(!table||key===KEYS.persons){writeLocal(key,data);return true} // persons only via RPC/Edge
+  if(!table||key===KEYS.persons){writeLocal(key,data);return true}
   if(!dbClient||!navigator.onLine){showAlert('اتصال به دیتابیس برقرار نیست.','error');return false}
   
   var prev=new Map(getData(key).map(x=>[x.id,JSON.stringify(x)]));
@@ -1810,7 +1803,7 @@ function showForcePasswordChange(userId) {
     const { error } = await dbClient.auth.updateUser({ password: newPass });
     if (error) { errBox.textContent = 'خطا: ' + error.message; errBox.style.display = 'block'; return; }
 
-    await dbClient.from('persons').update({ must_change_password: false }).eq('user_id', userId);
+    await dbClient.rpc('app_mark_password_changed');
     $('modal_force_change_password').classList.add('hidden');
     showAlert('✅ رمز عبور با موفقیت تغییر کرد.', 'success');
     await startApp();
@@ -1850,11 +1843,13 @@ async function handleSetup(){
   const { data: authData, error: authError } = await dbClient.auth.signUp({ email: username + '@app.com', password });
   if (authError) { showAlert('❌ خطا: ' + authError.message, 'error'); return; }
 
-  const { error: personError } = await dbClient.from('persons').insert({
-    user_id: authData.user.id, firstname: first, lastname: last, personnelid: pid, username: username, role: 'superadmin'
+  const { error: setupError } = await dbClient.rpc('app_setup_first_admin', {
+    p_user_id: authData.user.id, p_firstname: first, p_lastname: last, p_personnelid: pid, p_username: username
   });
+  if (setupError) { showAlert('❌ خطا: ' + setupError.message, 'error'); return; }
 
-  if (personError) { showAlert('❌ خطا: ' + personError.message, 'error'); return; }
+  $('login_username').value = username;
+  $('login_password').value = password;
   await handleLogin(); 
 }
 
@@ -1867,11 +1862,11 @@ async function showLogin(){
   var flash=sessionStorage.getItem('actbk_flash');
   
   if(dbClient&&navigator.onLine){
-    const { data: persons, error } = await dbClient.from('persons').select('id').limit(1);
+    const { data: hasUsers, error } = await dbClient.rpc('check_has_users');
     if(error){
       $('login_msg').innerHTML='<div class="alert alert-error" style="display:block;margin-bottom:12px"><b>⚠️ خطا:</b><br>'+esc(error.message)+'</div>';
       $('login_form').classList.add('hidden');$('setup_form').classList.add('hidden');$('login_title').textContent='خطای دیتابیس';
-    }else if(!persons || persons.length===0){
+    }else if(!hasUsers){
       $('login_form').classList.add('hidden');$('setup_form').classList.remove('hidden');
       $('login_title').textContent='ایجاد حساب مدیر اصلی';$('login_msg').innerHTML='👋 به برنامه خوش آمدید.<br>لطفاً اولین حساب را ایجاد کنید.';
     }else{
@@ -1947,7 +1942,7 @@ async function checkDbConnection(){
     if(!dbClient||!navigator.onLine){setConnectionStatus('offline');return false}
     setConnectionStatus('checking');
     try{
-      const {error}=await dbClient.from('persons').select('id').limit(1);
+      const {error}=await dbClient.rpc('check_has_users');
       if(!error){setConnectionStatus('online',activeServerName);return true}
     }catch(e){console.warn('[Conn] check failed:',e.message)}
     setConnectionStatus('offline');return false;
