@@ -1823,7 +1823,7 @@ async function handleLogin(){
   if(!dbClient||!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return}
   
   showAlert('⏳ در حال بررسی...','info');
-  const { data, error } = await dbClient.auth.signInWithPassword({ email: username + '@app.local', password });
+  const { data, error } = await dbClient.auth.signInWithPassword({ email: username + '@app.com', password });
 
   if (error) {
     showAlert(error.message.includes('Invalid login credentials') ? '❌ نام کاربری یا کلمه عبور نادرست است.' : '❌ خطا: ' + error.message, 'error');
@@ -1847,7 +1847,7 @@ async function handleSetup(){
   if(!/^\d{1,6}$/.test(pid)){showAlert('شماره پرسنلی معتبر نیست.');return}
   if(password.length<MIN_PASSWORD_LEN){showAlert('رمز حداقل '+MIN_PASSWORD_LEN+' کاراکتر.');return}
 
-  const { data: authData, error: authError } = await dbClient.auth.signUp({ email: username + '@app.local', password });
+  const { data: authData, error: authError } = await dbClient.auth.signUp({ email: username + '@app.com', password });
   if (authError) { showAlert('❌ خطا: ' + authError.message, 'error'); return; }
 
   const { error: personError } = await dbClient.from('persons').insert({
