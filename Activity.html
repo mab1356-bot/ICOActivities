@@ -1806,12 +1806,13 @@ function showForcePasswordChange(userId) {
     await dbClient.rpc('app_mark_password_changed');
     $('modal_force_change_password').classList.add('hidden');
     showAlert('✅ رمز عبور با موفقیت تغییر کرد.', 'success');
-    await startApp();
+    
+    // بارگذاری مجدد صفحه برای اعمال کامل تغییرات
+    location.reload();
   };
 }
 
-async function handleLogin()
-{
+async function handleLogin(){
   var username=val('login_username'),password=$('login_password').value;
   if(!username||!password){showAlert('نام کاربری و رمز الزامی است.','warning');return}
   if(!dbClient||!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return}
@@ -1824,13 +1825,10 @@ async function handleLogin()
     return;
   }
 
-  // دریافت اطلاعات پروفایل
   const { data: person, error: personError } = await dbClient.from('persons').select('*').eq('user_id', data.user.id).single();
   
   if (personError || !person) { 
-    // نمایش خطای دقیق دیتابیس
-    var errMsg = personError ? personError.message : 'رکوردی یافت نشد';
-    showAlert('❌ اطلاعات پروفایل یافت نشد.\nدلیل: ' + errMsg, 'error'); 
+    showAlert('❌ اطلاعات پروفایل یافت نشد.\nدلیل: ' + (personError ? personError.message : 'رکوردی یافت نشد'), 'error'); 
     await dbClient.auth.signOut(); 
     return; 
   }
@@ -1838,12 +1836,15 @@ async function handleLogin()
   setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
   $('login_password').value = '';
   
-  if (person.must_change_password) { showForcePasswordChange(data.user.id); } 
-  else { await startApp(); }
+  if (person.must_change_password) { 
+    location.reload(); 
+  } else { 
+    $('login_modal').style.display = 'none';
+    await startApp(); 
+  }
 }
 
-async function handleSetup()
-{
+async function handleSetup(){
   if(!navigator.onLine||!dbClient){showAlert('برای ایجاد حساب باید به اینترنت متصل باشید.','error');return}
   var first=val('setup_first'),last=val('setup_last'),pid=val('setup_pid'),username=val('setup_username'),password=$('setup_password').value;
   if(!first||!last||!pid||!username||!password){showAlert('همه فیلدها الزامی.');return}
@@ -1852,36 +1853,29 @@ async function handleSetup()
 
   showAlert('⏳ در حال ایجاد حساب...','info');
 
-  // استخراج آدرس و کلید از config
-  var cfg = window.APP_CONFIG.SUPABASE_URL ? window.APP_CONFIG : window.APP_CONFIG.SERVERS[0];
-  var url = cfg.SUPABASE_URL || cfg.DB_URL || cfg.url;
-  var key = cfg.SUPABASE_ANON_KEY || cfg.DB_ANON_KEY || cfg.key;
-
   try {
-    const response = await fetch(`${url}/functions/v1/setup-admin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': key,
-        'Authorization': `Bearer ${key}` // ارسال کلید به عنوان توکن برای عبور از فیلتر امنیتی
-      },
-      body: JSON.stringify({ username, firstname: first, lastname: last, personnelid: pid, password })
+    const { data, error } = await dbClient.functions.invoke('setup-admin', {
+      body: { username, firstname: first, lastname: last, personnelid: pid, password }
     });
 
-    const resData = await response.json();
-
-    if (!response.ok) {
-      showAlert(`❌ خطای سرور (${response.status}): ` + (resData.error || resData.message || 'خطای ناشناخته'), 'error');
+    if (error) {
+      console.error("Edge Function Error:", error);
+      showAlert('❌ خطای ارتباط با تابع: ' + error.message, 'error');
+      return;
+    }
+    
+    if (data && data.error) {
+      showAlert('❌ خطای سرور: ' + data.error, 'error');
       return;
     }
 
-    // پس از ساخت موفق، فرم ورود را پر کرده و وارد می‌شویم
     $('login_username').value = username;
     $('login_password').value = password;
     await handleLogin(); 
 
   } catch (err) {
-    showAlert('❌ خطای شبکه: ' + err.message, 'error');
+    console.error("Catch Error:", err);
+    showAlert('❌ خطای پیش‌بینی نشده: ' + err.message, 'error');
   }
 }
 
@@ -2004,10 +1998,10 @@ function startConnectionMonitor(){
 function on(id,ev,fn){var e=$(id);if(e)e.addEventListener(ev,fn)}
 function delegate(id,fn){var e=$(id);if(!e)return;e.addEventListener('click',ev=>{var b=ev.target.closest('button');if(b&&b.dataset.action)fn(b.dataset.action,b.dataset.id)})}
 
-async function startApp()
-{
+async function startApp(){
   $('login_modal').style.display='none';
   $('main_app').style.display='block';
+  
   await seedImportance();
   refreshDropdowns();applyPermissions();
   var today=getTodayJalali().split('/');
