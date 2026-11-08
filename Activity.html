@@ -745,14 +745,35 @@ async function setData(key,data){
   
   if(changed.length){
     try{
-      var r=await dbClient.from(table).upsert(changed.map(x=>toDB(key,x)), { onConflict: 'id' }).select();
-      if(r.error){
-        showAlert('❌ خطا در ذخیره‌سازی: \n'+r.error.message,'error');
-        return false;
+      // جدا کردن رکوردهای جدید از رکوردهای قبلی برای جلوگیری از خطای RLS
+      var toInsert = changed.filter(x => !prev.has(x.id));
+      var toUpdate = changed.filter(x => prev.has(x.id));
+
+      if (toInsert.length > 0) {
+        var r1 = await dbClient.from(table).insert(toInsert.map(x=>toDB(key,x))).select();
+        if (r1.error) {
+          showAlert('❌ خطا در ذخیره‌سازی اطلاعات جدید:\n' + r1.error.message, 'error');
+          return false;
+        }
+        if(!Array.isArray(r1.data)||r1.data.length<toInsert.length){
+          showAlert('⚠️ هشدار: برخی رکوردهای جدید ذخیره نشدند. دسترسی کافی وجود ندارد.','warning');
+          return false;
+        }
       }
-      if(!Array.isArray(r.data)||r.data.length<changed.length){
-        showAlert('⚠️ هشدار: برخی رکوردها ذخیره نشدند. دسترسی کافی وجود ندارد.','warning');
-        return false;
+
+      if (toUpdate.length > 0) {
+        for (var i = 0; i < toUpdate.length; i++) {
+          var item = toUpdate[i];
+          var r2 = await dbClient.from(table).update(toDB(key, item)).eq('id', item.id).select();
+          if (r2.error) {
+            showAlert('❌ خطا در ویرایش اطلاعات:\n' + r2.error.message, 'error');
+            return false;
+          }
+          if(!Array.isArray(r2.data)||r2.data.length===0){
+            showAlert('⚠️ هشدار: برخی رکوردهای ویرایش‌شده ذخیره نشدند. دسترسی کافی وجود ندارد.','warning');
+            return false;
+          }
+        }
       }
     }catch(e){showAlert('❌ خطا در ارتباط با سرور: '+e.message,'error');return false}
   }
