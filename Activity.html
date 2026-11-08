@@ -129,17 +129,14 @@ tbody tr:last-child td{border-bottom:0}
 .week-grid-table .btn-add-week { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; font-size: 12px; background: var(--primary); color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
 .week-grid-table .btn-add-week:hover { background: var(--primaryH); }
 .hour-cell { width: 50px; text-align: center; font-weight: bold; background: var(--surface3); vertical-align: middle; font-size: 10px;}
-/* ثابت کردن ستون ساعت در نمای هفته (سمت راست) */
 .week-grid-table th:first-child,
 .week-grid-table td.hour-cell {
   position: sticky;
   right: 0;
   background: var(--surface3);
   z-index: 3;
-  /* خط جداکننده + سایه ملایم برای نمایش لایه بالاتر هنگام اسکرول */
   box-shadow: -1px 0 0 var(--border), -3px 0 6px rgba(0,0,0,0.06);
 }
-
 .week-grid-table th:first-child {
   background: var(--surface2);
   z-index: 4;
@@ -263,6 +260,20 @@ tbody tr:last-child td{border-bottom:0}
 </head>
 <body>
 
+<!-- مودال تغییر رمز اجباری (جدید) -->
+<div id="modal_force_change_password" class="modal-overlay hidden" style="z-index: 3000;">
+  <div class="modal" style="max-width:450px">
+    <h3>🔐 تغییر رمز عبور (اجباری)</h3>
+    <p class="modal-note">برای امنیت حساب، لطفاً رمز عبور جدیدی تعیین کنید. (رمز فعلی شما همان «نام کاربری» شماست).</p>
+    <div class="form-group"><label>رمز عبور جدید (حداقل ۶ کاراکتر):</label><input type="password" id="force_new_pass" dir="ltr"></div>
+    <div class="form-group"><label>تکرار رمز عبور جدید:</label><input type="password" id="force_confirm_pass" dir="ltr"></div>
+    <div id="force_pass_error" class="alert alert-error" style="display:none;margin-top:10px"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-success" style="flex:1" id="btn_submit_force_pass">ذخیره و ادامه</button>
+    </div>
+  </div>
+</div>
+
 <div id="login_modal" class="auth-root" style="display:none">
   <div class="auth-card">
     <div style="text-align:center;font-size:44px;margin-bottom:8px">📊</div>
@@ -284,11 +295,11 @@ tbody tr:last-child td{border-bottom:0}
       <div class="form-group"><label>شماره پرسنلی:</label><input type="text" id="setup_pid" maxlength="6" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
       <div class="form-group"><label>نام کاربری:</label><input type="text" id="setup_username" autocomplete="username"></div>
       <div class="form-group"><label>کلمه عبور (حداقل ۶ کاراکتر):</label><input type="password" id="setup_password" autocomplete="new-password"></div>
-      <button class="btn btn-success" style="width:100%" id="btn_setup">ایجاد حساب ادمین</button>
+      <button class="btn btn-success" style="width:100%" id="btn_setup">ایجاد حساب مدیر اصلی</button>
     </div>
     <hr style="margin:18px 0;border:0;border-top:1px dashed var(--border)">
     <button class="btn btn-secondary" style="width:100%" id="btn_retry_connection">🔄 تلاش مجدد برای اتصال</button>
-    </div>
+  </div>
 </div>
 
 <div class="app" id="main_app" style="display:none">
@@ -328,7 +339,6 @@ tbody tr:last-child td{border-bottom:0}
       <button data-target="settings" data-superadmin-only="1"><span class="nav-icon">💾</span>پشتیبان‌گیری</button>
     </aside>
     <main class="content">
-      <div id="backup_only_banner" class="alert alert-warning" style="display:none">⛔ اتصال به دیتابیس برقرار نیست. فقط تهیهٔ فایل پشتیبان از اطلاعات ذخیره‌شده روی این دستگاه ممکن است. با برقراری اتصال، برنامه خودکار به حالت عادی برمی‌گردد.</div>
       <div id="alert-box" class="alert"></div>
 
       <div id="section-persons" class="card">
@@ -341,7 +351,7 @@ tbody tr:last-child td{border-bottom:0}
         </div>
         <div class="form-row">
           <div class="form-group"><label>نام کاربری:</label><input type="text" id="p_username" autocomplete="off"></div>
-          <div class="form-group"><label>کلمه عبور:</label><input type="password" id="p_password" autocomplete="new-password"></div>
+          <div class="form-group"><label>کلمه عبور:</label><input type="password" id="p_password" autocomplete="new-password" placeholder="برای کاربر جدید الزامی است"></div>
           <div class="form-group"><label>نقش:</label>
             <select id="p_role"><option value="user">کاربر عادی</option><option value="manager">مدیر</option><option value="admin">ادمین</option><option value="superadmin">سوپر ادمین</option></select>
           </div>
@@ -595,11 +605,7 @@ tbody tr:last-child td{border-bottom:0}
 <div id="modal_change_password" class="modal-overlay hidden">
   <div class="modal" style="max-width:420px">
     <h3>🔑 تغییر رمز عبور</h3>
-    <p class="modal-note">برای تغییر رمز، ابتدا رمز فعلی خود را وارد کنید.</p>
-    <div class="form-group">
-      <label>رمز عبور فعلی:</label>
-      <input type="password" id="chg_old_pass" dir="ltr">
-    </div>
+    <p class="modal-note">رمز عبور جدید خود را وارد کنید.</p>
     <div class="form-group">
       <label>رمز عبور جدید (حداقل ۶ کاراکتر):</label>
       <input type="password" id="chg_new_pass" dir="ltr">
@@ -629,211 +635,62 @@ tbody tr:last-child td{border-bottom:0}
 /* ════════════════════════════════════════════════════════════════
    ۰) ثابت‌ها و متغیرهای سراسری
    ════════════════════════════════════════════════════════════════ */
-const MIN_PASSWORD_LEN=6;                       // حداقل طول کلمه عبور جدید
-const IDLE_LIMIT_MS=60*60*1000;                 // خروج خودکار پس از ۶۰ دقیقه عدم فعالیت
-const OFFLINE_ADMIN_KEY='actbk_offline_admin';  // مشخصات تأییدکنندهٔ آفلاین سوپر ادمین (فقط روی دستگاه او)
-const LOCAL_VERIFY_ITER=150000;                 // تعداد تکرار PBKDF2 برای تأیید آفلاین
-const PERSON_COLS='id,firstname,lastname,personnelid,username,role'; // ستون‌های مجاز خواندن از جدول persons (بدون هش رمز)
-const OFFLINE_MSG='⛔ اتصال به دیتابیس برقرار نیست؛ ثبت و ویرایش اطلاعات فقط در حالت آنلاین ممکن است.';
+const MIN_PASSWORD_LEN=6;
+const PERSON_COLS='id,firstname,lastname,personnelid,username,role';
 
-let dbClient=null;          // کلاینت Supabase
-let activeServerName='';    // نام سرور (فقط برای نمایش)
-let _backupOnly=false;      // حالت «فقط پشتیبان‌گیری» (سوپر ادمین بدون اتصال)
+let dbClient=null;          
+let activeServerName='';    
 
 /* ════════════════════════════════════════════════════════════════
    ۱) ابزارهای عمومی
    ════════════════════════════════════════════════════════════════ */
-/** میان‌بر getElementById */
 function $(id){return document.getElementById(id)}
-/** مقدار تمیزشدهٔ (trim) یک فیلد فرم */
 function val(id){var e=$(id);return e?String(e.value).trim():''}
-/** پاک‌سازی متن برای درج امن در HTML (جلوگیری از XSS) */
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
-/** افزودن صفر پیشین به اعداد یک‌رقمی */
 function pad2(n){n=String(n);return n.length<2?'0'+n:n}
-/** ارسال رویداد change روی یک المان */
 function fireChange(el){try{el.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}}
-/** تأخیر در اجرای تابع (برای جلوگیری از رندر در هر کلید) */
 function debounce(fn,ms){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},ms)}}
-/** تبدیل آرایهٔ بایت به رشتهٔ هگزادسیمال */
 function toHex(bytes){return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('')}
-/** تولید شناسهٔ یکتا با بخش تصادفی امن (crypto) */
 function genId(prefix){var a=new Uint32Array(1);crypto.getRandomValues(a);return prefix+Date.now()+'_'+a[0].toString(36)}
-/** گروه‌بندی شمارشی: تعداد عناصر به‌ازای هر کلید */
 function countBy(list,fn){var m={};list.forEach(x=>{var k=fn(x);if(k!=null)m[k]=(m[k]||0)+1});return m}
 
-/* ── نشست کاربر (فقط در sessionStorage و با پایان تب پاک می‌شود) ── */
-/** خواندن نشست فعلی */
 function getSession(){try{return JSON.parse(sessionStorage.getItem('actbk_session')||'null')}catch(e){return null}}
-/** ذخیرهٔ نشست */
 function setSession(s){sessionStorage.setItem('actbk_session',JSON.stringify(s))}
-/** حذف نشست */
 function clearSession(){sessionStorage.removeItem('actbk_session')}
-/** آیا کاربر فعلی ادمین/مدیر/سوپر ادمین است؟ */
 function isPriv(){var s=getSession();return !!s&&(s.role==='admin'||s.role==='manager'||s.role==='superadmin')}
 
-/* ── تم ── */
 const THEME_KEY='actbk_theme';
-/** اعمال تم ذخیره‌شده هنگام شروع */
 function initTheme(){var t=localStorage.getItem(THEME_KEY)||'light';document.documentElement.setAttribute('data-theme',t);var b=$('themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙'}
-/** تغییر تم روشن/تاریک */
 function toggleTheme(){var c=document.documentElement.getAttribute('data-theme')||'light';var n=c==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem(THEME_KEY,n);var b=$('themeBtn');if(b)b.textContent=n==='dark'?'☀️':'🌙'}
-/** باز/بسته کردن منوی کناری (موبایل) */
 function toggleNav(){$('main_nav').classList.toggle('active');$('navOverlay').classList.toggle('active')}
 
-/* ── هش رمز عبور ── */
-/** هش SHA-256 از نام‌کاربری+رمز+Salt ثابت (همان الگوریتم نسخه‌های قبل؛ سمت سرور دوباره با bcrypt هش می‌شود) */
-async function hashPassword(password,username){
-  const text=username+':'+password+':icg-actbk-salt-2024';
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
-  return toHex(new Uint8Array(buf));
-}
-/** مشتق‌سازی کند (PBKDF2) برای تأیید آفلاین سوپر ادمین؛ با هش ارسالی به سرور متفاوت است تا قابل استفاده برای ورود آنلاین نباشد */
-async function deriveLocalVerifier(password,username){
-  const enc=new TextEncoder();
-  const keyMat=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveBits']);
-  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc.encode('icg-actbk-local:'+username),iterations:LOCAL_VERIFY_ITER},keyMat,256);
-  return toHex(new Uint8Array(bits));
-}
-
-/** تقسیم صحیح (بخش صحیح خارج‌قسمت) */
-function div(a,b){return~~(a/b)}/** باقی‌مانده با علامت حاصل‌تقسیم صحیح */
-function mod(a,b){return a-~~(a/b)*b}
+function div(a,b){return~~(a/b)}function mod(a,b){return a-~~(a/b)*b}
 var BREAKS=[-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];
-/** محاسبهٔ اطلاعات سال شمسی (کبیسه بودن، سال میلادی متناظر و روز آغاز فروردین) */
 function jalCal(jy){var bl=BREAKS.length,gy=jy+621,leapJ=-14,jp=BREAKS[0],jm,jump=0,leap,leapG,march,n,i;for(i=1;i<bl;i++){jm=BREAKS[i];jump=jm-jp;if(jy<jm)break;leapJ+=div(jump,33)*8+div(mod(jump,33),4);jp=jm}n=jy-jp;leapJ+=div(n,33)*8+div(mod(n,33)+3,4);if(mod(jump,33)===4&&jump-n===4)leapJ+=1;leapG=div(gy,4)-div((div(gy,100)+1)*3,4)-150;march=20+leapJ-leapG;if(jump-n<6)n=n-jump+div(jump+4,33)*33;leap=mod(mod(n+1,33)-1,4);if(leap===-1)leap=4;return{leap,gy,march}}
-/** تبدیل تاریخ میلادی به شمارهٔ روز ژولین (JDN) */
 function g2d(gy,gm,gd){var d=div((gy+div(gm-8,6)+100100)*1461,4)+div(153*mod(gm+9,12)+2,5)+gd-34840408;return d-div(div(gy+100100+div(gm-8,6),100)*3,4)+752}
-/** تبدیل شمارهٔ روز ژولین به تاریخ میلادی */
 function d2g(jdn){var j=4*jdn+139361631;j+=div(div(4*jdn+183187720,146097)*3,4)*4-3908;var i=div(mod(j,1461),4)*5+308;var gd=div(mod(i,153),5)+1,gm=mod(div(i,153),12)+1,gy=div(j,1461)-100100+div(8-gm,6);return[gy,gm,gd]}
-/** تبدیل تاریخ شمسی به میلادی (بدون کتابخانهٔ خارجی) */
 function jalaliToGregorian(jy,jm,jd){var r=jalCal(jy);return d2g(g2d(r.gy,3,r.march)+(jm-1)*31-div(jm,7)*(jm-7)+jd-1)}
-/** تبدیل تاریخ میلادی به شمسی */
 function gregorianToJalali(gy,gm,gd){var jdn=g2d(gy,gm,gd),jy=d2g(jdn)[0]-621,r=jalCal(jy),k=jdn-g2d(jy+621,3,r.march);if(k>=0){if(k<=185)return[jy,1+div(k,31),mod(k,31)+1];k-=186}else{jy-=1;k+=179;if(r.leap===1)k+=1}return[jy,7+div(k,30),mod(k,30)+1]}
-/** آیا سال شمسی کبیسه است؟ */
 function isJalaliLeap(jy){return jalCal(jy).leap===0}
-/** تعداد روزهای یک ماه شمسی */
 function jalaliMonthLength(jy,jm){if(jm<=6)return 31;if(jm<=11)return 30;return isJalaliLeap(jy)?30:29}
-/** روز هفته (۰=شنبه ... ۶=جمعه) */
 function getJalaliDayOfWeek(jy,jm,jd){var g=jalaliToGregorian(jy,jm,jd);return(new Date(g[0],g[1]-1,g[2]).getDay()+1)%7}
-/** آیا شمارهٔ روز هفته پنجشنبه (۵) یا جمعه (۶) است؟ */
 function isHolidayDow(d){return d===5||d===6}
-/** تبدیل ارقام فارسی/عربی به انگلیسی */
 function toEnglishDigits(str){if(str==null)return'';return String(str).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-1776).replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632)}
-/** اعتبارسنجی رشتهٔ تاریخ شمسی (yyyy/mm/dd) */
 function isValidJalaliDate(str){if(!str)return false;var p=toEnglishDigits(str).replace(/\s/g,'').split('/');if(p.length!==3)return false;var jy=parseInt(p[0],10),jm=parseInt(p[1],10),jd=parseInt(p[2],10);if(isNaN(jy)||isNaN(jm)||isNaN(jd))return false;if(jy<1300||jy>1500||jm<1||jm>12)return false;return jd>=1&&jd<=jalaliMonthLength(jy,jm)}
-/** شکستن رشتهٔ تاریخ شمسی به سال/ماه/روز */
 function parseJalali(str){var p=toEnglishDigits(str).replace(/\s/g,'').split('/');return{jy:parseInt(p[0],10),jm:parseInt(p[1],10),jd:parseInt(p[2],10)}}
-/** قالب‌بندی تاریخ شمسی به yyyy/mm/dd */
 function fmtJalali(jy,jm,jd){return jy+'/'+pad2(jm)+'/'+pad2(jd)}
-/** نرمال‌سازی رشتهٔ تاریخ شمسی */
 function normJ(str){var p=parseJalali(str);return fmtJalali(p.jy,p.jm,p.jd)}
-/** تاریخ امروز به شمسی */
 function getTodayJalali(){var t=new Date();return fmtJalali.apply(null,gregorianToJalali(t.getFullYear(),t.getMonth()+1,t.getDate()))}
-/** تبدیل تاریخ شمسی به timestamp (برای مقایسه) */
 function jalaliToTimestamp(str){if(!str)return 0;var p=parseJalali(str),g=jalaliToGregorian(p.jy,p.jm,p.jd);return new Date(g[0],g[1]-1,g[2]).getTime()}
-/** افزودن/کاستن n روز به تاریخ شمسی */
 function addDaysStr(dateStr,n){var p=parseJalali(dateStr);var g=jalaliToGregorian(p.jy,p.jm,p.jd);var d=new Date(g[0],g[1]-1,g[2]+n);var j=gregorianToJalali(d.getFullYear(),d.getMonth()+1,d.getDate());return fmtJalali(j[0],j[1],j[2])}
 var DAY_NAMES=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
 var MONTH_NAMES=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 
-/* ════════════════════════════════════════════════════════════════
-   ۲) اتصال به دیتابیس و پایش وضعیت اتصال
-   ════════════════════════════════════════════════════════════════ */
-/** ساخت کلاینت Supabase از روی config.js (بدون ذخیرهٔ نشست Supabase در مرورگر) */
-async function initDbClient(){
-  if(!window.supabase){window.dbInitError='کتابخانه اتصال لود نشد.';return false}
-  let cfg=null;
-  if(window.APP_CONFIG){
-    if(window.APP_CONFIG.SERVERS&&window.APP_CONFIG.SERVERS.length>0){
-      cfg=window.APP_CONFIG.SERVERS.find(s=>s.type!=='nhost')||window.APP_CONFIG.SERVERS[0];
-    }else if(window.APP_CONFIG.DB_URL||window.APP_CONFIG.SUPABASE_URL){
-      cfg={url:window.APP_CONFIG.DB_URL||window.APP_CONFIG.SUPABASE_URL,key:window.APP_CONFIG.DB_ANON_KEY||window.APP_CONFIG.SUPABASE_ANON_KEY};
-    }
-  }
-  if(!cfg||!cfg.url||!cfg.key||String(cfg.url).includes('YOUR_')){window.dbInitError='تنظیمات اتصال در config.js ناقص است.';return false}
-  try{
-    dbClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-    activeServerName=cfg.name||'';
-    return true;
-  }catch(e){console.error('[DB] init failed:',e);window.dbInitError='خطا در راه‌اندازی اتصال.';return false}
-}
-
-/** نمایش نسخهٔ برنامه (خوانده‌شده از sw.js) در هدر */
-function loadAppVersion(){
-  fetch('./sw.js?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('bad response');return r.text()}).then(t=>{
-    var m=t.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);var el=$('app_version_display');if(m&&m[1]&&el)el.textContent=m[1];
-  }).catch(()=>{var el=$('app_version_display');if(el)el.textContent='نامشخص'});
-}
-
-/** به‌روزرسانی چراغ وضعیت اتصال (هدر و صفحهٔ ورود)؛ فقط نمایش، بدون تصمیم‌گیری */
-function setConnectionStatus(status,serverName){
-  var dot=$('onlineDot');
-  if(dot){
-    dot.classList.remove('online','partial','offline','checking');dot.classList.add(status);
-    dot.title=status==='online'?('آنلاین'+(serverName?' — '+serverName:'')):status==='offline'?'آفلاین — اتصال به دیتابیس برقرار نیست':'در حال بررسی اتصال...';
-  }
-  var box=$('login_conn_box'),text=$('login_conn_text');
-  if(box){box.classList.remove('online','partial','offline','checking');box.classList.add(status)}
-  if(text){
-    text.textContent=status==='online'?'✅ اتصال به دیتابیس برقرار است'+(serverName?' ('+serverName+')':''):status==='offline'?'⛔ اتصال به دیتابیس برقرار نیست':'⏳ در حال بررسی اتصال...';
-  }
-}
-
-let _connBusy=null,_connFails=0,_connTimer=null;
-/** بررسی اتصال با یک کوئری سبک؛ فراخوانی‌های هم‌زمان یک نتیجه را به اشتراک می‌گذارند */
-async function checkDbConnection(){
-  if(_connBusy)return _connBusy;
-  _connBusy=(async function(){
-    if(!dbClient||!navigator.onLine){setConnectionStatus('offline');return false}
-    setConnectionStatus('checking');
-    try{
-      const {error}=await dbClient.from('persons').select('id').limit(1);
-      if(!error){setConnectionStatus('online',activeServerName);return true}
-    }catch(e){console.warn('[Conn] check failed:',e.message)}
-    setConnectionStatus('offline');return false;
-  })();
-  try{return await _connBusy}finally{_connBusy=null}
-}
-
-/** سیاست قطع اتصال: کاربر عادی خارج می‌شود، سوپر ادمین به حالت «فقط پشتیبان‌گیری» می‌رود */
-function handleConnectionLost(){
-  var s=getSession();if(!s)return;
-  if(s.role==='superadmin'){if(!_backupOnly)enterBackupOnlyMode();return}
-  forceLogout('ارتباط با سرور قطع شد. تا برقراری مجدد اتصال امکان کار با برنامه وجود ندارد.');
-}
-
-/** هر دقیقه (و هنگام بازگشت به تب) اتصال را بررسی می‌کند؛ دو شکست پیاپی = قطع اتصال */
-async function connectionTick(){
-  var ok=await checkDbConnection();
-  var s=getSession();if(!s)return;
-  if(ok){
-    _connFails=0;
-    if(s.offline){clearSession();location.reload()}          // نشست آفلاین: ورود دوباره لازم است
-    else if(_backupOnly){location.reload()}                  // بازگشت اتصال: ادامهٔ نشست عادی
-  }else{
-    _connFails++;
-    if(_connFails>=2)handleConnectionLost();
-  }
-}
-/** راه‌اندازی پایشگر اتصال و شنونده‌های online/offline مرورگر */
-function startConnectionMonitor(){
-  if(_connTimer)clearInterval(_connTimer);
-  _connTimer=setInterval(()=>{if(document.visibilityState==='visible')connectionTick()},60000);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')connectionTick()});
-  window.addEventListener('online',()=>connectionTick());
-  window.addEventListener('offline',()=>{setConnectionStatus('offline');handleConnectionLost()});
-}
-
-/* ════════════════════════════════════════════════════════════════
-   ۳) لایهٔ داده: LocalStorage (فقط کش) + Supabase (مرجع اصلی)
-   ════════════════════════════════════════════════════════════════ */
 var KEYS={persons:'actbk_persons',topics:'actbk_topics',acts:'actbk_activities',holidays:'actbk_holidays',importance:'actbk_importance',planning:'actbk_planning',locations:'actbk_locations'};
 const TABLE_MAP={'actbk_persons':'persons','actbk_topics':'topics','actbk_activities':'activities','actbk_holidays':'holidays','actbk_importance':'importance_levels','actbk_planning':'planning_topics','actbk_locations':'locations'};
-const OPTIONAL_KEYS=[KEYS.locations]; // اگر جدول هنوز ساخته نشده باشد همگام‌سازی را خراب نمی‌کند
+const OPTIONAL_KEYS=[KEYS.locations];
 const DEFAULT_IMPORTANCE=[{id:'current',name:'اقدام جاری',color:'#3498db',isKey:false},{id:'important',name:'مهم',color:'#f39c12',isKey:false},{id:'very_important',name:'خیلی مهم',color:'#e74c3c',isKey:true}];
 
-/* نگاشت نام فیلدهای برنامه (camelCase) به ستون‌های دیتابیس (lowercase) */
 const FIELD_MAP={};
 FIELD_MAP[KEYS.persons]={firstName:'firstname',lastName:'lastname',personnelId:'personnelid'};
 FIELD_MAP[KEYS.acts]={endDate:'enddate',startTime:'starttime',endTime:'endtime',topicId:'topicid',createdBy:'createdby',createdAt:'createdat',privateDescription:'privatedescription'};
@@ -844,17 +701,14 @@ FIELD_MAP[KEYS.topics]={sortOrder:'sorting'};
 const INV_MAP={};
 Object.keys(FIELD_MAP).forEach(k=>{INV_MAP[k]={};Object.keys(FIELD_MAP[k]).forEach(f=>{INV_MAP[k][FIELD_MAP[k][f]]=f})});
 
-/** تغییر نام کلیدهای یک شیء بر اساس جدول نگاشت */
 function mapKeys(obj,map){var out={};for(var k in obj){out[map[k]||k]=obj[k]}return out}
-/** تبدیل رکورد برنامه به رکورد دیتابیس */
 function toDB(key,item){
   var out=mapKeys(item,FIELD_MAP[key]||{});delete out.created_at;
-  if(key===KEYS.topics){delete out.Sorting;out.sorting=Number(out.sorting)||0}   // حذف فیلد قدیمی Sorting از کش
-  if(key===KEYS.acts)out.onlyforme=item.onlyforme===true;   // (باگ نسخهٔ قبل: این فیلد حذف می‌شد)
+  if(key===KEYS.topics){delete out.Sorting;out.sorting=Number(out.sorting)||0}
+  if(key===KEYS.acts)out.onlyforme=item.onlyforme===true;   
   else if(key===KEYS.importance)out.is_key=item.isKey===true;
   return out;
 }
-/** تبدیل رکورد دیتابیس به رکورد برنامه + نرمال‌سازی مقادیر */
 function fromDB(key,item){
   var out=mapKeys(item,INV_MAP[key]||{});
   if(key===KEYS.acts){
@@ -865,91 +719,65 @@ function fromDB(key,item){
   return out;
 }
 
-/** خواندن آرایه از LocalStorage (هر بار نسخهٔ تازه؛ برای کدهایی که ویرایش می‌کنند) */
 function getData(k){try{var v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}}
-/* کش فقط‌خواندنی برای رندرها (پرهیز از پارس مکرر JSON) */
 var _ro={};
-/** کش فقط‌خواندنی یک کلید (نباید ویرایش شود) */
 function readOnly(key){if(!_ro[key])_ro[key]={list:getData(key),map:null};return _ro[key]}
-/** یافتن سریع رکورد با شناسه از کش فقط‌خواندنی */
 function idxGet(key,id){var c=readOnly(key);if(!c.map){c.map=new Map();c.list.forEach(x=>c.map.set(x.id,x))}return c.map.get(id)||null}
-/** نوشتن در LocalStorage و باطل‌کردن کش */
 function writeLocal(key,data){localStorage.setItem(key,JSON.stringify(data));delete _ro[key]}
-/** پاک‌کردن تمام دادههای محلی (هنگام خروج کاربر عادی) */
-function wipeLocalData(){Object.keys(KEYS).forEach(k=>localStorage.removeItem(KEYS[k]));localStorage.removeItem('actbk_importance_seeded');_ro={}}
 
-/** مرتب‌سازی بر اساس شمارهٔ پرسنلی */
 function sortPersonsById(persons){return persons.slice().sort((a,b)=>(Number(a.personnelId)||0)-(Number(b.personnelId)||0))}
 
-/** دریافت یک جدول از سرور و جایگزینی کش محلی؛ نتیجه: موفق/ناموفق */
 async function pullTable(localKey){
   var table=TABLE_MAP[localKey];
   try{
     var r;
     if(localKey===KEYS.persons)r=await dbClient.from(table).select(PERSON_COLS);
-    else{ // سایر جداول فقط از طریق RPC با توکن نشست خوانده می‌شوند (فیلتر «فقط برای من» سمت سرور)
-      var tk=sessionToken();if(!tk)return false;
-      r=await dbClient.rpc('app_get_rows',{p_token:tk,p_table:table});
-      if(r.error&&handleSessionError(r.error))return false;
-      if(!r.error&&!Array.isArray(r.data))r.data=[];
-    }
+    else r=await dbClient.from(table).select('*');
+    
     if(r.error){console.warn('[Sync] '+table+':',r.error.message);return false}
     writeLocal(localKey,(r.data||[]).map(i=>fromDB(localKey,i)));
     return true;
   }catch(e){console.warn('[Sync] '+table+' failed:',e.message);return false}
 }
-/** توکن نشست جاری (یا رشتهٔ خالی) */
-function sessionToken(){var s=getSession();return s&&s.token?s.token:''}
-/** اگر خطا مربوط به نشست نامعتبر/منقضی باشد کاربر خارج می‌شود؛ نتیجه: true یعنی مدیریت شد */
-function handleSessionError(err){
-  if(err && String(err.message||'').indexOf('SESSION_INVALID')>=0){forceLogout('نشست شما منقضی شده است. دوباره وارد شوید.');return true}
-  return false;
-}
-/** دریافت تازهٔ یک جدول قبل از ویرایش (کاهش خطر بازنویسی تغییرات دیگران) */
 async function getFresh(key){if(dbClient&&navigator.onLine)await pullTable(key);return getData(key)}
 
-/**
- * ذخیرهٔ داده‌ها: فقط رکوردهای تغییر‌کرده Upsert می‌شوند (نه کل آرایه) و LocalStorage فقط پس از موفقیت سرور به‌روز می‌شود.
- * حالت آفلاین مجاز نیست؛ بنابراین دادهٔ محلی قدیمی هرگز روی دادهٔ سرور نوشته نمی‌شود.
- */
 async function setData(key,data){
   var table=TABLE_MAP[key];
-  if(!table||key===KEYS.persons){writeLocal(key,data);return true} // جدول persons فقط از طریق RPC تغییر می‌کند
-  if(!dbClient||!navigator.onLine){showAlert(OFFLINE_MSG,'error');return false}
+  if(!table||key===KEYS.persons){writeLocal(key,data);return true} // persons only via RPC/Edge
+  if(!dbClient||!navigator.onLine){showAlert('اتصال به دیتابیس برقرار نیست.','error');return false}
+  
   var prev=new Map(getData(key).map(x=>[x.id,JSON.stringify(x)]));
   var changed=data.filter(x=>prev.get(x.id)!==JSON.stringify(x));
+  
   if(changed.length){
     try{
-      var tk=sessionToken();if(!tk){showAlert('نشست معتبر نیست.','error');return false}
-      var r=await dbClient.rpc('app_save_rows',{p_token:tk,p_table:table,p_rows:changed.map(x=>toDB(key,x))});
-      if(r.error){if(handleSessionError(r.error))return false;showAlert('❌ خطا در ذخیره‌سازی اطلاعات:\n'+r.error.message.replace('FORBIDDEN:',''),'error');return false}
-      if(!Array.isArray(r.data)||r.data.length<changed.length){
-        showAlert('⚠️ هشدار: '+(changed.length-(Array.isArray(r.data)?r.data.length:0))+' رکورد از '+changed.length+' رکورد ذخیره نشد.\n\nدلیل: سطح دسترسی شما برای جدول "'+table+'" کافی نیست.','warning');
+      var r=await dbClient.from(table).upsert(changed.map(x=>toDB(key,x)), { onConflict: 'id' }).select();
+      if(r.error){
+        showAlert('❌ خطا در ذخیره‌سازی: \n'+r.error.message,'error');
         return false;
       }
-    }catch(e){showAlert('❌ خطا در برقراری ارتباط با سرور: '+e.message,'error');setTimeout(()=>checkDbConnection(),1500);return false}
+      if(!Array.isArray(r.data)||r.data.length<changed.length){
+        showAlert('⚠️ هشدار: برخی رکوردها ذخیره نشدند. دسترسی کافی وجود ندارد.','warning');
+        return false;
+      }
+    }catch(e){showAlert('❌ خطا در ارتباط با سرور: '+e.message,'error');return false}
   }
   writeLocal(key,data);setConnectionStatus('online',activeServerName);return true;
 }
-/** حذف یک رکورد از سرور (با بررسی واقعاً حذف‌شدن)؛ نتیجه: موفق/ناموفق */
+
 async function deleteRemote(table,id){
-  if(!dbClient||!navigator.onLine){showAlert(OFFLINE_MSG,'error');return false}
+  if(!dbClient||!navigator.onLine){showAlert('اتصال برقرار نیست.','error');return false}
   try{
-    var tk=sessionToken();if(!tk){showAlert('نشست معتبر نیست.','error');return false}
-    var r=await dbClient.rpc('app_delete_row',{p_token:tk,p_table:table,p_id:id});
-    if(r.error){if(handleSessionError(r.error))return false;showAlert('❌ خطا در حذف:\n'+r.error.message.replace('FORBIDDEN:',''),'error');return false}
-    if(!r.data){showAlert('❌ حذف انجام نشد (رکورد وجود ندارد یا دسترسی کافی نیست).','error');return false}
+    var r=await dbClient.from(table).delete().eq('id',id).select();
+    if(r.error){showAlert('❌ خطا در حذف: '+r.error.message,'error');return false}
+    if(!r.data||r.data.length===0){showAlert('❌ حذف انجام نشد (رکورد وجود ندارد یا دسترسی کافی نیست).','error');return false}
     return true;
-  }catch(e){showAlert('❌ خطا در برقراری ارتباط با سرور: '+e.message,'error');return false}
+  }catch(e){showAlert('❌ خطا در ارتباط: '+e.message,'error');return false}
 }
 
-/**
- * همگام‌سازی یک‌طرفه (Pull): همهٔ جداول از سرور خوانده و کش محلی جایگزین می‌شود.
- * هیچ دادهٔ محلی به سرور ارسال نمی‌شود (برای جلوگیری از بازنویسی آخرین تغییرات سرور).
- */
 async function syncFromCloud(showMessage){
   if(showMessage===undefined)showMessage=true;
-  if(!dbClient||!navigator.onLine){setConnectionStatus('offline');if(showMessage)showAlert(OFFLINE_MSG,'error');return{ok:false}}
+  if(!dbClient||!navigator.onLine){setConnectionStatus('offline');if(showMessage)showAlert('اتصال برقرار نیست.','error');return{ok:false}}
   var btn=$('btn_sync_cloud');if(btn&&showMessage){btn.textContent='⏳...';btn.disabled=true}
   var keys=Object.keys(TABLE_MAP),results=[];
   try{results=await Promise.all(keys.map(pullTable))}catch(e){results=keys.map(()=>false)}
@@ -964,82 +792,34 @@ async function syncFromCloud(showMessage){
   if(showMessage)showAlert('خطا در دریافت اطلاعات از سرور.','error');
   checkDbConnection();return{ok:false};
 }
-/** رندر مجدد همهٔ بخش‌ها پس از همگام‌سازی */
 function renderAll(){
   try{refreshDropdowns();renderPersons();renderTopics();renderImportance();renderHolidays();renderLocations();renderCalendar();renderRecords();renderDayActs();renderPlanning();updatePlanningBadge()}
   catch(e){console.warn('[render]',e)}
 }
 
-/* ── RPC (توابع امن سمت سرور برای احراز هویت و مدیریت کاربران) ── */
-/** فراخوانی تابع RPC با کنترل حالت آفلاین */
-async function callRpc(fn,args){
-  if(!dbClient||!navigator.onLine)return{data:null,error:{message:OFFLINE_MSG}};
-  try{return await dbClient.rpc(fn,args||{})}catch(e){return{data:null,error:{message:e.message}}}
-}
-/** پیام خوانا برای خطاهای RPC */
-function rpcErrorMessage(error){
-  var m=(error&&error.message)||'خطای ناشناخته';
-  if(error&&(error.code==='PGRST202'||/Could not find the function|schema cache/i.test(m)))return 'ساختار دیتابیس به‌روز نیست. اسکریپت SQL نسخهٔ جدید باید اجرا شود.';
-  return m;
-}
-/** بررسی نتیجهٔ RPC؛ در صورت موفقیت true. انقضای نشست = خروج خودکار */
-function rpcOk(data,error){
-  if(error){
-    if(/SESSION_EXPIRED/.test(error.message||'')){forceLogout('نشست شما منقضی شد. لطفاً دوباره وارد شوید.');return false}
-    showAlert('❌ '+rpcErrorMessage(error),'error');return false;
-  }
-  if(!data||data.ok!==true){showAlert((data&&data.message)||'عملیات انجام نشد.','error');return false}
-  return true;
-}
-
-/* ── کمکی‌های مدل داده (همه از کش فقط‌خواندنی) ── */
-/** فهرست درجات اهمیت (نسخهٔ قابل ویرایش) */
 function getImportanceLevels(){return getData(KEYS.importance)}
-/** نام درجهٔ اهمیت */
 function getImpLabel(id){var l=idxGet(KEYS.importance,id);return l?l.name:(id||'-')}
-/** رنگ درجهٔ اهمیت */
 function getImpColor(id){var l=idxGet(KEYS.importance,id);return l?(l.color||'#7f8c8d'):'#7f8c8d'}
-/** آیا درجه «اقدام کلیدی» است؟ */
 function isKeyImp(id){var l=idxGet(KEYS.importance,id);return !!l&&l.isKey===true}
-/** ترتیب درجه در فهرست (برای مرتب‌سازی) */
 function getImpOrder(id){var l=readOnly(KEYS.importance).list;for(var i=0;i<l.length;i++)if(l[i].id===id)return i;return 999}
-/** برچسب رنگی درجهٔ اهمیت */
 function impBadge(i){return '<span class="badge" style="background:'+esc(getImpColor(i))+'">'+esc(getImpLabel(i))+'</span>'}
-/** قالب‌بندی ساعت */
 function fmtHours(h){h=Number(h)||0;return(Math.round(h*100)/100)+' ساعت'}
-/** قالب‌بندی نفر-ساعت */
 function fmtPersonHours(h){h=Number(h)||0;return(Math.round(h*100)/100)+' نفر-ساعت'}
-/** یافتن عنصر با شناسه در آرایه */
 function findById(arr,id){for(var i=0;i<arr.length;i++)if(arr[i].id===id)return arr[i];return null}
-/** نام کامل شخص با شناسه */
 function personName(id){var p=idxGet(KEYS.persons,id);return p?p.firstName+' '+p.lastName:'نامشخص'}
-/** نام موضوع با شناسه */
 function topicName(id){var t=idxGet(KEYS.topics,id);return t?t.name:'نامشخص'}
 
-/** نرمال‌سازی متن فارسی برای مقایسه */
 function normText(s){return String(s||'').toLowerCase().replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\u064B-\u0652\u0640]/g,'').replace(/[^\u0600-\u06FF0-9a-z\s]/g,' ').replace(/\s+/g,' ').trim()}
-/** شباهت متنی (ضریب Jaccard روی کلمات) */
 function simScore(a,b){var x=normText(a),y=normText(b);if(!x||!y)return 0;if(x===y)return 1;if(x.indexOf(y)>=0||y.indexOf(x)>=0)return .9;var tx=x.split(' '),ty=y.split(' '),sx={},sy={},k,uni=0,inter=0;tx.forEach(t=>{if(t)sx[t]=1});ty.forEach(t=>{if(t)sy[t]=1});for(k in sx){uni++;if(sy[k])inter++}for(k in sy){if(!sx[k])uni++}return uni?inter/uni:0}
 
-/* ── حریم خصوصی «فقط برای من» ── */
-/** آیا کاربر فعلی اجازهٔ دیدن این اقدام را دارد؟ (اقدام «فقط برای من» فقط برای ثبت‌کننده) */
 function canSeeAct(a){if(!a.onlyforme)return true;var s=getSession();return !!s&&a.createdBy===s.personId}
-/** فهرست اقدامات قابل مشاهده برای کاربر فعلی (فقط‌خواندنی) */
 function getVisibleActs(){return readOnly(KEYS.acts).list.filter(canSeeAct)}
-/** آیا کاربر اجازهٔ ویرایش این اقدام را دارد؟ */
 function canEditAct(a,s){return isPriv()||a.createdBy===s.personId||(a.participants||[]).indexOf(s.personId)!==-1}
 
-/* ── تعطیلات ── */
-/** نقشهٔ تعطیلات ثبت‌شده در جدول holidays به شکل {تاریخ: عنوان} */
 function getHolidayMap(){var m={};readOnly(KEYS.holidays).list.forEach(h=>{m[h.date]=h.title});return m}
-/** آیا روز تعطیل است؟ (پنجشنبه، جمعه یا تعطیلی ثبت‌شده در جدول holidays) */
 function isOffDay(dateStr,holMap){var p=parseJalali(dateStr);return isHolidayDow(getJalaliDayOfWeek(p.jy,p.jm,p.jd))||!!(holMap&&holMap[dateStr])}
 
-/* ════════════════════════════════════════════════════════════════
-   ۴) هشدارها، منو و لیست‌های کشویی
-   ════════════════════════════════════════════════════════════════ */
 var alertTimer=null,loginAlertTimer=null;
-/** نمایش پیام در جعبهٔ هشدار صفحهٔ ورود یا صفحهٔ اصلی */
 function showAlert(msg,type){
   var lm=$('login_modal');
   var isLogin=!!(lm&&lm.style.display&&lm.style.display!=='none');
@@ -1049,10 +829,8 @@ function showAlert(msg,type){
   if(isLogin){clearTimeout(loginAlertTimer);loginAlertTimer=setTimeout(()=>{box.style.display='none'},15000)}
   else{clearTimeout(alertTimer);alertTimer=setTimeout(()=>{box.style.display='none'},15000);window.scrollTo({top:0,behavior:'smooth'})}
 }
-/** بستن تقویم‌های بازشده */
 function closePopups(){var p=document.querySelectorAll('.datepicker-popup');for(var i=0;i<p.length;i++)if(p[i].parentNode)p[i].parentNode.removeChild(p[i])}
 
-/** پرکردن لیست‌های کشویی پرسنل، موضوع، اهمیت و محل برگزاری */
 function refreshDropdowns(){
   var persons=sortPersonsById(readOnly(KEYS.persons).list),i,j;
   var pd=document.querySelectorAll('.person-dropdown');
@@ -1083,7 +861,6 @@ function refreshDropdowns(){
   fillLocationSelect();
 }
 
-/** نمایش یک بخش از برنامه و رندر محتوای آن */
 function showSection(id){
   closePopups();
   var cards=document.querySelectorAll('.content > div.card'),i;
@@ -1105,7 +882,6 @@ function showSection(id){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-/** ساخت چک‌باکس‌های شرکت‌کنندگان در فرم ثبت اقدام */
 function populateParticipants(preselected){
   var container=$('participants_checkboxes');if(!container)return;
   var persons=sortPersonsById(readOnly(KEYS.persons).list);
@@ -1121,10 +897,8 @@ function populateParticipants(preselected){
   });
   container.innerHTML=html;
 }
-/** شناسهٔ شرکت‌کنندگان انتخاب‌شده */
 function getSelectedParticipants(){var arr=[];document.querySelectorAll('#participants_checkboxes input[type=checkbox]').forEach(cb=>{if(cb.checked)arr.push(cb.value)});return arr}
 
-/** اعمال سطح دسترسی (سوپر ادمین/ادمین/مدیر/کاربر) روی منو و فرم‌ها */
 function applyPermissions(){
   var s=getSession();if(!s)return;
   var isSuper=s.role==='superadmin',admin=s.role==='admin'||isSuper,priv=admin||s.role==='manager';
@@ -1132,7 +906,7 @@ function applyPermissions(){
   document.querySelectorAll('[data-admin-only]').forEach(el=>{el.style.display=admin?'':'none'});
   document.querySelectorAll('[data-manager-only]').forEach(el=>{el.style.display=priv?'':'none'});
   var roleSel=$('p_role');
-  if(roleSel)Array.prototype.forEach.call(roleSel.options,o=>{if(o.value==='superadmin'){o.hidden=!isSuper;o.disabled=!isSuper}}); // فقط سوپر ادمین می‌تواند نقش سوپر ادمین بدهد
+  if(roleSel)Array.prototype.forEach.call(roleSel.options,o=>{if(o.value==='superadmin'){o.hidden=!isSuper;o.disabled=!isSuper}});
   $('btn_sync_cloud').style.display='';
   var roleLabel=isSuper?'سوپر ادمین':(admin?'ادمین':(s.role==='manager'?'مدیر':'کاربر'));
   $('current_user').textContent=s.name+' — '+roleLabel;$('user_info').style.display='';
@@ -1142,38 +916,43 @@ function applyPermissions(){
   }
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۵) مدیریت پرسنل (از طریق RPC امن)
-   ════════════════════════════════════════════════════════════════ */
-/** افزودن/ویرایش کاربر؛ ثبت در سرور فقط با RPC و احراز هویت نشست انجام می‌شود */
 async function savePerson(){
   var s=getSession();if(!s)return;
   var id=val('p_id'),first=val('p_first_name'),last=val('p_last_name'),pid=val('p_personnel_id');
-  var username=val('p_username'),password=val('p_password'),role=val('p_role');
+  var username=val('p_username'),password=$('p_password').value,role=val('p_role');
+  
   if(!first||!last||!pid){showAlert('نام، نام خانوادگی و شماره پرسنلی الزامی است.');return}
   if(!/^\d{1,6}$/.test(pid)){showAlert('شماره پرسنلی باید یک عدد حداکثر ۶ رقمی باشد.');return}
-  if(!username||username.length>60){showAlert('نام کاربری الزامی است (حداکثر ۶۰ کاراکتر).');return}
+  if(!username){showAlert('نام کاربری الزامی است.');return}
+  
   var persons=getData(KEYS.persons);
   if(persons.some(p=>p.username===username&&p.id!==id)){showAlert('این نام کاربری قبلاً ثبت شده.');return}
   if(persons.some(p=>p.personnelId===pid&&p.id!==id)){showAlert('شماره پرسنلی تکراری.');return}
-  var old=id?persons.find(x=>x.id===id):null;
-  if(id&&!old){showAlert('یافت نشد.');return}
-  var hash=null;
-  if(password){
-    if(password.length<MIN_PASSWORD_LEN){showAlert('کلمه عبور حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
-    hash=await hashPassword(password,username);
-  }else if(!id){showAlert('کلمه عبور الزامی است.');return}
-  else if(old.username!==username){showAlert('با تغییر نام کاربری باید کلمه عبور جدید نیز وارد شود.');return}
-  var payload={id:id||genId('p'),firstname:first,lastname:last,personnelid:pid,username:username,role:role};
-  var r=await callRpc('app_save_person',{p_token:s.token,p_person:payload,p_hash:hash});
-  if(!rpcOk(r.data,r.error))return;
-  await pullTable(KEYS.persons);
-  renderPersons();resetPersonForm();refreshDropdowns();populateParticipants();
-  showAlert(id?'ویرایش شد.':'افزوده شد.','success');
+  
+  if(id){
+    const { error } = await dbClient.from('persons').update({ firstname: first, lastname: last, personnelid: pid, username: username, role: role }).eq('id', id);
+    if (error) { showAlert('❌ خطا در ویرایش: ' + error.message, 'error'); return; }
+    if (password) showAlert('تغییر رمز دیگران از اینجا ممکن نیست. کاربر باید خودش رمز را تغییر دهد.', 'warning');
+
+    await pullTable(KEYS.persons); renderPersons(); resetPersonForm(); showAlert('ویرایش شد.', 'success');
+  } else {
+    if(!password){showAlert('کلمه عبور الزامی است.');return}
+    
+    const { data: { session } } = await dbClient.auth.getSession();
+    const { data: funcData, error: funcError } = await dbClient.functions.invoke('create-user', {
+      body: { username, firstname: first, lastname: last, personnelid: pid, role },
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+
+    if (funcError || (funcData && funcData.error)) {
+      showAlert('❌ خطا: ' + (funcError?.message || funcData?.error), 'error'); return;
+    }
+
+    await pullTable(KEYS.persons); renderPersons(); resetPersonForm(); 
+    showAlert('کاربر ایجاد شد. رمز پیش‌فرض: ' + username, 'success');
+  }
 }
-/** پاک‌کردن فرم کاربر */
 function resetPersonForm(){$('p_id').value='';$('p_first_name').value='';$('p_last_name').value='';$('p_personnel_id').value='';$('p_username').value='';$('p_password').value='';$('p_password').placeholder='';$('p_role').value='user';$('btn_save_person').textContent='افزودن پرسنل';$('btn_cancel_person').style.display='none'}
-/** پرکردن فرم برای ویرایش کاربر */
 function editPerson(id){
   var p=getData(KEYS.persons).find(x=>x.id===id);if(!p)return;
   $('p_id').value=p.id;$('p_first_name').value=p.firstName;$('p_last_name').value=p.lastName;
@@ -1182,7 +961,6 @@ function editPerson(id){
   $('p_role').value=p.role||'user';$('btn_save_person').textContent='ذخیره تغییرات';$('btn_cancel_person').style.display='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/** نمایش جدول کاربران */
 function renderPersons(){
   var persons=sortPersonsById(readOnly(KEYS.persons).list),c=$('person_list_container');
   if(!persons.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">هنوز کاربری ثبت نشده.</p>';return}
@@ -1194,27 +972,24 @@ function renderPersons(){
     if(p.role==='admin')rb='<span class="badge badge-role-admin">ادمین</span>';
     else if(p.role==='manager')rb='<span class="badge badge-role-manager">مدیر</span>';
     else if(p.role==='superadmin')rb='<span class="badge badge-role-superadmin">سوپر ادمین</span>';
-    var locked=p.role==='superadmin'&&!isSuper; // ادمین عادی حق ویرایش/حذف سوپر ادمین را ندارد
+    var locked=p.role==='superadmin'&&!isSuper;
     var btns=locked?'<span style="color:var(--text3)">—</span>':'<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(p.id)+'">ویرایش</button><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(p.id)+'">حذف</button>';
     h+='<tr><td data-label="نام">'+esc(p.firstName)+'</td><td data-label="نام خانوادگی">'+esc(p.lastName)+'</td><td data-label="شماره پرسنلی">'+esc(p.personnelId)+'</td><td data-label="نام کاربری">'+esc(p.username||'-')+'</td><td data-label="نقش">'+rb+'</td><td data-label="تعداد">'+(cnt[p.id]||0)+'</td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+btns+'</td></tr>';
   });
   c.innerHTML=h+'</table>';
 }
-/** حذف کاربر (RPC) و همگام‌سازی مجدد (چون نام او از اقدامات هم حذف می‌شود) */
 async function deletePerson(id){
   var s=getSession();if(!s)return;
   if(id===s.personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
   if(!confirm('حذف کاربر باعث حذف نام او از اقدامات می‌شود. مطمئن؟'))return;
-  var r=await callRpc('app_delete_person',{p_token:s.token,p_id:id});
-  if(!rpcOk(r.data,r.error))return;
+  
+  var r=await dbClient.from('persons').delete().eq('id',id);
+  if(r.error){showAlert('❌ خطا در حذف: '+r.error.message,'error');return;}
+  
   await syncFromCloud(false);
   renderPersons();refreshDropdowns();populateParticipants();showAlert('حذف شد.','success');
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۶) موضوعات
-   ════════════════════════════════════════════════════════════════ */
-/** افزودن موضوع جدید */
 async function saveTopic(){
   var name=val('t_name');if(!name){showAlert('نام موضوع الزامی.');return}
   var topics=getData(KEYS.topics);
@@ -1223,9 +998,7 @@ async function saveTopic(){
   if(!(await setData(KEYS.topics,topics)))return;
   $('t_name').value='';renderTopics();refreshDropdowns();showAlert('افزوده شد.','success');
 }
-/** شمارهٔ ترتیب بعدی برای موضوع جدید (آخر فهرست) */
 function nextTopicOrder(){var l=readOnly(KEYS.topics).list;return l.length?Math.max.apply(null,l.map(x=>x.sortOrder||0))+1:1}
-/** جابه‌جایی موضوع در ترتیب نمایش (dir=-1 بالا، +1 پایین) و شماره‌گذاری مجدد */
 async function moveTopic(id,dir){
   var list=getData(KEYS.topics).sort(byOrder),i=list.findIndex(x=>x.id===id),j=i+dir;
   if(i<0||j<0||j>=list.length)return;
@@ -1233,7 +1006,6 @@ async function moveTopic(id,dir){
   list.forEach((x,k)=>{x.sortOrder=k+1});
   if(await setData(KEYS.topics,list)){renderTopics();refreshDropdowns()}
 }
-/** نمایش جدول موضوعات (مرتب‌شده بر اساس ترتیب) */
 function renderTopics(){
   var topics=readOnly(KEYS.topics).list.slice().sort(byOrder),c=$('topic_list_container');
   if(!topics.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">هنوز موضوعی تعریف نشده.</p>';return}
@@ -1242,7 +1014,6 @@ function renderTopics(){
   topics.forEach(t=>{h+='<tr><td data-label="ترتیب">'+(t.sortOrder||0)+'</td><td data-label="نام">'+esc(t.name)+'</td><td data-label="تعداد">'+(cnt[t.id]||0)+'</td><td data-label="عملیات" style="display:flex;gap:4px;justify-content:flex-end"><button class="btn btn-secondary btn-sm" data-action="up" data-id="'+esc(t.id)+'" title="بالا">▲</button><button class="btn btn-secondary btn-sm" data-action="down" data-id="'+esc(t.id)+'" title="پایین">▼</button><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(t.id)+'">حذف</button></td></tr>'});
   c.innerHTML=h+'</table>';
 }
-/** حذف موضوع (در صورت عدم استفاده در اقدامات) */
 async function deleteTopic(id){
   var used=getData(KEYS.acts).filter(a=>a.topicId===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده و قابل حذف نیست.');return}
@@ -1252,19 +1023,13 @@ async function deleteTopic(id){
   renderTopics();refreshDropdowns();showAlert('حذف شد.','success');
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۷) درجات اهمیت
-   ════════════════════════════════════════════════════════════════ */
-/** پاک‌کردن فرم درجهٔ اهمیت */
 function resetImportanceForm(){$('imp_id').value='';$('imp_name').value='';$('imp_color').value='#3498db';$('imp_is_key').checked=false;$('btn_save_imp').textContent='افزودن';$('btn_cancel_imp_wrap').style.display='none'}
-/** پرکردن فرم برای ویرایش درجهٔ اهمیت */
 function editImportance(id){
   var lv=getImportanceLevels().find(x=>x.id===id);if(!lv)return;
   $('imp_id').value=lv.id;$('imp_name').value=lv.name;$('imp_color').value=lv.color||'#3498db';$('imp_is_key').checked=lv.isKey===true;
   $('btn_save_imp').textContent='ذخیره';$('btn_cancel_imp_wrap').style.display='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/** افزودن/ویرایش درجهٔ اهمیت */
 async function saveImportance(){
   var id=val('imp_id'),name=val('imp_name'),color=val('imp_color')||'#3498db',isKey=$('imp_is_key').checked;
   if(!name){showAlert('نام الزامی.');return}
@@ -1281,7 +1046,6 @@ async function saveImportance(){
     if(await setData(KEYS.importance,levels)){renderImportance();refreshDropdowns();resetImportanceForm();showAlert('افزوده شد.','success')}
   }
 }
-/** حذف درجهٔ اهمیت (در صورت عدم استفاده) */
 async function deleteImportance(id){
   var levels=getImportanceLevels(),lv=levels.find(x=>x.id===id);if(!lv)return;
   if(levels.length<=1){showAlert('حداقل یک درجه لازم است.','error');return}
@@ -1292,7 +1056,6 @@ async function deleteImportance(id){
   writeLocal(KEYS.importance,levels.filter(x=>x.id!==id));
   renderImportance();refreshDropdowns();showAlert('حذف شد.','success');
 }
-/** نمایش جدول درجات اهمیت */
 function renderImportance(){
   var levels=readOnly(KEYS.importance).list,c=$('imp_list_container');
   if(!levels.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">درجه‌ای ثبت نشده.</p>';return}
@@ -1305,10 +1068,6 @@ function renderImportance(){
   c.innerHTML=h+'</table>';
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۸) تعطیلات رسمی
-   ════════════════════════════════════════════════════════════════ */
-/** افزودن یک تعطیلی */
 async function saveHoliday(){
   var dateStr=val('h_date'),title=val('h_title');
   if(!isValidJalaliDate(dateStr)){showAlert('تاریخ نامعتبر.');return}
@@ -1319,14 +1078,12 @@ async function saveHoliday(){
   if(!(await setData(KEYS.holidays,holidays)))return;
   $('h_title').value='';renderHolidays();renderCalendar();showAlert('ثبت شد.','success');
 }
-/** حذف یک تعطیلی */
 async function deleteHoliday(id){
   if(!confirm('از حذف مطمئن هستید؟'))return;
   if(!(await deleteRemote('holidays',id)))return;
   writeLocal(KEYS.holidays,getData(KEYS.holidays).filter(h=>h.id!==id));
   renderHolidays();renderCalendar();showAlert('حذف شد.','success');
 }
-/** نمایش جدول تعطیلات */
 function renderHolidays(){
   var holidays=readOnly(KEYS.holidays).list.slice().sort((a,b)=>jalaliToTimestamp(a.date)-jalaliToTimestamp(b.date));
   var c=$('holiday_list_container');
@@ -1335,7 +1092,6 @@ function renderHolidays(){
   holidays.forEach(x=>{h+='<tr><td data-label="تاریخ">'+esc(x.date)+'</td><td data-label="عنوان">'+esc(x.title)+'</td><td data-label="عملیات"><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(x.id)+'">حذف</button></td></tr>'});
   c.innerHTML=h+'</table>';
 }
-/** افزودن تعطیلات ثابت سال (نوروز، ۱۵ خرداد و...) */
 async function loadDefaultHolidays(){
   var year=parseInt(val('h_default_year'),10);
   if(isNaN(year)||year<1300||year>1500){showAlert('سال معتبر.');return}
@@ -1346,14 +1102,8 @@ async function loadDefaultHolidays(){
   else showAlert('قبلاً ثبت شده‌اند.','warning');
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۹) محل‌های برگزاری (جدول locations؛ فقط سوپر ادمین)
-   ════════════════════════════════════════════════════════════════ */
-/** مقایسه‌گر مرتب‌سازی بر اساس ستون ترتیب و سپس نام */
 function byOrder(a,b){return(a.sortOrder||0)-(b.sortOrder||0)||String(a.name).localeCompare(String(b.name),'fa')}
-/** نام محل‌ها به ترتیب نمایش */
 function getLocationNames(){return readOnly(KEYS.locations).list.slice().sort(byOrder).map(l=>l.name)}
-/** پرکردن لیست کشویی محل برگزاری از جدول locations (+ گزینهٔ ثابت «سایر») */
 function fillLocationSelect(){
   var sel=$('act_location_select');if(!sel)return;
   var cur=sel.value,names=getLocationNames();
@@ -1361,15 +1111,12 @@ function fillLocationSelect(){
   sel.value=(cur&&(names.indexOf(cur)!==-1||cur==='سایر'))?cur:(names.length?names[0]:'سایر');
   toggleOtherLocation(false);
 }
-/** نمایش/پنهان‌سازی فیلد متن آزاد «سایر» */
 function toggleOtherLocation(focus){
   var other=$('act_location_other');if(!other)return;
   if($('act_location_select').value==='سایر'){other.classList.remove('hidden');if(focus)other.focus()}
   else{other.classList.add('hidden');other.value=''}
 }
-/** رویداد تغییر محل در فرم (از HTML فراخوانی می‌شود) */
 function onLocationChange(){toggleOtherLocation(true)}
-/** مقداردهی فیلدهای محل برای ویرایش/تبدیل/فرم جدید */
 function setLocationFields(loc){
   var names=getLocationNames(),sel=$('act_location_select'),oth=$('act_location_other');
   if(loc&&names.indexOf(loc)!==-1){sel.value=loc;oth.value=''}
@@ -1377,21 +1124,16 @@ function setLocationFields(loc){
   else{sel.value=names.length?names[0]:'سایر';oth.value=''}
   toggleOtherLocation(false);
 }
-/** محل نهایی انتخاب‌شده در فرم */
 function readLocation(){var l=val('act_location_select');if(l==='سایر')l=val('act_location_other')||'سایر';return l}
 
-/** شمارهٔ ترتیب بعدی برای محل جدید */
 function nextLocOrder(){var l=readOnly(KEYS.locations).list;return l.length?Math.max.apply(null,l.map(x=>x.sortOrder||0))+1:1}
-/** پاک‌کردن فرم محل */
 function resetLocationForm(){$('loc_id').value='';$('loc_name').value='';$('loc_order').value=nextLocOrder();$('btn_save_loc').textContent='افزودن';$('btn_cancel_loc_wrap').style.display='none'}
-/** پرکردن فرم برای ویرایش محل */
 function editLocation(id){
   var l=getData(KEYS.locations).find(x=>x.id===id);if(!l)return;
   $('loc_id').value=l.id;$('loc_name').value=l.name;$('loc_order').value=l.sortOrder||0;
   $('btn_save_loc').textContent='ذخیره';$('btn_cancel_loc_wrap').style.display='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/** افزودن/ویرایش محل برگزاری */
 async function saveLocation(){
   var s=getSession();if(!s||s.role!=='superadmin'){showAlert('فقط سوپر ادمین مجاز است.');return}
   var id=val('loc_id'),name=val('loc_name'),order=parseInt(val('loc_order'),10);
@@ -1406,7 +1148,6 @@ async function saveLocation(){
   }else list.push({id:genId('loc_'),name:name,sortOrder:order});
   if(await setData(KEYS.locations,list)){renderLocations();fillLocationSelect();resetLocationForm();showAlert(id?'ویرایش شد. (اقدامات قبلی با نام قدیمی باقی می‌مانند)':'افزوده شد.','success')}
 }
-/** جابه‌جایی محل در ترتیب نمایش (dir=-1 بالا، +1 پایین) و شماره‌گذاری مجدد */
 async function moveLocation(id,dir){
   var list=getData(KEYS.locations).sort(byOrder),i=list.findIndex(x=>x.id===id),j=i+dir;
   if(i<0||j<0||j>=list.length)return;
@@ -1414,7 +1155,6 @@ async function moveLocation(id,dir){
   list.forEach((x,k)=>{x.sortOrder=k+1});
   if(await setData(KEYS.locations,list)){renderLocations();fillLocationSelect()}
 }
-/** حذف محل برگزاری */
 async function deleteLocation(id){
   var l=getData(KEYS.locations).find(x=>x.id===id);if(!l)return;
   var used=getData(KEYS.acts).filter(a=>a.location===l.name).length;
@@ -1423,7 +1163,6 @@ async function deleteLocation(id){
   writeLocal(KEYS.locations,getData(KEYS.locations).filter(x=>x.id!==id));
   renderLocations();fillLocationSelect();showAlert('حذف شد.','success');
 }
-/** نمایش جدول محل‌ها */
 function renderLocations(){
   var c=$('loc_list_container');if(!c)return;
   var list=readOnly(KEYS.locations).list.slice().sort(byOrder);
@@ -1437,24 +1176,16 @@ function renderLocations(){
   c.innerHTML=h+'</table>';
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۱۰) تقویم ماهانه و نمای هفته
-   ════════════════════════════════════════════════════════════════ */
 var _weekStart=null;
-/** تاریخ شنبهٔ هفتهٔ شامل یک تاریخ */
 function getWeekStart(dateStr){var p=parseJalali(dateStr);return addDaysStr(dateStr,-getJalaliDayOfWeek(p.jy,p.jm,p.jd))}
-/** تعویض بین نمای ماه و هفته */
 function onWeekModeChange(){
   var w=$('cal_week_mode').checked;
   $('cal_month_group').style.display=w?'none':'';$('cal_year_group').style.display=w?'none':'';$('monthly_summary').style.display=w?'none':'';
   renderCalendar();
 }
-/** رفتن به هفتهٔ قبل/بعد */
 function weekShift(n){if(!_weekStart)_weekStart=getWeekStart(getTodayJalali());_weekStart=addDaysStr(_weekStart,n*7);renderWeekView()}
-/** رفتن به هفتهٔ جاری */
 function weekGoToday(){_weekStart=getWeekStart(getTodayJalali());renderWeekView()}
 
-/** رندر تقویم ماهانه (فقط اقدامات قابل‌مشاهده؛ ساعت چندروزه‌ها بدون روزهای تعطیل) */
 function renderCalendar(){
   var weekMode=$('cal_week_mode')&&$('cal_week_mode').checked;
   if(weekMode){$('calendar_container').classList.add('hidden');$('calendar_week_view').classList.remove('hidden');renderWeekView();return}
@@ -1478,8 +1209,8 @@ function renderCalendar(){
     for(var mi=0;mi<actMeta.length;mi++){var m=actMeta[mi];if(dayTs>=m.sTs&&dayTs<=m.eTs)da.push(m.a)}
     var isHol=isHolidayDow(dow)||!!holMap[ds],hrs=0;
     da.forEach(a=>{
-      if(a.date===ds&&(!a.endDate||a.endDate===a.date))hrs+=Number(a.hours)||0; // اقدام تک‌روزه: ساعت واقعی
-      else if(!isHol)hrs+=8;                                                       // چندروزه: ۸ ساعت برای روز کاری
+      if(a.date===ds&&(!a.endDate||a.endDate===a.date))hrs+=Number(a.hours)||0;
+      else if(!isHol)hrs+=8;
     });
     monthHours+=hrs;monthCount+=da.filter(a=>a.date===ds).length;
     var holTitle=holMap[ds]?'<div class="holiday-title">'+esc(holMap[ds])+'</div>':'';
@@ -1497,7 +1228,6 @@ function renderCalendar(){
   $('monthly_summary').innerHTML='<b>خلاصه '+MONTH_NAMES[month-1]+' '+year+':</b> '+monthCount+' اقدام ثبت‌شده • مجموع ساعات: '+fmtHours(monthHours);
 }
 
-/** رندر نمای هفتگی (اقدامات یک‌بار پیش‌پردازش و در سطل روز/ساعت قرار می‌گیرند) */
 function renderWeekView(){
   if(!_weekStart)_weekStart=getWeekStart(getTodayJalali());
   var container=$('week_grid');if(!container)return;
@@ -1536,7 +1266,6 @@ function renderWeekView(){
   container.innerHTML=html+'</tbody></table>';
 }
 
-/** پنجرهٔ جزئیات یک اقدام (فقط در صورت مجاز بودن مشاهده) */
 function showActivityDetails(id){
   var a=idxGet(KEYS.acts,id);if(!a||!canSeeAct(a))return;
   var pNames=(a.participants||[]).map(personName).join('، ');
@@ -1561,16 +1290,8 @@ function showActivityDetails(id){
   });
   document.body.appendChild(overlay);
 }
-/** باز کردن فرم ثبت اقدام برای یک تاریخ مشخص */
 function openNewActivityForDate(dateStr){showSection('activity');$('act_start_date').value=dateStr;resetActivityForm(true)}
 
-/* ════════════════════════════════════════════════════════════════
-   ۱۱) ثبت و مدیریت اقدامات
-   ════════════════════════════════════════════════════════════════ */
-/**
- * محاسبهٔ مدت (ساعت). تک‌روزه: اختلاف ساعت‌ها. چندروزه: ۸ ساعت برای هر روز کاری؛
- * پنجشنبه، جمعه و همهٔ تعطیلات ثبت‌شده در جدول holidays کسر می‌شوند.
- */
 function calcDurationHours(startDate,startTime,endDate,endTime){
   if(!isValidJalaliDate(startDate)||!isValidJalaliDate(endDate))return 0;
   if(!startTime||!endTime)return 0;
@@ -1583,7 +1304,6 @@ function calcDurationHours(startDate,startTime,endDate,endTime){
   while(jalaliToTimestamp(curr)<=endTs){if(!isOffDay(curr,holMap))total+=8;curr=addDaysStr(curr,1)}
   return total;
 }
-/** به‌روزرسانی فیلد «مدت محاسبه‌شده» در فرم */
 function updateCalculatedHours(){
   var sd=val('act_start_date'),st=val('act_start_time'),ed=val('act_end_date'),et=val('act_end_time'),el=$('act_calc_hours');if(!el)return;
   if(!isValidJalaliDate(sd)||!st||!et){el.value='';return}
@@ -1591,13 +1311,11 @@ function updateCalculatedHours(){
   if(!isValidJalaliDate(ed)){el.value='';return}
   var h=calcDurationHours(sd,st,ed,et);el.value=h>0?h+' ساعت':'نامعتبر';
 }
-/** تنظیم حالت ویرایش/ثبت در فرم اقدام */
 function setActivityEditMode(isEdit){
   var hdr=$('activity_form_header');if(hdr)hdr.classList.toggle('hidden',isEdit);
   var sb=$('btn_save_act');if(sb)sb.textContent=isEdit?'💾 ذخیره تغییرات':'ثبت اقدام';
   var cb=$('btn_cancel_edit_act');if(cb)cb.style.display=isEdit?'':'none';
 }
-/** پاک‌کردن فرم اقدام (با حفظ تاریخ در صورت keepDate) */
 function resetActivityForm(keepDate){
   $('act_id').value='';setActivityEditMode(false);
   var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
@@ -1606,10 +1324,8 @@ function resetActivityForm(keepDate){
   if(!keepDate){$('act_start_date').value=getTodayJalali();$('act_end_date').value=''}
   populateParticipants();updateCalculatedHours();renderDayActs();
 }
-/** انصراف از ویرایش اقدام */
 function cancelEditAct(){resetActivityForm(true);showAlert('ویرایش لغو شد.','info')}
 
-/** اعتبارسنجی و ثبت/ویرایش اقدام؛ شامل تشخیص شباهت متنی برای جلوگیری از ثبت تکراری */
 async function saveActivity(){
   var id=$('act_id').value,sd=val('act_start_date'),st=val('act_start_time');
   var ed=val('act_end_date')||sd,et=val('act_end_time');
@@ -1626,10 +1342,10 @@ async function saveActivity(){
   if(jalaliToTimestamp(ed)<jalaliToTimestamp(sd)){showAlert('تاریخ پایان قبل از شروع نباشد.');return}
   if(sd===ed&&st>=et){showAlert('ساعت شروع قبل از پایان باشد.','error');return}
   if(!desc){showAlert('شرح اقدام الزامی.');return}
-  if(!navigator.onLine||!dbClient){showAlert(OFFLINE_MSG,'error');return}
+  if(!navigator.onLine||!dbClient){showAlert('اتصال به دیتابیس برقرار نیست.','error');return}
   var hours=calcDurationHours(sd,st,ed,et);
   if(hours<=0){showAlert('مدت محاسبه‌شده نامعتبر.');return}
-  await getFresh(KEYS.acts);   // آخرین وضعیت سرور قبل از ثبت
+  await getFresh(KEYS.acts);
   var obj={id:id||genId('a'),date:normJ(sd),endDate:normJ(ed),startTime:st,endTime:et,topicId:topicId,importance:imp,description:desc,location:location,privateDescription:privateDescription,hours:hours,participants:participants,onlyforme:onlyforme};
   if(id){
     var acts=getData(KEYS.acts),idx=acts.findIndex(x=>x.id===id);
@@ -1646,7 +1362,6 @@ async function saveActivity(){
   var all=getData(KEYS.acts);all.push(obj);
   if(await setData(KEYS.acts,all)){afterSave('اقدام با موفقیت ثبت شد.');handlePendingPlanConversion(obj.id)}
 }
-/** یافتن اقدامات مشابه (همان روز و موضوع) با شباهت متنی ≥ آستانه؛ فقط اقدامات قابل‌مشاهده برای کاربر */
 function findSimilar(obj,threshold){
   threshold=threshold||0.4;
   var nd=normText(obj.description),res=[];
@@ -1657,7 +1372,6 @@ function findSimilar(obj,threshold){
   });
   res.sort((x,y)=>y.s-x.s);return res;
 }
-/** پنجرهٔ هشدار «اقدام مشابه» و پیشنهاد پیوستن */
 function showSimilarBlockModal(sims,obj){
   var old=$('sim_block_overlay');if(old&&old.parentNode)old.parentNode.removeChild(old);
   var overlay=document.createElement('div');overlay.className='modal-overlay';overlay.id='sim_block_overlay';
@@ -1676,7 +1390,6 @@ function showSimilarBlockModal(sims,obj){
     if(e.target.closest('[data-act="close"]'))overlay.remove();
   });
 }
-/** پاک‌سازی فرم پس از ذخیرهٔ موفق */
 function afterSave(msg){
   if(msg)showAlert(msg,'success');
   setActivityEditMode(false);
@@ -1685,7 +1398,6 @@ function afterSave(msg){
   var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
   populateParticipants();renderDayActs();renderCalendar();
 }
-/** پیوستن کاربر فعلی به یک اقدام (پس از دریافت آخرین وضعیت سرور) */
 async function joinActivity(id){
   var session=getSession();if(!session)return;
   await getFresh(KEYS.acts);
@@ -1697,7 +1409,6 @@ async function joinActivity(id){
   if(await setData(KEYS.acts,acts)){showAlert('به شرکت‌کنندگان اضافه شدید.','success');renderDayActs();renderRecords();renderCalendar()}
 }
 
-/** دکمه‌های عملیات هر ردیف بر اساس نقش و مشارکت کاربر */
 function actButtons(a,session,isRecords){
   var priv=isPriv(),parts=a.participants||[],joined=parts.indexOf(session.personId)!==-1,id=esc(a.id);
   var edit='<button class="btn-icon-sm btn-warning" data-action="edit" data-id="'+id+'" title="ویرایش">✏️</button> ';
@@ -1710,7 +1421,6 @@ function actButtons(a,session,isRecords){
   if(a.createdBy===session.personId){b+=edit;if(parts.length<=1)b+=del}
   return b;
 }
-/** HTML یک ردیف جدول اقدامات (لیست روز یا سوابق) */
 function actRowHtml(a,session,withCreator){
   var dStr=(a.endDate&&a.endDate!==a.date)?esc(a.date)+' تا '+esc(a.endDate):esc(a.date);
   if(a.startTime)dStr+=' ('+esc(a.startTime)+' تا '+esc(a.endTime)+')';
@@ -1722,7 +1432,6 @@ function actRowHtml(a,session,withCreator){
   if(withCreator)h+='<td>'+esc(a.createdBy?personName(a.createdBy):'-')+'</td>';
   return h+'<td>'+actButtons(a,session,withCreator)+'</td></tr>';
 }
-/** جدول اقدامات روز انتخاب‌شده در فرم ثبت اقدام */
 function renderDayActs(){
   var c=$('day_acts_container'),dateStr=val('act_start_date'),session=getSession();if(!session)return;
   if(!isValidJalaliDate(dateStr)){c.innerHTML='<p style="padding:20px;text-align:center;color:var(--text3)">تاریخ را انتخاب کنید.</p>';return}
@@ -1734,7 +1443,6 @@ function renderDayActs(){
   acts.forEach(a=>{h+=actRowHtml(a,session,false)});
   c.innerHTML=h+'</tbody></table>';
 }
-/** پرکردن فرم برای ویرایش یک اقدام */
 function editAct(id){
   var a=idxGet(KEYS.acts,id),session=getSession();if(!a||!session||!canSeeAct(a))return;
   if(!canEditAct(a,session)){showAlert('اجازه ویرایش ندارید.','error');return}
@@ -1748,7 +1456,6 @@ function editAct(id){
   populateParticipants(parts);updateCalculatedHours();renderDayActs();
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/** حذف یک اقدام (با رعایت مجوزها و تأیید حذف از سرور) */
 async function deleteAct(id){
   var a=findById(getData(KEYS.acts),id),session=getSession();if(!a||!session||!canSeeAct(a))return;
   if(!isPriv()){
@@ -1762,7 +1469,6 @@ async function deleteAct(id){
   renderDayActs();renderRecords();renderCalendar();showAlert('اقدام با موفقیت حذف شد.','success');
 }
 
-/** جدول سوابق اقدامات با فیلتر (فقط اقدامات قابل‌مشاهده) */
 function renderRecords(){
   var personId=val('rec_person'),topicId=val('rec_topic'),imp=val('rec_imp'),search=normText(val('rec_search'));
   var from=val('rec_from'),to=val('rec_to'),vf=isValidJalaliDate(from),vt=isValidJalaliDate(to);
@@ -1784,22 +1490,17 @@ function renderRecords(){
   c.innerHTML=h+'</tbody></table>';
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۱۲) موضوعات در انتظار برنامه‌ریزی
-   ════════════════════════════════════════════════════════════════ */
 const PLAN_STATUS={draft:{label:'ثبت اولیه',color:'#64748b',icon:'📥'},coordinating:{label:'در حال هماهنگی',color:'#d97706',icon:'🔄'},ready:{label:'آماده برنامه‌ریزی',color:'#2563eb',icon:'✅'},converted:{label:'تبدیل‌شده',color:'#059669',icon:'🔗'},cancelled:{label:'منصرف‌شده',color:'#dc2626',icon:'❌'}};
 const PLAN_ACTIVE=['draft','coordinating','ready'];
 const PLAN_FLOW={draft:['coordinating','cancelled'],coordinating:['ready','cancelled'],ready:['converted','cancelled'],converted:[],cancelled:['draft']};
 let _pendingPlanConvert=null;
 
-/** پاک‌کردن فرم موضوع در انتظار */
 function resetPlanForm(){
   $('plan_id').value='';$('plan_title').value='';$('plan_requester').value='';$('plan_assignee').value='';
   $('plan_proposed_date').value='';$('plan_location').value='';$('plan_description').value='';$('plan_notes').value='';
   var imps=getImportanceLevels();$('plan_importance').value=imps.length?imps[0].id:'';
   $('btn_save_plan').textContent='ثبت موضوع';$('btn_cancel_plan').style.display='none';
 }
-/** پرکردن فرم برای ویرایش موضوع */
 function editPlan(id){
   var p=getData(KEYS.planning).find(x=>x.id===id);if(!p)return;
   if(p.status==='converted'){showAlert('این موضوع تبدیل شده و قابل ویرایش نیست.','warning');return}
@@ -1810,7 +1511,6 @@ function editPlan(id){
   $('btn_save_plan').textContent='ذخیره تغییرات';$('btn_cancel_plan').style.display='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/** ثبت/ویرایش موضوع در انتظار برنامه‌ریزی */
 async function savePlan(){
   var id=val('plan_id'),title=val('plan_title');
   if(!title){showAlert('عنوان موضوع الزامی.');return}
@@ -1826,7 +1526,6 @@ async function savePlan(){
     if(await setData(KEYS.planning,plans)){renderPlanning();resetPlanForm();updatePlanningBadge();showAlert('موضوع جدید ثبت شد.','success')}
   }
 }
-/** تغییر وضعیت موضوع در چرخهٔ حیات (فقط انتقال‌های مجاز) */
 async function advancePlanStatus(id,newStatus){
   var plans=await getFresh(KEYS.planning),p=plans.find(x=>x.id===id);if(!p)return;
   if((PLAN_FLOW[p.status]||[]).indexOf(newStatus)===-1){showAlert('این انتقال وضعیت مجاز نیست.','error');return}
@@ -1834,7 +1533,6 @@ async function advancePlanStatus(id,newStatus){
   p.status=newStatus;p.updatedAt=Date.now();
   if(await setData(KEYS.planning,plans)){renderPlanning();updatePlanningBadge();showAlert('وضعیت به «'+PLAN_STATUS[newStatus].label+'» تغییر کرد.','success')}
 }
-/** حذف موضوع (به‌جز تبدیل‌شده‌ها) */
 async function deletePlan(id){
   var p=getData(KEYS.planning).find(x=>x.id===id);if(!p)return;
   if(p.status==='converted'){showAlert('موضوع تبدیل‌شده قابل حذف نیست.','warning');return}
@@ -1843,7 +1541,6 @@ async function deletePlan(id){
   writeLocal(KEYS.planning,getData(KEYS.planning).filter(x=>x.id!==id));
   renderPlanning();updatePlanningBadge();showAlert('حذف شد.','success');
 }
-/** جدول موضوعات در انتظار با فیلتر وضعیت و جستجو */
 function renderPlanning(){
   var c=$('plan_list_container');if(!c)return;
   var fs=val('plan_filter_status')||'active',search=normText(val('plan_search'));
@@ -1875,13 +1572,11 @@ function renderPlanning(){
   });
   c.innerHTML=h+'</table>';
 }
-/** نشان تعداد موضوعات فعال روی منو */
 function updatePlanningBadge(){
   var badge=$('planning_badge');if(!badge)return;
   var n=readOnly(KEYS.planning).list.filter(p=>PLAN_ACTIVE.indexOf(p.status)!==-1).length;
   if(n>0){badge.textContent=n;badge.style.display='inline-block'}else badge.style.display='none';
 }
-/** پیش‌پر کردن فرم ثبت اقدام از روی یک موضوع «آماده» */
 function convertPlanToActivity(id){
   var p=getData(KEYS.planning).find(x=>x.id===id);if(!p)return;
   if(p.status!=='ready'){showAlert('تنها موضوعات «آماده برنامه‌ریزی» قابل تبدیل هستند.','warning');return}
@@ -1896,13 +1591,11 @@ function convertPlanToActivity(id){
   $('act_only_for_me').checked=false;updateCalculatedHours();
   showAlert('فرم پیش‌پر شد. پس از تکمیل (ساعت، شرکت‌کنندگان، موضوع) ذخیره کنید.','success');
 }
-/** انصراف از تبدیل موضوع به اقدام */
 function cancelPendingConversion(){
   _pendingPlanConvert=null;
   $('plan_convert_banner').classList.add('hidden');$('plan_convert_banner').style.display='none';
   showAlert('تبدیل لغو شد.','warning');
 }
-/** پس از ثبت اقدام، موضوع مرتبط را «تبدیل‌شده» می‌کند */
 async function handlePendingPlanConversion(activityId){
   if(!_pendingPlanConvert)return;
   var planId=_pendingPlanConvert;_pendingPlanConvert=null;
@@ -1912,7 +1605,6 @@ async function handlePendingPlanConversion(activityId){
   if(await setData(KEYS.planning,plans)){updatePlanningBadge();renderPlanning();showAlert('موضوع به «تبدیل‌شده» منتقل شد.','success')}
 }
 
-/** گردآوری دادهٔ گزارش بر اساس فیلترها (اقدامات «فقط برای من» هرگز وارد گزارش نمی‌شوند) */
 function gatherReportData(){
   var personId=val('rep_person'),topicId=val('rep_topic'),imp=val('rep_imp'),from=val('rep_from'),to=val('rep_to');
   if(!isValidJalaliDate(from)||!isValidJalaliDate(to))return null;
@@ -1932,11 +1624,9 @@ function gatherReportData(){
   var totalPersonHours=list.reduce((s,x)=>s+(Number(x.hours)*x.participants.length),0);
   var topicsData={};getData(KEYS.topics).sort(byOrder).forEach(t=>{topicsData[t.id]={name:t.name,acts:[]}});
   list.forEach(x=>{if(!topicsData[x.topicId])topicsData[x.topicId]={name:topicName(x.topicId),acts:[]};topicsData[x.topicId].acts.push(x)});
-  // آمار هر موضوع (فقط موضوعات دارای اقدام)؛ مجموع آن‌ها همیشه برابر کل اقدامات است
   var topicStats=Object.keys(topicsData).filter(id=>topicsData[id].acts.length).map(id=>({name:topicsData[id].name,count:topicsData[id].acts.length}));
   return{list,from,to,periodTitle,totalActs:list.length,totalPersonHours,topicStats,topicsData};
 }
-/** تولید داشبورد مدیریتی (HTML) در صفحه */
 function generateReport(){
   var data=gatherReportData();
   if(!data){$('report_area').innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">اقدامی یافت نشد یا بازه نامعتبر است.</p>';return false}
@@ -1965,12 +1655,9 @@ function generateReport(){
   $('report_area').innerHTML=h;return true;
 }
 
-/** چاپ داشبورد تولیدشده */
 function printReport(){var c=$('report_area');if(!c.querySelector('.dashboard-report')){showAlert('ابتدا گزارش را تولید کنید.');return}$('print_area').innerHTML=c.innerHTML;window.print()}
-/** چاپ محتوای یک جدول با سربرگ و محل امضا */
 function printData(containerId,needTable){var c=$(containerId);if(!c.innerHTML.trim()||(needTable&&!c.querySelector('table'))){showAlert('موردی برای چاپ نیست.');return}var HEAD='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px"><h2>واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری</h2></div>';var SIGN='<div style="margin-top:50px;display:flex;justify-content:space-between"><div>امضای کاربر: ............................</div><div>امضای مسئول: ............................</div></div>';$('print_area').innerHTML=HEAD+'<div>'+c.innerHTML+'</div>'+SIGN;window.print()}
 
-/** خروجی Word (.doc) از داشبورد */
 function exportWord(){
   if(!generateReport())return;
   var c=$('report_area');var content=c.innerHTML;
@@ -1983,9 +1670,7 @@ function exportWord(){
   setTimeout(()=>URL.revokeObjectURL(url),2000);
   showAlert('فایل Word دانلود شد.','success');
 }
-/** تقسیم آرایه به دسته‌های هم‌اندازه */
 function chunkArray(arr,size){var out=[];for(var i=0;i<arr.length;i+=size)out.push(arr.slice(i,i+size));return out}
-/** خروجی PowerPoint (.pptx) از داشبورد */
 async function exportPPTX(){
   if(typeof PptxGenJS==='undefined'){showAlert('کتابخانه PowerPoint لود نشده.','error');return}
   var data=gatherReportData();if(!data){showAlert('ابتدا بازه را انتخاب کنید.','error');return}
@@ -2033,24 +1718,17 @@ async function exportPPTX(){
   catch(e){showAlert('خطا: '+e.message,'error')}
 }
 
-
-
-/* ════════════════════════════════════════════════════════════════
-   ۱۳) پشتیبان‌گیری و بازیابی (فقط سوپر ادمین)
-   ════════════════════════════════════════════════════════════════ */
-/** دریافت فایل پشتیبان JSON از دادهٔ محلی (هش رمزها هرگز در پشتیبان نیست) */
 function exportJSON(){
   var s=getSession();if(!s||s.role!=='superadmin'){showAlert('فقط سوپر ادمین مجاز است.');return}
-  var data={version:'12.0',export_date:getTodayJalali(),persons:getData(KEYS.persons),topics:getData(KEYS.topics),acts:getData(KEYS.acts),holidays:getData(KEYS.holidays),importance:getData(KEYS.importance),planning:getData(KEYS.planning),locations:getData(KEYS.locations)};
+  var data={version:'13.0',export_date:getTodayJalali(),persons:getData(KEYS.persons),topics:getData(KEYS.topics),acts:getData(KEYS.acts),holidays:getData(KEYS.holidays),importance:getData(KEYS.importance),planning:getData(KEYS.planning),locations:getData(KEYS.locations)};
   var url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
   var a=document.createElement('a');a.href=url;a.download='backup_'+getTodayJalali().replace(/\//g,'-')+'.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-/** بازیابی و ادغام فایل JSON (فقط آنلاین و فقط سوپر ادمین؛ ابتدا آخرین وضعیت سرور دریافت می‌شود). کاربران بازیابی نمی‌شوند. */
 async function importJSON(){
   var s=getSession();
-  if(!s||s.role!=='superadmin'||_backupOnly||s.offline){showAlert('بازیابی فقط برای سوپر ادمین و در حالت آنلاین مجاز است.');return}
+  if(!s||s.role!=='superadmin'){showAlert('بازیابی فقط برای سوپر ادمین مجاز است.');return}
   var fi=$('import_file');if(!fi.files.length){showAlert('فایلی انتخاب نشده.');return}
   var reader=new FileReader();
   reader.onload=async function(ev){
@@ -2074,17 +1752,13 @@ async function importJSON(){
       else{curA.push(inc);aMap[inc.id]=inc}
     });
     ok=ok&&await setData(KEYS.acts,curA);
-    var known={};getData(KEYS.persons).forEach(p=>{known[p.id]=1});
-    var skipped=clean(data.persons).filter(p=>!known[p.id]).length;
     fi.value='';renderAll();
-    showAlert(ok?('ادغام شد.'+(skipped?'\n'+skipped+' کاربر موجود در فایل، در سرور وجود ندارند و بازیابی نشدند (کاربران فقط از بخش «پرسنل» ساخته می‌شوند).':'')):'ادغام با خطا متوقف شد.',ok?'success':'error');
+    showAlert(ok?'ادغام شد.':'ادغام با خطا متوقف شد.',ok?'success':'error');
   };
   reader.readAsText(fi.files[0]);
 }
 
-/** اتصال تقویم شمسی به همهٔ فیلدهای date-picker */
 function initDatepickers(){document.querySelectorAll('.date-picker').forEach(el=>el.addEventListener('click',openDatepicker))}
-/** باز کردن پنجرهٔ انتخاب تاریخ شمسی کنار فیلد */
 function openDatepicker(e){
   e.stopPropagation();var input=this;closePopups();
   var popup=document.createElement('div');popup.className='datepicker-popup';input.parentNode.appendChild(popup);
@@ -2097,7 +1771,6 @@ function openDatepicker(e){
   });
   renderDatepickerPopup(popup,v.jy,v.jm,input);
 }
-/** رسم شبکهٔ روزهای ماه در پنجرهٔ تقویم */
 function renderDatepickerPopup(popup,year,month,input){
   year=Math.min(1500,Math.max(1300,year));
   var days=jalaliMonthLength(year,month),first=getJalaliDayOfWeek(year,month,1);
@@ -2113,189 +1786,217 @@ function renderDatepickerPopup(popup,year,month,input){
   popup.querySelector('#dp_year').onchange=function(){renderDatepickerPopup(popup,parseInt(this.value,10)||year,parseInt(popup.querySelector('#dp_month').value,10),input)};
 }
 
-
-
-/* ════════════════════════════════════════════════════════════════
-   ۱۴) احراز هویت، نشست و حالت آفلاین سوپر ادمین
-   ════════════════════════════════════════════════════════════════ */
-/** خروج اجباری: پایان نشست سمت سرور، پاک‌سازی دادهٔ محلی کاربران عادی و بارگذاری مجدد صفحهٔ ورود */
 async function forceLogout(msg){
-  var s=getSession();
-  if(s&&s.token&&dbClient&&navigator.onLine){try{await dbClient.rpc('app_logout',{p_token:s.token})}catch(e){}}
+  await dbClient.auth.signOut();
   clearSession();
-  if(!s||s.role!=='superadmin')wipeLocalData();
   if(msg)sessionStorage.setItem('actbk_flash',msg);
   location.reload();
 }
-/** مراقب عدم فعالیت: خروج خودکار پس از IDLE_LIMIT_MS */
 var _idleStarted=false,_lastActivity=Date.now();
 function startIdleWatch(){
   if(_idleStarted)return;_idleStarted=true;
   ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{_lastActivity=Date.now()},{passive:true}));
-  setInterval(()=>{if(getSession()&&Date.now()-_lastActivity>IDLE_LIMIT_MS)forceLogout('به دلیل عدم فعالیت طولانی از حساب خارج شدید.')},60000);
+  setInterval(()=>{if(getSession()&&Date.now()-_lastActivity>3600000)forceLogout('به دلیل عدم فعالیت طولانی از حساب خارج شدید.')},60000);
 }
-/** ذخیرهٔ تأییدکنندهٔ آفلاین سوپر ادمین (PBKDF2؛ غیرقابل استفاده برای ورود آنلاین) */
-async function storeOfflineAdmin(person,username,password){
-  try{
-    var verifier=await deriveLocalVerifier(password,username);
-    localStorage.setItem(OFFLINE_ADMIN_KEY,JSON.stringify({username:username,verifier:verifier,personId:person.id,name:person.firstname+' '+person.lastname}));
-  }catch(e){console.warn('[offline-admin]',e)}
+
+function showForcePasswordChange(userId) {
+  $('modal_force_change_password').classList.remove('hidden');
+  $('btn_submit_force_pass').onclick = async () => {
+    const newPass = $('force_new_pass').value, confirmPass = $('force_confirm_pass').value, errBox = $('force_pass_error');
+    errBox.style.display = 'none';
+    if (!newPass || newPass.length < 6) { errBox.textContent = 'رمز جدید حداقل ۶ کاراکتر باشد.'; errBox.style.display = 'block'; return; }
+    if (newPass !== confirmPass) { errBox.textContent = 'تکرار رمز یکسان نیست.'; errBox.style.display = 'block'; return; }
+
+    const { error } = await dbClient.auth.updateUser({ password: newPass });
+    if (error) { errBox.textContent = 'خطا: ' + error.message; errBox.style.display = 'block'; return; }
+
+    await dbClient.from('persons').update({ must_change_password: false }).eq('user_id', userId);
+    $('modal_force_change_password').classList.add('hidden');
+    showAlert('✅ رمز عبور با موفقیت تغییر کرد.', 'success');
+    await startApp();
+  };
 }
-/** حذف تأییدکنندهٔ آفلاین اگر کاربر دیگر سوپر ادمین نیست */
-function dropOfflineAdminFor(username){
-  try{var c=JSON.parse(localStorage.getItem(OFFLINE_ADMIN_KEY)||'null');if(c&&c.username===username)localStorage.removeItem(OFFLINE_ADMIN_KEY)}catch(e){}
-}
-/** ورود آفلاین: فقط سوپر ادمینی که قبلاً روی همین دستگاه آنلاین وارد شده است */
-async function handleOfflineAdminLogin(username,password){
-  var cred=null;try{cred=JSON.parse(localStorage.getItem(OFFLINE_ADMIN_KEY)||'null')}catch(e){}
-  if(!cred||cred.username!==username){showAlert('⛔ اتصال برقرار نیست. در این حالت فقط سوپر ادمین (که قبلاً روی همین دستگاه آنلاین وارد شده) می‌تواند برای تهیه پشتیبان وارد شود.','error');return}
-  showAlert('⏳ در حال بررسی...','info');
-  var v=await deriveLocalVerifier(password,username);
-  if(v!==cred.verifier){showAlert('❌ نام کاربری یا کلمه عبور نادرست است.','error');return}
-  setSession({personId:cred.personId,username:cred.username,role:'superadmin',name:cred.name,offline:true});
-  location.reload();
-}
-/** ورود: اعتبارسنجی سمت سرور با RPC (بدون خواندن هش رمز) و دریافت توکن نشست */
+
 async function handleLogin(){
   var username=val('login_username'),password=$('login_password').value;
-  if(!username&&!password){showAlert('⚠️ نام کاربری و کلمه عبور را وارد کنید.','warning');return}
-  if(!username){showAlert('⚠️ نام کاربری را وارد کنید.','warning');return}
-  if(!password){showAlert('⚠️ کلمه عبور را وارد کنید.','warning');return}
-  var online=!!dbClient&&navigator.onLine&&await checkDbConnection();
-  if(!online){await handleOfflineAdminLogin(username,password);return}
-  showAlert('⏳ در حال بررسی اطلاعات...','info');
-  var hash=await hashPassword(password,username);
-  var r=await callRpc('app_login',{p_username:username,p_hash:hash});
-  if(r.error){showAlert('❌ '+rpcErrorMessage(r.error),'error');return}
-  if(!r.data||r.data.ok!==true){showAlert((r.data&&r.data.message)||'❌ نام کاربری یا کلمه عبور نادرست است.','error');return}
-  await finishLogin(r.data,username,password);
+  if(!username||!password){showAlert('نام کاربری و رمز الزامی است.','warning');return}
+  if(!dbClient||!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return}
+  
+  showAlert('⏳ در حال بررسی...','info');
+  const { data, error } = await dbClient.auth.signInWithPassword({ email: username + '@app.local', password });
+
+  if (error) {
+    showAlert(error.message.includes('Invalid login credentials') ? '❌ نام کاربری یا کلمه عبور نادرست است.' : '❌ خطا: ' + error.message, 'error');
+    return;
+  }
+
+  const { data: person, error: personError } = await dbClient.from('persons').select('*').eq('user_id', data.user.id).single();
+  if (personError || !person) { showAlert('❌ اطلاعات پروفایل یافت نشد.', 'error'); await dbClient.auth.signOut(); return; }
+
+  setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
+  $('login_password').value = '';
+  
+  if (person.must_change_password) { showForcePasswordChange(data.user.id); } 
+  else { await startApp(); }
 }
-/** ثبت نشست پس از ورود/ایجاد حساب موفق */
-async function finishLogin(data,username,password){
-  var pr=data.person;
-  setSession({personId:pr.id,username:pr.username,role:pr.role||'user',name:pr.firstname+' '+pr.lastname,token:data.token});
-  if(pr.role==='superadmin')await storeOfflineAdmin(pr,username,password);else dropOfflineAdminFor(username);
-  $('login_password').value='';
-  location.reload();
-}
-/** ایجاد اولین حساب (سوپر ادمین) هنگام راه‌اندازی اولیه */
+
 async function handleSetup(){
   if(!navigator.onLine||!dbClient){showAlert('برای ایجاد حساب باید به اینترنت متصل باشید.','error');return}
   var first=val('setup_first'),last=val('setup_last'),pid=val('setup_pid'),username=val('setup_username'),password=$('setup_password').value;
   if(!first||!last||!pid||!username||!password){showAlert('همه فیلدها الزامی.');return}
-  if(!/^\d{1,6}$/.test(pid)){showAlert('شماره پرسنلی باید یک عدد حداکثر ۶ رقمی باشد.');return}
+  if(!/^\d{1,6}$/.test(pid)){showAlert('شماره پرسنلی معتبر نیست.');return}
   if(password.length<MIN_PASSWORD_LEN){showAlert('رمز حداقل '+MIN_PASSWORD_LEN+' کاراکتر.');return}
-  var hash=await hashPassword(password,username);
-  var r=await callRpc('app_setup_first_admin',{p_person:{id:genId('p'),firstname:first,lastname:last,personnelid:pid,username:username},p_hash:hash});
-  if(r.error){showAlert('❌ '+rpcErrorMessage(r.error),'error');return}
-  if(!r.data||r.data.ok!==true){showAlert((r.data&&r.data.message)||'ایجاد حساب انجام نشد.','error');return}
-  await finishLogin(r.data,username,password);
+
+  const { data: authData, error: authError } = await dbClient.auth.signUp({ email: username + '@app.local', password });
+  if (authError) { showAlert('❌ خطا: ' + authError.message, 'error'); return; }
+
+  const { error: personError } = await dbClient.from('persons').insert({
+    user_id: authData.user.id, firstname: first, lastname: last, personnelid: pid, username: username, role: 'superadmin'
+  });
+
+  if (personError) { showAlert('❌ خطا: ' + personError.message, 'error'); return; }
+  await handleLogin(); 
 }
-/** خروج از حساب */
+
 function handleLogout(){if(!confirm('از حساب خارج می‌شوید؟'))return;forceLogout()}
-/** بررسی اعتبار توکن نشست در سرور و تازه‌سازی نقش از سرور */
-async function validateSession(s){
-  if(!s||!s.token)return null;
-  var r=await callRpc('app_check_session',{p_token:s.token});
-  if(r.error||!r.data||r.data.ok!==true)return null;
-  var pr=r.data.person;
-  s.personId=pr.id;s.username=pr.username;s.role=pr.role||'user';s.name=pr.firstname+' '+pr.lastname;setSession(s);
-  return s;
-}
-/** نمایش صفحهٔ ورود (یا فرم راه‌اندازی اولیه) بر اساس وضعیت اتصال و دیتابیس */
+
 async function showLogin(){
   $('login_modal').style.display='flex';$('main_app').style.display='none';$('user_info').style.display='none';
   var lb=$('login_alert_box');if(lb){lb.style.display='none';lb.textContent='';lb.className='alert'}
   $('btn_login').disabled=false;
   var flash=sessionStorage.getItem('actbk_flash');
-  var online=!!dbClient&&navigator.onLine&&await checkDbConnection();
-  if(online){
-    var r=await callRpc('app_needs_setup',{});
-    if(r.error){
-      $('login_msg').innerHTML='<div class="alert alert-error" style="display:block;margin-bottom:12px"><b>⚠️ خطا:</b><br>'+esc(rpcErrorMessage(r.error))+'</div>';
+  
+  if(dbClient&&navigator.onLine){
+    const { data: persons, error } = await dbClient.from('persons').select('id').limit(1);
+    if(error){
+      $('login_msg').innerHTML='<div class="alert alert-error" style="display:block;margin-bottom:12px"><b>⚠️ خطا:</b><br>'+esc(error.message)+'</div>';
       $('login_form').classList.add('hidden');$('setup_form').classList.add('hidden');$('login_title').textContent='خطای دیتابیس';
-    }else if(r.data===true){
+    }else if(!persons || persons.length===0){
       $('login_form').classList.add('hidden');$('setup_form').classList.remove('hidden');
-      $('login_title').textContent='ایجاد حساب مدیر اصلی (سوپر ادمین)';$('login_msg').innerHTML='👋 به برنامه خوش آمدید.<br>لطفاً اولین حساب را ایجاد کنید.';
+      $('login_title').textContent='ایجاد حساب مدیر اصلی';$('login_msg').innerHTML='👋 به برنامه خوش آمدید.<br>لطفاً اولین حساب را ایجاد کنید.';
     }else{
       $('login_form').classList.remove('hidden');$('setup_form').classList.add('hidden');
       $('login_title').textContent='ورود به سیستم';$('login_msg').textContent='لطفاً نام کاربری و کلمه عبور خود را وارد کنید.';
     }
   }else{
     $('login_form').classList.remove('hidden');$('setup_form').classList.add('hidden');
-    $('login_title').textContent='حالت آفلاین';
-    $('login_msg').innerHTML='<div class="alert alert-warning" style="display:block;margin-bottom:12px">'+esc(window.dbInitError||'اتصال به دیتابیس برقرار نیست.')+'<br>کاربران عادی در این حالت نمی‌توانند وارد شوند. فقط سوپر ادمین (با حسابی که قبلاً روی همین دستگاه آنلاین وارد شده) می‌تواند برای تهیه پشتیبان وارد شود.</div>';
+    $('login_title').textContent='عدم اتصال';
+    $('login_msg').innerHTML='<div class="alert alert-warning" style="display:block;margin-bottom:12px">'+esc(window.dbInitError||'اتصال به دیتابیس برقرار نیست.')+'<br>برای ورود باید به اینترنت متصل باشید.</div>';
   }
   if(flash){sessionStorage.removeItem('actbk_flash');showAlert(flash,'error')}
 }
-/** حالت «فقط پشتیبان‌گیری» سوپر ادمین هنگام نبود اتصال: همهٔ بخش‌ها به‌جز پشتیبان‌گیری غیرفعال می‌شود */
-function enterBackupOnlyMode(){
-  _backupOnly=true;
-  document.querySelectorAll('#main_nav button').forEach(b=>{b.style.display=b.dataset.target==='settings'?'':'none'});
-  var banner=$('backup_only_banner');if(banner)banner.style.display='block';
-  var sb=$('btn_sync_cloud');if(sb)sb.style.display='none';
-  var ib=$('btn_import');if(ib)ib.disabled=true;
-  var inf=$('import_file');if(inf)inf.disabled=true;
-  showSection('settings');
-}
 
-/** باز کردن پنجرهٔ تغییر رمز */
 function openChangePasswordModal(){
-  $('chg_old_pass').value='';$('chg_new_pass').value='';$('chg_confirm_pass').value='';
+  $('chg_new_pass').value='';$('chg_confirm_pass').value='';
   $('chg_error').style.display='none';$('modal_change_password').classList.remove('hidden');
 }
-/** تغییر رمز عبور از طریق RPC (رمز فعلی در سرور بررسی می‌شود) */
 async function submitChangePassword(){
-  var s=getSession();if(!s)return;
-  var oldPass=$('chg_old_pass').value,newPass=$('chg_new_pass').value,confirmPass=$('chg_confirm_pass').value,errBox=$('chg_error');
-  var fail=m=>{errBox.textContent=m;errBox.style.display='block'};
+  var newPass=$('chg_new_pass').value, confirmPass=$('chg_confirm_pass').value, errBox=$('chg_error');
   errBox.style.display='none';
-  if(!oldPass||!newPass||!confirmPass){fail('همه فیلدها الزامی است.');return}
-  if(newPass.length<MIN_PASSWORD_LEN){fail('رمز جدید باید حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
-  if(newPass!==confirmPass){fail('رمز جدید و تکرار آن یکسان نیستند.');return}
-  var oldHash=await hashPassword(oldPass,s.username),newHash=await hashPassword(newPass,s.username);
-  var r=await callRpc('app_change_password',{p_token:s.token,p_old_hash:oldHash,p_new_hash:newHash});
-  if(r.error){if(/SESSION_EXPIRED/.test(r.error.message||'')){forceLogout('نشست شما منقضی شد.');return}fail(rpcErrorMessage(r.error));return}
-  if(!r.data||r.data.ok!==true){fail((r.data&&r.data.message)||'خطا در تغییر رمز.');return}
-  if(s.role==='superadmin')await storeOfflineAdmin({id:s.personId,firstname:s.name,lastname:''},s.username,newPass);
+  if(!newPass||newPass.length<MIN_PASSWORD_LEN){errBox.textContent='رمز جدید باید حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.';errBox.style.display='block';return}
+  if(newPass!==confirmPass){errBox.textContent='تکرار رمز یکسان نیست.';errBox.style.display='block';return}
+
+  const { error } = await dbClient.auth.updateUser({ password: newPass });
+  if (error) { errBox.textContent = 'خطا: ' + error.message; errBox.style.display = 'block'; return; }
+
   $('modal_change_password').classList.add('hidden');
-  showAlert('✅ رمز عبور با موفقیت تغییر کرد.','success');
+  showAlert('✅ رمز عبور تغییر کرد.', 'success');
 }
 
-/* ════════════════════════════════════════════════════════════════
-   ۱۵) راه‌اندازی برنامه
-   ════════════════════════════════════════════════════════════════ */
-/** ثبت شنونده برای یک المان (در صورت وجود) */
+async function initDbClient(){
+  if(!window.supabase){window.dbInitError='کتابخانه اتصال لود نشد.';return false}
+  let cfg=null;
+  if(window.APP_CONFIG){
+    if(window.APP_CONFIG.SERVERS&&window.APP_CONFIG.SERVERS.length>0){
+      cfg=window.APP_CONFIG.SERVERS.find(s=>s.type!=='nhost')||window.APP_CONFIG.SERVERS[0];
+    }else if(window.APP_CONFIG.DB_URL||window.APP_CONFIG.SUPABASE_URL){
+      cfg={url:window.APP_CONFIG.DB_URL||window.APP_CONFIG.SUPABASE_URL,key:window.APP_CONFIG.DB_ANON_KEY||window.APP_CONFIG.SUPABASE_ANON_KEY};
+    }
+  }
+  if(!cfg||!cfg.url||!cfg.key||String(cfg.url).includes('YOUR_')){window.dbInitError='تنظیمات اتصال در config.js ناقص است.';return false}
+  try{
+    dbClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+    activeServerName=cfg.name||'';
+    return true;
+  }catch(e){console.error('[DB] init failed:',e);window.dbInitError='خطا در راه‌اندازی اتصال.';return false}
+}
+
+function loadAppVersion(){
+  fetch('./sw.js?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('bad response');return r.text()}).then(t=>{
+    var m=t.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);var el=$('app_version_display');if(m&&m[1]&&el)el.textContent=m[1];
+  }).catch(()=>{var el=$('app_version_display');if(el)el.textContent='نامشخص'});
+}
+
+function setConnectionStatus(status,serverName){
+  var dot=$('onlineDot');
+  if(dot){
+    dot.classList.remove('online','partial','offline','checking');dot.classList.add(status);
+    dot.title=status==='online'?('آنلاین'+(serverName?' — '+serverName:'')):status==='offline'?'آفلاین — اتصال به دیتابیس برقرار نیست':'در حال بررسی اتصال...';
+  }
+  var box=$('login_conn_box'),text=$('login_conn_text');
+  if(box){box.classList.remove('online','partial','offline','checking');box.classList.add(status)}
+  if(text){
+    text.textContent=status==='online'?'✅ اتصال به دیتابیس برقرار است'+(serverName?' ('+serverName+')':''):status==='offline'?'⛔ اتصال به دیتابیس برقرار نیست':'⏳ در حال بررسی اتصال...';
+  }
+}
+
+let _connBusy=null,_connFails=0,_connTimer=null;
+async function checkDbConnection(){
+  if(_connBusy)return _connBusy;
+  _connBusy=(async function(){
+    if(!dbClient||!navigator.onLine){setConnectionStatus('offline');return false}
+    setConnectionStatus('checking');
+    try{
+      const {error}=await dbClient.from('persons').select('id').limit(1);
+      if(!error){setConnectionStatus('online',activeServerName);return true}
+    }catch(e){console.warn('[Conn] check failed:',e.message)}
+    setConnectionStatus('offline');return false;
+  })();
+  try{return await _connBusy}finally{_connBusy=null}
+}
+
+async function connectionTick(){
+  var ok=await checkDbConnection();
+  var s=getSession();if(!s)return;
+  if(!ok){
+    _connFails++;
+    if(_connFails>=2){forceLogout('ارتباط با سرور قطع شد. لطفاً مجدداً وارد شوید.')}
+  }else{
+    _connFails=0;
+  }
+}
+
+function startConnectionMonitor(){
+  if(_connTimer)clearInterval(_connTimer);
+  _connTimer=setInterval(()=>{if(document.visibilityState==='visible')connectionTick()},60000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')connectionTick()});
+  window.addEventListener('online',()=>connectionTick());
+  window.addEventListener('offline',()=>{setConnectionStatus('offline');if(getSession())forceLogout('اتصال اینترنت قطع شد.')});
+}
+
 function on(id,ev,fn){var e=$(id);if(e)e.addEventListener(ev,fn)}
-/** واگذاری رویداد کلیک دکمه‌های جدول‌ها (data-action / data-id) */
 function delegate(id,fn){var e=$(id);if(!e)return;e.addEventListener('click',ev=>{var b=ev.target.closest('button');if(b&&b.dataset.action)fn(b.dataset.action,b.dataset.id)})}
 
-/** نمایش برنامهٔ اصلی پس از ورود */
 async function startApp(){
   $('main_app').style.display='block';
-  var s=getSession(),offlineMode=_backupOnly||!!(s&&s.offline);
-  if(!offlineMode)await seedImportance();
+  await seedImportance();
   refreshDropdowns();applyPermissions();
   var today=getTodayJalali().split('/');
   $('cal_year').value=parseInt(today[0],10);$('cal_month').value=parseInt(today[1],10);$('h_default_year').value=parseInt(today[0],10);
   if(!$('act_start_date').value)$('act_start_date').value=getTodayJalali();
-  // پیش‌فرض گزارش: اول تا آخر ماه جاری شمسی
   var tp=today.map(n=>parseInt(n,10));
   if(!$('rep_from').value)$('rep_from').value=fmtJalali(tp[0],tp[1],1);
   if(!$('rep_to').value)$('rep_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
   populateParticipants();renderPersons();renderImportance();renderLocations();renderCalendar();updateCalculatedHours();updatePlanningBadge();
   startIdleWatch();
-  if(offlineMode){enterBackupOnlyMode();return}
   showSection('calendar');
 }
-/** ثبت درجات اهمیت پیش‌فرض در صورت خالی بودن جدول (فقط آنلاین) */
 async function seedImportance(){
   if(localStorage.getItem('actbk_importance_seeded'))return;
   if(!getData(KEYS.importance).length){if(!(await setData(KEYS.importance,DEFAULT_IMPORTANCE.slice())))return}
   localStorage.setItem('actbk_importance_seeded','1');
 }
 
-/** اتصال همهٔ رویدادهای رابط کاربری */
 function bindEvents(){
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
   on('btn_sync_cloud','click',()=>syncFromCloud(true));
@@ -2367,38 +2068,34 @@ function bindEvents(){
   on('btn_import','click',importJSON);
 }
 
-/** نقطهٔ شروع: اتصال، اعتبارسنجی نشست و نمایش ورود یا برنامه */
 async function init(){
   initTheme();
   document.addEventListener('click',closePopups);
   loadAppVersion();
   bindEvents();
   initDatepickers();
+  
   var dbReady=await initDbClient();
   if(dbReady)startConnectionMonitor();else setConnectionStatus('offline');
 
-  var session=getSession();
-  if(!session){await showLogin();return}
-  var online=dbReady&&navigator.onLine&&await checkDbConnection();
-  if(session.offline){                       // نشست آفلاین سوپر ادمین
-    if(online){clearSession();await showLogin();return}   // اتصال برقرار شده: ورود مجدد لازم است
-    await startApp();return;
-  }
-  if(!online){
-    if(session.role==='superadmin'){_backupOnly=true;await startApp();return}
-    clearSession();wipeLocalData();
-    sessionStorage.setItem('actbk_flash','اتصال به دیتابیس برقرار نیست؛ ورود کاربران عادی تا برقراری اتصال ممکن نیست.');
-    await showLogin();return;
-  }
-  var valid=await validateSession(session);
-  if(!valid){clearSession();await showLogin();return}
+  if(!dbReady){ await showLogin(); return; }
+
+  const { data: { session } } = await dbClient.auth.getSession();
+  if(!session){ await showLogin(); return; }
+
+  const { data: person, error } = await dbClient.from('persons').select('*').eq('user_id', session.user.id).single();
+  if (error || !person) { await dbClient.auth.signOut(); await showLogin(); return; }
+
+  setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
+  
+  if (person.must_change_password) { showForcePasswordChange(session.user.id); return; }
+  
   await syncFromCloud(false);
   await startApp();
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 
-/* توابعی که از HTML (onclick/onchange) فراخوانی می‌شوند */
 window.toggleNav=toggleNav;
 window.toggleTheme=toggleTheme;
 window.onWeekModeChange=onWeekModeChange;
@@ -2409,9 +2106,7 @@ window.renderPlanning=renderPlanning;
 window.onLocationChange=onLocationChange;
 
 })();
-
 </script>
-
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
