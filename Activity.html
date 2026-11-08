@@ -1840,14 +1840,19 @@ async function handleSetup(){
   if(!/^\d{1,6}$/.test(pid)){showAlert('شماره پرسنلی معتبر نیست.');return}
   if(password.length<MIN_PASSWORD_LEN){showAlert('رمز حداقل '+MIN_PASSWORD_LEN+' کاراکتر.');return}
 
-  const { data: authData, error: authError } = await dbClient.auth.signUp({ email: username + '@app.com', password });
-  if (authError) { showAlert('❌ خطا: ' + authError.message, 'error'); return; }
+  showAlert('⏳ در حال ایجاد حساب...','info');
 
-  const { error: setupError } = await dbClient.rpc('app_setup_first_admin', {
-    p_user_id: authData.user.id, p_firstname: first, p_lastname: last, p_personnelid: pid, p_username: username
+  // فراخوانی Edge Function برای ساخت مدیر بدون ارسال ایمیل
+  const { data: funcData, error: funcError } = await dbClient.functions.invoke('setup-admin', {
+    body: { username, firstname: first, lastname: last, personnelid: pid, password }
   });
-  if (setupError) { showAlert('❌ خطا: ' + setupError.message, 'error'); return; }
 
+  if (funcError || (funcData && funcData.error)) {
+    showAlert('❌ خطا: ' + (funcError?.message || funcData?.error), 'error'); 
+    return;
+  }
+
+  // پس از ساخت موفق، فرم ورود را پر کرده و وارد می‌شویم
   $('login_username').value = username;
   $('login_password').value = password;
   await handleLogin(); 
