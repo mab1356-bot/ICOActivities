@@ -885,11 +885,25 @@ function sortPersonsById(persons){return persons.slice().sort((a,b)=>(Number(a.p
 async function pullTable(localKey){
   var table=TABLE_MAP[localKey];
   try{
-    var r=await dbClient.from(table).select(localKey===KEYS.persons?PERSON_COLS:'*');
+    var r;
+    if(localKey===KEYS.persons)r=await dbClient.from(table).select(PERSON_COLS);
+    else{ // سایر جداول فقط از طریق RPC با توکن نشست خوانده می‌شوند (فیلتر «فقط برای من» سمت سرور)
+      var tk=sessionToken();if(!tk)return false;
+      r=await dbClient.rpc('app_get_rows',{p_token:tk,p_table:table});
+      if(r.error&&handleSessionError(r.error))return false;
+      if(!r.error&&!Array.isArray(r.data))r.data=[];
+    }
     if(r.error){console.warn('[Sync] '+table+':',r.error.message);return false}
     writeLocal(localKey,(r.data||[]).map(i=>fromDB(localKey,i)));
     return true;
   }catch(e){console.warn('[Sync] '+table+' failed:',e.message);return false}
+}
+/** توکن نشست جاری (یا رشتهٔ خالی) */
+function sessionToken(){var s=getSession();return s&&s.token?s.token:''}
+/** اگر خطا مربوط به نشست نامعتبر/منقضی باشد کاربر خارج می‌شود؛ نتیجه: true یعنی مدیریت شد */
+function handleSessionError(err){
+  if(err && String(err.message||'').indexOf('SESSION_INVALID')>=0){forceLogout('نشست شما منقضی شده است. دوباره وارد شوید.');return true}
+  return false;
 }
 /** دریافت تازهٔ یک جدول قبل از ویرایش (کاهش خطر بازنویسی تغییرات دیگران) */
 async function getFresh(key){if(dbClient&&navigator.onLine)await pullTable(key);return getData(key)}
@@ -906,10 +920,11 @@ async function setData(key,data){
   var changed=data.filter(x=>prev.get(x.id)!==JSON.stringify(x));
   if(changed.length){
     try{
-      var r=await dbClient.from(table).upsert(changed.map(x=>toDB(key,x)),{onConflict:'id'}).select('id');
-      if(r.error){showAlert('❌ خطا در ذخیره‌سازی اطلاعات:\n'+r.error.message,'error');return false}
-      if(!r.data||r.data.length<changed.length){
-        showAlert('⚠️ هشدار: '+(changed.length-(r.data?r.data.length:0))+' رکورد از '+changed.length+' رکورد ذخیره نشد.\n\nدلیل: دسترسی INSERT/UPDATE برای جدول "'+table+'" و نقش anon فعال نیست.','warning');
+      var tk=sessionToken();if(!tk){showAlert('نشست معتبر نیست.','error');return false}
+      var r=await dbClient.rpc('app_save_rows',{p_token:tk,p_table:table,p_rows:changed.map(x=>toDB(key,x))});
+      if(r.error){if(handleSessionError(r.error))return false;showAlert('❌ خطا در ذخیره‌سازی اطلاعات:\n'+r.error.message.replace('FORBIDDEN:',''),'error');return false}
+      if(!Array.isArray(r.data)||r.data.length<changed.length){
+        showAlert('⚠️ هشدار: '+(changed.length-(Array.isArray(r.data)?r.data.length:0))+' رکورد از '+changed.length+' رکورد ذخیره نشد.\n\nدلیل: سطح دسترسی شما برای جدول "'+table+'" کافی نیست.','warning');
         return false;
       }
     }catch(e){showAlert('❌ خطا در برقراری ارتباط با سرور: '+e.message,'error');setTimeout(()=>checkDbConnection(),1500);return false}
@@ -920,9 +935,10 @@ async function setData(key,data){
 async function deleteRemote(table,id){
   if(!dbClient||!navigator.onLine){showAlert(OFFLINE_MSG,'error');return false}
   try{
-    var r=await dbClient.from(table).delete().eq('id',id).select('id');
-    if(r.error){showAlert('❌ خطا در حذف:\n'+r.error.message,'error');return false}
-    if(!r.data||!r.data.length){showAlert('❌ حذف از دیتابیس انجام نشد.\nدسترسی DELETE برای جدول '+table+' فعال نیست.','error');return false}
+    var tk=sessionToken();if(!tk){showAlert('نشست معتبر نیست.','error');return false}
+    var r=await dbClient.rpc('app_delete_row',{p_token:tk,p_table:table,p_id:id});
+    if(r.error){if(handleSessionError(r.error))return false;showAlert('❌ خطا در حذف:\n'+r.error.message.replace('FORBIDDEN:',''),'error');return false}
+    if(!r.data){showAlert('❌ حذف انجام نشد (رکورد وجود ندارد یا دسترسی کافی نیست).','error');return false}
     return true;
   }catch(e){showAlert('❌ خطا در برقراری ارتباط با سرور: '+e.message,'error');return false}
 }
