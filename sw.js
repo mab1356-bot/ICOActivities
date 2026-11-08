@@ -1,9 +1,9 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v1.3.2
+   نسخه: actbk-v2.0.0
    ================================================ */
 
-const CACHE_VERSION = 'actbk-v1.3.3';
+const CACHE_VERSION = 'Ver-2.0.0';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 

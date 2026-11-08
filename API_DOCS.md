@@ -1,76 +1,40 @@
-# 📚 مستندات توابع (JavaScript API Reference)
+# 📚 مستندات توابع (JavaScript API Reference) — نسخه ۲
 
-تمامی کدها در یک IIFE (Immediately Invoked Function Expression) قرار دارند تا از تداخل متغیرها جلوگیری شود.
+همهٔ کدها داخل یک IIFE هستند. تمام توابع در خود کد توضیح فارسی دارند؛ اینجا توابع کلیدی آمده است.
 
-## ۱. هسته و اتصال (Core & Connectivity)
+## هسته و اتصال
+- `initDbClient()` — ساخت کلاینت Supabase از `config.js` (بدون ذخیرهٔ نشست Supabase).
+- `checkDbConnection()` — بررسی اتصال با `select id from persons limit 1` (درخواست‌های هم‌زمان ادغام می‌شوند).
+- `connectionTick()` / `handleConnectionLost()` — پایش هر ۶۰ ثانیه؛ قطع اتصال ⇒ خروج کاربر عادی یا حالت پشتیبان‌گیری برای سوپر ادمین.
+- `pullTable(key)` — خواندن یک جدول و جایگزینی کش؛ `getFresh(key)` پیش از ویرایش.
+- `syncFromCloud(showMessage)` — **همگام‌سازی یک‌طرفه (فقط Pull)** موازی.
+- `setData(key,data)` — Upsert فقط رکوردهای تغییرکرده؛ آفلاین ⇒ رد؛ کش محلی فقط پس از موفقیت.
+- `deleteRemote(table,id)` — حذف سرور با تأیید.
+- `callRpc(fn,args)` / `rpcOk(data,error)` — فراخوانی و بررسی توابع امن سرور.
 
-### `initSupabaseClient()`
-- **توضیح**: کلاینت Supabase را با استفاده از اطلاعات `config.js` مقداردهی اولیه می‌کند.
-- **خروجی**: `Boolean` (در صورت موفقیت `true` برمی‌گرداند).
+## احراز هویت
+- `handleLogin()`, `handleSetup()`, `finishLogin()`, `handleLogout()`, `forceLogout(msg)`, `validateSession(s)`.
+- `hashPassword(password,username)` — SHA-256 (ارسالی به سرور). `deriveLocalVerifier()` — PBKDF2 برای تأیید آفلاین سوپر ادمین.
+- `handleOfflineAdminLogin()`, `enterBackupOnlyMode()`, `storeOfflineAdmin()`.
+- `submitChangePassword()` — RPC `app_change_password`.
 
-### `checkDbConnection()`
-- **توضیح**: وضعیت اتصال به دیتابیس را با ارسال یک کوئری ساده (`select id limit 1`) بررسی می‌کند.
-- **خروجی**: `Promise<Boolean>`
+## پرسنل
+`savePerson()` (RPC `app_save_person`)، `deletePerson(id)` (RPC `app_delete_person`)، `renderPersons()`.
 
-### `syncFromCloud(showMessage)`
-- **توضیح**: عملیات همگام‌سازی دوطرفه را انجام می‌دهد (Push local -> Pull remote).
-- **پارامترها**: `showMessage` (بولین - آیا پیام موفقیت نمایش داده شود؟)
+## اقدامات
+- `saveActivity()` — اعتبارسنجی، دریافت تازهٔ سرور، تشخیص شباهت (`findSimilar`, آستانه ۴۰٪ Jaccard فقط روی اقدامات قابل‌مشاهده).
+- `joinActivity(id)`, `editAct(id)`, `deleteAct(id)`, `renderDayActs()`, `renderRecords()`.
+- `canSeeAct(a)` / `getVisibleActs()` — حریم خصوصی «فقط برای من».
+- `calcDurationHours(...)` — تک‌روزه: اختلاف ساعت؛ چندروزه: ۸ ساعت برای هر روز کاری، با کسر پنجشنبه، جمعه و همهٔ ردیف‌های جدول `holidays` (`getHolidayMap`, `isOffDay`).
 
-### `setData(key, data)`
-- **توضیح**: داده را در LocalStorage ذخیره کرده و آن را به صورت `Upsert` به سرور ارسال می‌کند.
-- **پارامترها**: `key` (نام کلید)، `data` (آرایه‌ای از اشیاء)
+## محل‌های برگزاری
+`getLocationNames()`, `fillLocationSelect()`, `setLocationFields(loc)`, `readLocation()`, `saveLocation()`, `moveLocation(id,dir)`, `deleteLocation(id)`, `renderLocations()` (فقط سوپر ادمین).
 
----
+## برنامه‌ریزی
+`savePlan()`, `advancePlanStatus(id,status)`, `convertPlanToActivity(id)`, `handlePendingPlanConversion(id)`.
 
-## ۲. مدیریت اقدامات (Activities)
+## گزارش و خروجی
+`gatherReportData()`, `generateReport()`, `exportWord()`, `exportPPTX()`, `exportJSON()`, `importJSON()` (فقط سوپر ادمین و آنلاین؛ کاربران و هش رمزها در پشتیبان/بازیابی نیستند).
 
-### `saveActivity()`
-- **توضیح**: فرم ثبت اقدام را اعتبارسنجی کرده و اقدام جدید را ایجاد یا ویرایش می‌کند. شامل منطق تشخیص شباهت (`findSimilar`) است.
-
-### `findSimilar(obj, threshold = 0.4)`
-- **توضیح**: اقدامات ثبت‌شده در همان روز و همان موضوع را بررسی کرده و با استفاده از الگوریتم Jaccard، درصد شباهت متن را محاسبه می‌کند. اگر شباهت بیشتر از ۴۰٪ باشد، از ثبت جلوگیری می‌کند.
-
-### `joinActivity(id)`
-- **توضیح**: کاربر فعلی را به لیست شرکت‌کنندگان یک اقدام اضافه می‌کند.
-
-### `renderDayActs()`
-- **توضیح**: لیست اقدامات مربوط به تاریخ انتخاب‌شده در فرم را در جدول پایین صفحه رندر می‌کند.
-
----
-
-## ۳. برنامه‌ریزی (Planning)
-
-### `savePlan()`
-- **توضیح**: موضوع جدید در انتظار برنامه‌ریزی را ثبت می‌کند یا موضوع موجود را ویرایش می‌کند.
-
-### `advancePlanStatus(id, newStatus)`
-- **توضیح**: وضعیت یک موضوع را در چرخه حیات تغییر می‌دهد (`draft` -> `coordinating` -> `ready`).
-
-### `convertPlanToActivity(id)`
-- **توضیح**: فرم ثبت اقدام را با اطلاعات موضوع برنامه‌ریزی (عنوان، شرح، تاریخ) پیش‌پر می‌کند تا کاربر فقط جزئیات نهایی (ساعت، شرکت‌کنندگان) را وارد کند.
-
----
-
-## ۴. گزارش‌گیری و خروجی (Reports & Export)
-
-### `generateReport()`
-- **توضیح**: بر اساس فیلترهای بازه زمانی، پرسنل و موضوع، یک داشبورد مدیریتی (HTML) در صفحه تولید می‌کند.
-
-### `exportWord()` / `exportPPTX()`
-- **توضیح**: داده‌های داشبورد را به ترتیب به فرمت‌های `.doc` و `.pptx` تبدیل و دانلود می‌کند.
-
----
-
-## ۵. توابع کمکی (Utilities)
-
-### `hashPassword(password, username)`
-- **توضیح**: با استفاده از Web Crypto API، هش SHA-256 از ترکیب نام کاربری، رمز و یک Salt ثابت تولید می‌کند (برای امنیت رمز عبور در LocalStorage).
-
-### `jalaliToGregorian(jy, jm, jd)` / `gregorianToJalali(gy, gm, gd)`
-- **توضیح**: توابع تبدیل تاریخ بین تقویم هجری شمسی و میلادی (بدون نیاز به کتابخانه خارجی).
-
-### `calcDurationHours(startDate, startTime, endDate, endTime)`
-- **توضیح**: مدت زمان بین دو تاریخ/ساعت را محاسبه می‌کند. در اقدامات چندروزه، روزهای تعطیل (پنجشنبه و جمعه) را از مجموع کسر می‌کند.
-
-### `normText(s)`
-- **توضیح**: متن را برای مقایسه، نرمال‌سازی می‌کند (حذف نیم‌فاصله‌ها، تبدیل ی/ك عربی به فارسی، حذف کاراکترهای اضافی).
+## تاریخ و ابزارها
+`jalaliToGregorian`, `gregorianToJalali`, `normJ`, `addDaysStr`, `normText`, `simScore`, `esc` (جلوگیری از XSS)، `genId` (شناسهٔ امن).

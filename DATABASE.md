@@ -1,81 +1,47 @@
-# 🗄 معماری بانک اطلاعاتی (Database Architecture)
+# 🗄 معماری بانک اطلاعاتی (Database Architecture) — نسخه ۲
 
-این برنامه از دیتابیس PostgreSQL (میزبانی شده در Supabase) استفاده می‌کند. جداول به صورت منطقی به هم متصل هستند (ارتباط با استفاده از IDها برقرار می‌شود).
+دیتابیس PostgreSQL در Supabase. ارتباط جداول منطقی است (با IDها). برای ایجاد/به‌روزرسانی ساختار، فایل `migration_v2.0.0.sql` را اجرا کنید.
 
-## ساختار جداول (Tables Schema)
+## جداول
 
-### ۱. جدول `persons` (کاربران و پرسنل)
-| نام ستون | نوع داده | توضیحات |
+### `persons`
+| ستون | نوع | توضیح |
 | :--- | :--- | :--- |
-| `id` | TEXT (PK) | شناسه یکتا (تولید شده در سمت کلاینت) |
-| `firstname` | TEXT | نام |
-| `lastname` | TEXT | نام خانوادگی |
-| `personnelid` | TEXT | شماره پرسنلی (یکتا) |
+| `id` | TEXT (PK) | شناسه (ساخته‌شده در کلاینت) |
+| `firstname`, `lastname` | TEXT | نام و نام خانوادگی |
+| `personnelid` | TEXT | شماره پرسنلی (یکتا، حداکثر ۶ رقم) |
 | `username` | TEXT | نام کاربری (یکتا) |
-| `passwordhash` | TEXT | هش SHA-256 رمز عبور |
-| `role` | TEXT | نقش کاربر (`admin`, `manager`, `user`) |
+| `passwordhash` | TEXT | **bcrypt** از هش SHA-256 کلاینت (هش‌های قدیمی هنگام اولین ورود خودکار ارتقا می‌یابند). برای `anon` **قابل‌خواندن نیست**. |
+| `role` | TEXT | `superadmin` / `admin` / `manager` / `user` |
 
-### ۲. جدول `topics` (موضوعات اقدام)
-| نام ستون | نوع داده | توضیحات |
+### `topics`: `id`، `name` (و در صورت وجود در دیتابیس شما ستون `Sorting` که برنامه هنگام افزودن موضوع مقدار ۹۹ می‌فرستد).
+### `importance_levels`: `id`، `name`، `color`، `is_key`.
+### `activities`
+`id`، `date`، `enddate`، `starttime`، `endtime`، `topicid`، `importance`، `description`، `privatedescription`، `location` (متن محل)، `hours`، `participants` (TEXT[])، **`onlyforme`** (BOOLEAN؛ فقط برای ثبت‌کننده نمایش داده می‌شود)، `createdby`، `createdat`.
+### `holidays`: `id`، `date`، `title` — همهٔ ردیف‌ها در محاسبهٔ ساعت اقدامات چندروزه کسر می‌شوند.
+### `planning_topics`
+`id`، `title`، `requester`، `assignee`، `proposeddate`، `importanceid`، `description`، `status` (`draft|coordinating|ready|converted|cancelled`)، `locationhint`، `notes`، `createdby`، `createdat`، `convertedactivityid`، `convertedat`، `cancelreason`، `updatedat`.
+### `locations` (جدید)
+| ستون | نوع | توضیح |
 | :--- | :--- | :--- |
-| `id` | TEXT (PK) | شناسه یکتا |
-| `name` | TEXT | نام موضوع (مثلاً: جلسات) |
+| `id` | TEXT (PK) | شناسه |
+| `name` | TEXT (یکتا) | نام محل |
+| `sort_order` | INTEGER | ترتیب نمایش (کوچک‌تر = بالاتر) |
+فقط سوپر ادمین از رابط برنامه آن را ویرایش می‌کند. گزینهٔ «سایر» ثابت است و در جدول نیست.
+### جدول‌های داخلی احراز هویت (برای `anon` کاملاً بسته)
+- `app_sessions`: `token` (uuid)، `person_id`، `created_at`، `expires_at` (۱۲ ساعت).
+- `app_login_attempts`: `username`، `fails`، `last_fail`، `locked_until` (۵ تلاش ناموفق = ۱۰ دقیقه قفل).
 
-### ۳. جدول `importance_levels` (درجات اهمیت)
-| نام ستون | نوع داده | توضیحات |
-| :--- | :--- | :--- |
-| `id` | TEXT (PK) | شناسه یکتا |
-| `name` | TEXT | نام درجه (مثلاً: خیلی مهم) |
-| `color` | TEXT | کد رنگ HEX |
-| `is_key` | BOOLEAN | آیا این اقدام کلیدی است؟ (برای داشبورد) |
+## توابع RPC (SECURITY DEFINER)
+`app_login`، `app_logout`، `app_check_session`، `app_needs_setup`، `app_setup_first_admin`، `app_change_password`، `app_save_person`، `app_delete_person` (و تابع داخلی `app_caller` که از بیرون قابل‌فراخوانی نیست).
 
-### ۴. جدول `activities` (اقدامات ثبت‌شده)
-| نام ستون | نوع داده | توضیحات |
-| :--- | :--- | :--- |
-| `id` | TEXT (PK) | شناسه یکتا |
-| `date` | TEXT | تاریخ شروع (فرمت: `1405/01/01`) |
-| `enddate` | TEXT | تاریخ پایان (در صورت چندروزه بودن) |
-| `starttime` | TEXT | ساعت شروع (`08:30`) |
-| `endtime` | TEXT | ساعت پایان (`16:00`) |
-| `topicid` | TEXT (FK) | ارجاع به جدول `topics.id` |
-| `importance` | TEXT (FK) | ارجاع به جدول `importance_levels.id` |
-| `description` | TEXT | شرح اقدام |
-| `privatedescription` | TEXT | توضیحات تکمیلی (برای همه قابل مشاهده) |
-| `location` | TEXT | محل برگزاری |
-| `hours` | NUMERIC | مدت زمان محاسبه‌شده (ساعت) |
-| `participants` | TEXT[] | آرایه‌ای از IDهای پرسنل (`persons.id`) |
-| `onlyforme` | BOOLEAN | آیا فقط برای کاربر ثبت‌کننده نمایش داده شود؟ |
-| `createdby` | TEXT (FK) | ارجاع به `persons.id` (ثبت‌کننده) |
-| `createdat` | BIGINT | تایم‌استمپ ثبت (برای مرتب‌سازی) |
+## ارتباطات منطقی
+- `activities.topicid → topics.id`، `activities.importance → importance_levels.id`
+- `activities.createdby → persons.id`، `activities.participants ⊂ persons.id`
+- `planning_topics.convertedactivityid → activities.id`
+- `activities.location` متنِ نام محل است (رابطهٔ کلید خارجی با `locations` ندارد؛ با حذف/تغییر نام محل، اقدامات قدیمی متن خود را حفظ می‌کنند).
 
-### ۵. جدول `holidays` (تعطیلات رسمی)
-| نام ستون | نوع داده | توضیحات |
-| :--- | :--- | :--- |
-| `id` | TEXT (PK) | شناسه یکتا |
-| `date` | TEXT | تاریخ شمسی تعطیلی |
-| `title` | TEXT | عنوان تعطیلی |
-
-### ۶. جدول `planning_topics` (موضوعات در انتظار برنامه‌ریزی)
-| نام ستون | نوع داده | توضیحات |
-| :--- | :--- | :--- |
-| `id` | TEXT (PK) | شناسه یکتا |
-| `title` | TEXT | عنوان موضوع |
-| `requester` | TEXT | درخواست‌کننده |
-| `assignee` | TEXT (FK) | ارجاع به `persons.id` (مسئول پیگیری) |
-| `proposeddate` | TEXT | تاریخ پیشنهادی |
-| `importanceid` | TEXT (FK) | ارجاع به `importance_levels.id` |
-| `description` | TEXT | شرح نیاز |
-| `status` | TEXT | وضعیت (`draft`, `coordinating`, `ready`, `converted`, `cancelled`) |
-| `convertedactivityid` | TEXT (FK) | ارجاع به `activities.id` (در صورت تبدیل شدن) |
-
----
-
-## 🔗 ارتباطات منطقی (Logical Relationships)
-
-- **اقدامات و موضوعات**: `activities.topicid` → `topics.id` (هر اقدام یک موضوع دارد).
-- **اقدامات و اهمیت**: `activities.importance` → `importance_levels.id` (هر اقدام یک درجه اهمیت دارد).
-- **اقدامات و پرسنل**: `activities.createdby` → `persons.id` (ثبت‌کننده) و `activities.participants` (آرایه‌ای از IDها).
-- **برنامه‌ریزی و اقدامات**: `planning_topics.convertedactivityid` → `activities.id` (ارتباط یک‌به‌یک پس از تبدیل).
-
-## 🔒 سیاست‌های امنیتی (RLS in Supabase)
-برای کارکرد صحیح برنامه (چون از کلید `anon` استفاده می‌شود)، باید در بخش **Authentication > Policies** در Supabase، برای تمامی ۶ جدول، دسترسی‌های `SELECT`, `INSERT`, `UPDATE` و `DELETE` را برای نقش `anon` فعال کنید (با شرط `true`).
+## 🔒 امنیت (RLS)
+- `persons`: فقط `SELECT` روی ستون‌های `id, firstname, lastname, personnelid, username, role`؛ نوشتن/حذف فقط از طریق RPC با نشست معتبر.
+- سایر جداول (`topics`, `importance_levels`, `holidays`, `activities`, `planning_topics`, `locations`): `SELECT/INSERT/UPDATE/DELETE` برای `anon` با شرط `true` (چون برنامه با کلید anon کار می‌کند).
+- محدودیت شناخته‌شده: چون کلید anon عمومی است، حفاظت واقعی ردیفی (مثل «فقط برای من» در سطح سرور) در این جداول ممکن نیست؛ راه‌حل نهایی مهاجرت به Supabase Auth است.
