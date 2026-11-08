@@ -1810,7 +1810,8 @@ function showForcePasswordChange(userId) {
   };
 }
 
-async function handleLogin(){
+async function handleLogin()
+{
   var username=val('login_username'),password=$('login_password').value;
   if(!username||!password){showAlert('نام کاربری و رمز الزامی است.','warning');return}
   if(!dbClient||!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return}
@@ -1823,8 +1824,16 @@ async function handleLogin(){
     return;
   }
 
+  // دریافت اطلاعات پروفایل
   const { data: person, error: personError } = await dbClient.from('persons').select('*').eq('user_id', data.user.id).single();
-  if (personError || !person) { showAlert('❌ اطلاعات پروفایل یافت نشد.', 'error'); await dbClient.auth.signOut(); return; }
+  
+  if (personError || !person) { 
+    // نمایش خطای دقیق دیتابیس
+    var errMsg = personError ? personError.message : 'رکوردی یافت نشد';
+    showAlert('❌ اطلاعات پروفایل یافت نشد.\nدلیل: ' + errMsg, 'error'); 
+    await dbClient.auth.signOut(); 
+    return; 
+  }
 
   setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
   $('login_password').value = '';
