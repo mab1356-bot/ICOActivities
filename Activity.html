@@ -1833,7 +1833,8 @@ async function handleLogin(){
   else { await startApp(); }
 }
 
-async function handleSetup(){
+async function handleSetup()
+{
   if(!navigator.onLine||!dbClient){showAlert('برای ایجاد حساب باید به اینترنت متصل باشید.','error');return}
   var first=val('setup_first'),last=val('setup_last'),pid=val('setup_pid'),username=val('setup_username'),password=$('setup_password').value;
   if(!first||!last||!pid||!username||!password){showAlert('همه فیلدها الزامی.');return}
@@ -1842,20 +1843,37 @@ async function handleSetup(){
 
   showAlert('⏳ در حال ایجاد حساب...','info');
 
-  // فراخوانی Edge Function برای ساخت مدیر بدون ارسال ایمیل
-  const { data: funcData, error: funcError } = await dbClient.functions.invoke('setup-admin', {
-    body: { username, firstname: first, lastname: last, personnelid: pid, password }
-  });
+  // استخراج آدرس و کلید از config
+  var cfg = window.APP_CONFIG.SUPABASE_URL ? window.APP_CONFIG : window.APP_CONFIG.SERVERS[0];
+  var url = cfg.SUPABASE_URL || cfg.DB_URL || cfg.url;
+  var key = cfg.SUPABASE_ANON_KEY || cfg.DB_ANON_KEY || cfg.key;
 
-  if (funcError || (funcData && funcData.error)) {
-    showAlert('❌ خطا: ' + (funcError?.message || funcData?.error), 'error'); 
-    return;
+  try {
+    const response = await fetch(`${url}/functions/v1/setup-admin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': key,
+        'Authorization': `Bearer ${key}` // ارسال کلید به عنوان توکن برای عبور از فیلتر امنیتی
+      },
+      body: JSON.stringify({ username, firstname: first, lastname: last, personnelid: pid, password })
+    });
+
+    const resData = await response.json();
+
+    if (!response.ok) {
+      showAlert(`❌ خطای سرور (${response.status}): ` + (resData.error || resData.message || 'خطای ناشناخته'), 'error');
+      return;
+    }
+
+    // پس از ساخت موفق، فرم ورود را پر کرده و وارد می‌شویم
+    $('login_username').value = username;
+    $('login_password').value = password;
+    await handleLogin(); 
+
+  } catch (err) {
+    showAlert('❌ خطای شبکه: ' + err.message, 'error');
   }
-
-  // پس از ساخت موفق، فرم ورود را پر کرده و وارد می‌شویم
-  $('login_username').value = username;
-  $('login_password').value = password;
-  await handleLogin(); 
 }
 
 function handleLogout(){if(!confirm('از حساب خارج می‌شوید؟'))return;forceLogout()}
