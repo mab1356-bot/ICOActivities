@@ -840,6 +840,7 @@ FIELD_MAP[KEYS.acts]={endDate:'enddate',startTime:'starttime',endTime:'endtime',
 FIELD_MAP[KEYS.importance]={isKey:'is_key'};
 FIELD_MAP[KEYS.planning]={proposedDate:'proposeddate',importanceId:'importanceid',locationHint:'locationhint',createdBy:'createdby',createdAt:'createdat',convertedActivityId:'convertedactivityid',convertedAt:'convertedat',cancelReason:'cancelreason',updatedAt:'updatedat'};
 FIELD_MAP[KEYS.locations]={sortOrder:'sort_order'};
+FIELD_MAP[KEYS.topics]={sortOrder:'sorting'};
 const INV_MAP={};
 Object.keys(FIELD_MAP).forEach(k=>{INV_MAP[k]={};Object.keys(FIELD_MAP[k]).forEach(f=>{INV_MAP[k][FIELD_MAP[k][f]]=f})});
 
@@ -848,6 +849,7 @@ function mapKeys(obj,map){var out={};for(var k in obj){out[map[k]||k]=obj[k]}ret
 /** تبدیل رکورد برنامه به رکورد دیتابیس */
 function toDB(key,item){
   var out=mapKeys(item,FIELD_MAP[key]||{});delete out.created_at;
+  if(key===KEYS.topics){delete out.Sorting;out.sorting=Number(out.sorting)||0}   // حذف فیلد قدیمی Sorting از کش
   if(key===KEYS.acts)out.onlyforme=item.onlyforme===true;   // (باگ نسخهٔ قبل: این فیلد حذف می‌شد)
   else if(key===KEYS.importance)out.is_key=item.isKey===true;
   return out;
@@ -859,7 +861,7 @@ function fromDB(key,item){
     if(!Array.isArray(out.participants))out.participants=typeof out.participants==='string'?out.participants.split(',').filter(Boolean):[];
     out.onlyforme=out.onlyforme===true;out.location=out.location||'';out.privateDescription=out.privateDescription||'';
   }else if(key===KEYS.importance)out.isKey=out.isKey===true;
-  else if(key===KEYS.locations)out.sortOrder=Number(out.sortOrder)||0;
+  else if(key===KEYS.locations||key===KEYS.topics)out.sortOrder=Number(out.sortOrder)||0;
   return out;
 }
 
@@ -1046,7 +1048,7 @@ function refreshDropdowns(){
     var ex=persons.some(x=>x.id===cur);
     if(cur&&ex)s.value=cur;else if(!all&&persons.length)s.value=persons[0].id;
   }
-  var topics=readOnly(KEYS.topics).list,td=document.querySelectorAll('.topic-dropdown');
+  var topics=readOnly(KEYS.topics).list.slice().sort(byOrder),td=document.querySelectorAll('.topic-dropdown');
   for(i=0;i<td.length;i++){
     var s2=td[i],c2=s2.value,a2=s2.dataset.all==='1';
     var h2='<option value="">'+(a2?'همه':'انتخاب کنید...')+'</option>';
@@ -1201,17 +1203,27 @@ async function saveTopic(){
   var name=val('t_name');if(!name){showAlert('نام موضوع الزامی.');return}
   var topics=getData(KEYS.topics);
   for(var i=0;i<topics.length;i++)if(normText(topics[i].name)===normText(name)){showAlert('قبلاً ثبت شده.');return}
-  topics.push({id:genId('t'),name:name,Sorting:99});
+  topics.push({id:genId('t'),name:name,sortOrder:nextTopicOrder()});
   if(!(await setData(KEYS.topics,topics)))return;
   $('t_name').value='';renderTopics();refreshDropdowns();showAlert('افزوده شد.','success');
 }
-/** نمایش جدول موضوعات */
+/** شمارهٔ ترتیب بعدی برای موضوع جدید (آخر فهرست) */
+function nextTopicOrder(){var l=readOnly(KEYS.topics).list;return l.length?Math.max.apply(null,l.map(x=>x.sortOrder||0))+1:1}
+/** جابه‌جایی موضوع در ترتیب نمایش (dir=-1 بالا، +1 پایین) و شماره‌گذاری مجدد */
+async function moveTopic(id,dir){
+  var list=getData(KEYS.topics).sort(byOrder),i=list.findIndex(x=>x.id===id),j=i+dir;
+  if(i<0||j<0||j>=list.length)return;
+  var t=list[i];list[i]=list[j];list[j]=t;
+  list.forEach((x,k)=>{x.sortOrder=k+1});
+  if(await setData(KEYS.topics,list)){renderTopics();refreshDropdowns()}
+}
+/** نمایش جدول موضوعات (مرتب‌شده بر اساس ترتیب) */
 function renderTopics(){
-  var topics=readOnly(KEYS.topics).list,c=$('topic_list_container');
+  var topics=readOnly(KEYS.topics).list.slice().sort(byOrder),c=$('topic_list_container');
   if(!topics.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">هنوز موضوعی تعریف نشده.</p>';return}
   var cnt=countBy(readOnly(KEYS.acts).list,a=>a.topicId);
-  var h='<table><tr><th>نام</th><th>تعداد اقدام</th><th>عملیات</th></tr>';
-  topics.forEach(t=>{h+='<tr><td data-label="نام">'+esc(t.name)+'</td><td data-label="تعداد">'+(cnt[t.id]||0)+'</td><td data-label="عملیات"><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(t.id)+'">حذف</button></td></tr>'});
+  var h='<table><tr><th>ترتیب</th><th>نام</th><th>تعداد اقدام</th><th>عملیات</th></tr>';
+  topics.forEach(t=>{h+='<tr><td data-label="ترتیب">'+(t.sortOrder||0)+'</td><td data-label="نام">'+esc(t.name)+'</td><td data-label="تعداد">'+(cnt[t.id]||0)+'</td><td data-label="عملیات" style="display:flex;gap:4px;justify-content:flex-end"><button class="btn btn-secondary btn-sm" data-action="up" data-id="'+esc(t.id)+'" title="بالا">▲</button><button class="btn btn-secondary btn-sm" data-action="down" data-id="'+esc(t.id)+'" title="پایین">▼</button><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(t.id)+'">حذف</button></td></tr>'});
   c.innerHTML=h+'</table>';
 }
 /** حذف موضوع (در صورت عدم استفاده در اقدامات) */
@@ -1902,18 +1914,18 @@ function gatherReportData(){
   if(!list.length)return null;
   var pFrom=parseJalali(from);var periodTitle=MONTH_NAMES[pFrom.jm-1]+' '+pFrom.jy;
   var totalPersonHours=list.reduce((s,x)=>s+(Number(x.hours)*x.participants.length),0);
-  var meetings=list.filter(x=>/جلسه|کمیته|رویداد|ممیز/.test(x.description)||/جلسه|کمیته/.test(topicName(x.topicId)));
-  var visits=list.filter(x=>/بازدید|سایت ویزیت|محدوده|منطقه ویژه/.test(x.description)||/بازدید/.test(topicName(x.topicId)));
-  var topicsData={};getData(KEYS.topics).forEach(t=>{topicsData[t.id]={name:t.name,acts:[]}});
+  var topicsData={};getData(KEYS.topics).sort(byOrder).forEach(t=>{topicsData[t.id]={name:t.name,acts:[]}});
   list.forEach(x=>{if(!topicsData[x.topicId])topicsData[x.topicId]={name:topicName(x.topicId),acts:[]};topicsData[x.topicId].acts.push(x)});
-  return{list,from,to,periodTitle,totalActs:list.length,totalPersonHours,meetings,visits,topicsData};
+  // آمار هر موضوع (فقط موضوعات دارای اقدام)؛ مجموع آن‌ها همیشه برابر کل اقدامات است
+  var topicStats=Object.keys(topicsData).filter(id=>topicsData[id].acts.length).map(id=>({name:topicsData[id].name,count:topicsData[id].acts.length}));
+  return{list,from,to,periodTitle,totalActs:list.length,totalPersonHours,topicStats,topicsData};
 }
 /** تولید داشبورد مدیریتی (HTML) در صفحه */
 function generateReport(){
   var data=gatherReportData();
   if(!data){$('report_area').innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">اقدامی یافت نشد یا بازه نامعتبر است.</p>';return false}
   var withDetails=$('rep_details').checked;
-  var totalActs=data.totalActs,totalPersonHours=data.totalPersonHours,meetings=data.meetings,visits=data.visits,topicsData=data.topicsData,periodTitle=data.periodTitle;
+  var totalActs=data.totalActs,totalPersonHours=data.totalPersonHours,topicStats=data.topicStats,topicsData=data.topicsData,periodTitle=data.periodTitle;
   var colsHtml='';
   Object.keys(topicsData).forEach(tid=>{
     var td=topicsData[tid];var viActs=td.acts.filter(a=>isKeyImp(a.importance));if(viActs.length===0)return;
@@ -1924,7 +1936,7 @@ function generateReport(){
   if(!colsHtml)colsHtml='<div style="width:100%;text-align:center;padding:20px;color:var(--text2)">اقدام کلیدی ثبت نشده.</div>';
   var outcomesUl=data.list.filter(x=>isKeyImp(x.importance)).map(x=>'<li>'+esc(x.description)+'</li>').join('')||'<li>موردی ثبت نشده.</li>';
   var h='<div class="dashboard-report"><div class="db-header"><h1>عملکرد واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری</h1><p>جمع‌بندی اقدامات در '+periodTitle+'</p></div>';
-  h+='<div class="db-kpi-grid"><div class="db-kpi"><div class="db-kpi-val">'+totalActs+'</div><div class="db-kpi-title">فعالیت‌ها</div></div><div class="db-kpi"><div class="db-kpi-val">'+meetings.length+'</div><div class="db-kpi-title">جلسات</div></div><div class="db-kpi"><div class="db-kpi-val">'+visits.length+'</div><div class="db-kpi-title">بازدیدها</div></div><div class="db-kpi"><div class="db-kpi-val">'+fmtPersonHours(totalPersonHours)+'</div><div class="db-kpi-title">نفر-ساعت</div></div></div>';
+  h+='<div class="db-kpi-grid"><div class="db-kpi"><div class="db-kpi-val">'+totalActs+'</div><div class="db-kpi-title">فعالیت‌ها</div></div>'+topicStats.map(s=>'<div class="db-kpi"><div class="db-kpi-val">'+s.count+'</div><div class="db-kpi-title">'+esc(s.name)+'</div></div>').join('')+'<div class="db-kpi"><div class="db-kpi-val">'+fmtPersonHours(totalPersonHours)+'</div><div class="db-kpi-title">نفر-ساعت</div></div></div>';
   h+='<div class="db-section-bar">اقدامات کلیدی در '+periodTitle+'</div><div class="db-columns">'+colsHtml+'</div>';
   h+='<div class="db-bottom-section"><div class="db-box" style="border-color:#c9a227"><h3>خروجی شاخص</h3><ul>'+outcomesUl+'</ul></div>';
   if(!withDetails)h+='<div class="db-box"><h3>توضیحات</h3><p style="color:var(--text2)">(محل درج دستی)</p></div>';
@@ -1967,13 +1979,15 @@ async function exportPPTX(){
   slide.addText('دوره: '+data.periodTitle,{x:.5,y:3.9,w:12.3,h:1,fontSize:20,color:'c9a227',align:'center',fontFace:FONT,rtlMode:true});
   slide=pptx.addSlide();
   slide.addText('شاخص‌های کلیدی',{x:.5,y:.2,w:12.3,h:.7,fontSize:26,bold:true,color:'1a2530',align:'center',fontFace:FONT,rtlMode:true});
-  var kpis=[{val:String(data.totalActs),title:'فعالیت‌ها',color:'8e6c3e'},{val:String(data.meetings.length),title:'جلسات',color:'3498db'},{val:String(data.visits.length),title:'بازدیدها',color:'2c3e50'},{val:fmtPersonHours(data.totalPersonHours),title:'نفر-ساعت',color:'27ae60'}];
+  var pal=['3498db','2c3e50','16a085','f39c12','9b59b6','e74c3c'];
+  var kpis=[{val:String(data.totalActs),title:'فعالیت‌ها',color:'8e6c3e'}].concat(data.topicStats.map((s,i)=>({val:String(s.count),title:s.name,color:pal[i%pal.length]})),[{val:fmtPersonHours(data.totalPersonHours),title:'نفر-ساعت',color:'27ae60'}]);
+  var kw=Math.min(3,12.4/kpis.length-.2);
   kpis.forEach((kpi,i)=>{
-    var x=.3+i*3.2;
-    slide.addShape(pptx.ShapeType.rect,{x,y:1.3,w:3,h:2.6,fill:{color:'FFFFFF'},line:{color:'DDDDDD',width:1}});
+    var x=.3+i*(kw+.2);
+    slide.addShape(pptx.ShapeType.rect,{x,y:1.3,w:kw,h:2.6,fill:{color:'FFFFFF'},line:{color:'DDDDDD',width:1}});
     slide.addShape(pptx.ShapeType.rect,{x,y:1.3,w:.12,h:2.6,fill:{color:kpi.color}});
-    slide.addText(kpi.val,{x,y:1.7,w:3,h:1.2,fontSize:30,bold:true,color:'1a2530',align:'center',fontFace:FONT});
-    slide.addText(kpi.title,{x,y:3,w:3,h:.7,fontSize:13,color:'555',align:'center',fontFace:FONT,rtlMode:true});
+    slide.addText(kpi.val,{x,y:1.7,w:kw,h:1.2,fontSize:30,bold:true,color:'1a2530',align:'center',fontFace:FONT});
+    slide.addText(kpi.title,{x,y:3,w:kw,h:.7,fontSize:13,color:'555',align:'center',fontFace:FONT,rtlMode:true});
   });
   var keyTopics=Object.keys(data.topicsData).filter(tid=>data.topicsData[tid].acts.some(a=>isKeyImp(a.importance)));
   var topicColors=['2980b9','16a085','f39c12','27ae60','2c3e50'];
@@ -2249,8 +2263,10 @@ async function startApp(){
   var today=getTodayJalali().split('/');
   $('cal_year').value=parseInt(today[0],10);$('cal_month').value=parseInt(today[1],10);$('h_default_year').value=parseInt(today[0],10);
   if(!$('act_start_date').value)$('act_start_date').value=getTodayJalali();
-  if(!$('rep_from').value)$('rep_from').value=getTodayJalali();
-  if(!$('rep_to').value)$('rep_to').value=getTodayJalali();
+  // پیش‌فرض گزارش: اول تا آخر ماه جاری شمسی
+  var tp=today.map(n=>parseInt(n,10));
+  if(!$('rep_from').value)$('rep_from').value=fmtJalali(tp[0],tp[1],1);
+  if(!$('rep_to').value)$('rep_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
   populateParticipants();renderPersons();renderImportance();renderLocations();renderCalendar();updateCalculatedHours();updatePlanningBadge();
   startIdleWatch();
   if(offlineMode){enterBackupOnlyMode();return}
@@ -2281,7 +2297,7 @@ function bindEvents(){
   on('btn_cancel_person','click',resetPersonForm);
   delegate('person_list_container',(a,id)=>{if(a==='edit')editPerson(id);else if(a==='delete')deletePerson(id)});
   on('btn_save_topic','click',saveTopic);
-  delegate('topic_list_container',(a,id)=>{if(a==='delete')deleteTopic(id)});
+  delegate('topic_list_container',(a,id)=>{if(a==='delete')deleteTopic(id);else if(a==='up')moveTopic(id,-1);else if(a==='down')moveTopic(id,1)});
   on('btn_save_imp','click',saveImportance);
   on('btn_cancel_imp','click',resetImportanceForm);
   delegate('imp_list_container',(a,id)=>{if(a==='edit')editImportance(id);else if(a==='delete')deleteImportance(id)});
