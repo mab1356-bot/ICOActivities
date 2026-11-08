@@ -2004,7 +2004,9 @@ function startConnectionMonitor(){
 function on(id,ev,fn){var e=$(id);if(e)e.addEventListener(ev,fn)}
 function delegate(id,fn){var e=$(id);if(!e)return;e.addEventListener('click',ev=>{var b=ev.target.closest('button');if(b&&b.dataset.action)fn(b.dataset.action,b.dataset.id)})}
 
-async function startApp(){
+async function startApp()
+{
+  $('login_modal').style.display='none';
   $('main_app').style.display='block';
   await seedImportance();
   refreshDropdowns();applyPermissions();
