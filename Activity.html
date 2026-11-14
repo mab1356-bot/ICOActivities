@@ -2,6 +2,9 @@
 <html lang="fa" dir="rtl" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ثبت فعالیت ماهانه</title>
@@ -350,7 +353,7 @@ tbody tr:last-child td{border-bottom:0}
           <div class="form-group"><label>شماره پرسنلی (الزامی):</label><input type="text" id="p_personnel_id" maxlength="6" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="حداکثر ۶ رقم"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>نام کاربری:</label><input type="text" id="p_username" autocomplete="off"></div>
+          <div class="form-group"><label>نام کاربری (حداقل ۵ کاراکتر):</label><input type="text" id="p_username" autocomplete="off"></div>
           <div class="form-group"><label>کلمه عبور:</label><input type="password" id="p_password" autocomplete="new-password" placeholder="کاربر جدید: رمز اولیه = نام کاربری. ویرایش: رمز جدید (اختیاری)"></div>
           <div class="form-group"><label>نقش:</label>
             <select id="p_role"><option value="user">کاربر عادی</option><option value="manager">مدیر</option><option value="admin">ادمین</option><option value="superadmin">سوپر ادمین</option></select>
@@ -634,6 +637,7 @@ tbody tr:last-child td{border-bottom:0}
 'use strict';
 
 const MIN_PASSWORD_LEN=6;
+const MIN_USERNAME_LEN=5;
 const PERSON_COLS='id,firstname,lastname,personnelid,username,role';
 
 let dbClient=null;          
@@ -940,6 +944,7 @@ async function savePerson(){
   if(!first||!last||!pid){showAlert('نام، نام خانوادگی و شماره پرسنلی الزامی است.');return}
   if(!/^\d{1,6}$/.test(pid)){showAlert('شماره پرسنلی باید یک عدد حداکثر ۶ رقمی باشد.');return}
   if(!username){showAlert('نام کاربری الزامی است.');return}
+  if(username.length < MIN_USERNAME_LEN){showAlert('نام کاربری باید حداقل '+MIN_USERNAME_LEN+' کاراکتر باشد.');return}
   
   var persons=getData(KEYS.persons);
   if(persons.some(p=>p.username===username&&p.id!==id)){showAlert('این نام کاربری قبلاً ثبت شده.');return}
@@ -949,17 +954,31 @@ async function savePerson(){
     var old=persons.find(x=>x.id===id);
     if(!old){showAlert('یافت نشد.');return}
     if(password&&password.length<MIN_PASSWORD_LEN){showAlert('کلمه عبور حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
+    
     var usernameChanged=old.username!==username;
     var ar=null;
+    
     if(password||usernameChanged){
       ar=await callAccountFn('update_account',{id:id,username:usernameChanged?username:undefined,password:password||undefined});
       if(!ar.ok){showAlert('❌ '+(ar.error||'خطا'),'error');return}
     }
+    
     var upd={ firstname: first, lastname: last, personnelid: pid, role: role };
     const { error } = await dbClient.from('persons').update(upd).eq('id', id);
     if (error) { showAlert('❌ خطا در ویرایش: ' + error.message, 'error'); return; }
-    await pullTable(KEYS.persons); renderPersons(); resetPersonForm(); refreshDropdowns(); populateParticipants();
+    
+    var pullOk = await pullTable(KEYS.persons); 
+    
+    renderPersons(); resetPersonForm(); refreshDropdowns(); populateParticipants();
     showAlert('✅ ویرایش شد.'+(ar&&ar.message?' '+ar.message:''), 'success');
+
+    if(!pullOk) {
+      showAlert('✅ تغییرات در سرور ذخیره شد، اما دریافت اطلاعات جدید با خطا مواجه شد. لطفاً صفحه را رفرش کنید.', 'warning');
+    } else if (usernameChanged && id === s.personId) {
+      showAlert('نام کاربری شما تغییر کرد. صفحه رفرش می‌شود...', 'success');
+      setTimeout(() => location.reload(), 1500);
+    }
+    
   } else {
     if(!password){showAlert('کلمه عبور الزامی است.');return}
     
@@ -1003,7 +1022,6 @@ function renderPersons(){
   });
   c.innerHTML=h+'</table>';
 }
-/** فراخوانی Edge Function «account-admin» (تغییر رمز/نام کاربری/حذف حساب ورود)؛ خروجی همیشه {ok,error?} */
 async function callAccountFn(action,payload){
   if(!dbClient||!navigator.onLine)return{ok:false,error:'اتصال به دیتابیس برقرار نیست.'};
   try{
@@ -1017,7 +1035,6 @@ async function callAccountFn(action,payload){
     return r.data||{ok:false,error:'پاسخ نامعتبر از سرور.'};
   }catch(e){return{ok:false,error:e.message}}
 }
-/** تعیین رمز جدید برای یک کاربر (ادمین/سوپر ادمین)؛ سرور ورود با رمز جدید را تأیید می‌کند */
 async function changePersonPassword(id){
   var p=getData(KEYS.persons).find(x=>x.id===id);if(!p)return;
   var pw=prompt('رمز جدید برای «'+p.firstName+' '+p.lastName+'» (حداقل '+MIN_PASSWORD_LEN+' کاراکتر):');
@@ -1028,14 +1045,12 @@ async function changePersonPassword(id){
   await pullTable(KEYS.persons);renderPersons();
   showAlert('✅ '+(r.message||'رمز تغییر کرد.'),'success');
 }
-/** (سوپر ادمین) اصلاح گروهی ایمیل ورود همهٔ کاربران تا با نام کاربری فعلی هماهنگ باشد */
 async function repairLoginEmails(){
   if(!confirm('ایمیل ورود همهٔ کاربران با نام کاربری فعلی‌شان هماهنگ شود؟'))return;
   var r=await callAccountFn('repair_all',{});
   if(!r.ok){showAlert('❌ '+(r.error||'خطا'),'error');return}
   showAlert('✅ اصلاح‌شده: '+((r.fixed||[]).length?(r.fixed||[]).join('، '):'موردی نبود')+((r.skipped||[]).length?'\nرد شده: '+(r.skipped||[]).join('، '):''),'success');
 }
-/** حذف کامل کاربر: حساب ورود، ردیف persons و (در صورت امکان) نام او از اقدامات — از طریق Edge Function */
 async function deletePerson(id){
   var s=getSession();if(!s)return;
   if(id===s.personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
@@ -1847,7 +1862,6 @@ function renderDatepickerPopup(popup,year,month,input){
 async function forceLogout(msg){
   try {
     if (dbClient && dbClient.auth) {
-      // منتظر ماندن حداکثر ۱ ثانیه برای signOut تا در موبایل با اینترنت ضعیف گیر نکنیم
       await Promise.race([
         dbClient.auth.signOut(),
         new Promise(resolve => setTimeout(resolve, 1000))
@@ -1857,7 +1871,6 @@ async function forceLogout(msg){
     console.warn('SignOut error:', e);
   }
   
-  // پاک کردن توکن‌های Supabase از حافظه محلی برای اطمینان کامل
   try {
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
@@ -2033,11 +2046,6 @@ async function initDbClient(){
   }catch(e){console.error('[DB] init failed:',e);window.dbInitError='خطا در راه‌اندازی اتصال.';return false}
 }
 
-/**
- * نمایش نسخهٔ برنامه در هدر.
- * همیشه فایل sw.js را مستقیماً از شبکه (با دور زدن کش) می‌خواند.
- * این روش تضمین می‌کند نسخه در تمام مرورگرها (از جمله ویندوز) نمایش داده شود.
- */
 function loadAppVersion() {
   var el = $('app_version_display');
   if (!el) return;
