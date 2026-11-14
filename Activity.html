@@ -1991,11 +1991,29 @@ async function initDbClient(){
   }catch(e){console.error('[DB] init failed:',e);window.dbInitError='خطا در راه‌اندازی اتصال.';return false}
 }
 
+/**
+ * نمایش نسخهٔ برنامه در هدر. ترتیب منابع:
+ * ۱) نام کش سرویس‌ورکر فعال (actbk-cache-<نسخه>) ← نسخهٔ واقعاً در حال اجرا؛ در برنامهٔ نصب‌شده هم کار می‌کند
+ * ۲) خواندن CACHE_VERSION از sw.js با دور زدن کش (بدون ذخیره در کش)
+ */
 function loadAppVersion(){
-  fetch('./sw.js?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('bad response');return r.text()}).then(t=>{
-    var m=t.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);var el=$('app_version_display');if(m&&m[1]&&el)el.textContent=m[1];
-  }).catch(()=>{var el=$('app_version_display');if(el)el.textContent='نامشخص'});
+  var el=$('app_version_display');if(!el)return;
+  var show=function(v){if(v)el.textContent=v;return !!v};
+  var fromCaches=function(){
+    if(!window.caches||!caches.keys)return Promise.resolve(false);
+    return caches.keys().then(function(keys){
+      var k=keys.filter(function(x){return x.indexOf('actbk-cache-')===0}).sort().pop();
+      return show(k?k.replace('actbk-cache-',''):'');
+    }).catch(function(){return false});
+  };
+  var fromFile=function(){
+    return fetch('./sw.js',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('bad');return r.text()}).then(function(t){
+      var m=t.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);return show(m&&m[1]);
+    }).catch(function(){return false});
+  };
+  fromCaches().then(function(ok){return ok||fromFile()}).then(function(ok){if(!ok)el.textContent='نامشخص'});
 }
+
 
 function setConnectionStatus(status,serverName){
   var dot=$('onlineDot');
