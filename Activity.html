@@ -360,6 +360,7 @@ tbody tr:last-child td{border-bottom:0}
           <button class="btn btn-success" style="flex:1" id="btn_save_person">افزودن پرسنل</button>
           <button class="btn btn-warning" style="flex:1;display:none" id="btn_cancel_person">انصراف از ویرایش</button>
         </div>
+        <div style="margin-top:14px"><button class="btn btn-secondary btn-sm" id="btn_repair_emails" data-superadmin-only="1">🛠 همگام‌سازی ایمیل‌های ورود</button></div>
         <h3 style="margin-top:20px">فهرست کاربران</h3>
         <div id="person_list_container" class="table-wrap"></div>
       </div>
@@ -950,15 +951,16 @@ async function savePerson(){
     if(password&&password.length<MIN_PASSWORD_LEN){showAlert('کلمه عبور حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
     var usernameChanged=old.username!==username;
     // تغییر رمز یا نام کاربری باید روی حساب ورود (Supabase Auth) هم اعمال شود؛ فقط Edge Function این اجازه را دارد
+    var ar=null;
     if(password||usernameChanged){
-      var ar=await callAccountFn('update_account',{id:id,username:usernameChanged?username:undefined,password:password||undefined});
+      ar=await callAccountFn('update_account',{id:id,username:usernameChanged?username:undefined,password:password||undefined});
       if(!ar.ok){showAlert('❌ '+(ar.error||'خطا'),'error');return}
     }
     var upd={ firstname: first, lastname: last, personnelid: pid, role: role };
     const { error } = await dbClient.from('persons').update(upd).eq('id', id);
     if (error) { showAlert('❌ خطا در ویرایش: ' + error.message, 'error'); return; }
     await pullTable(KEYS.persons); renderPersons(); resetPersonForm(); refreshDropdowns(); populateParticipants();
-    showAlert(password?'ویرایش شد. رمز جدید تنظیم شد؛ کاربر در اولین ورود باید آن را تغییر دهد.':'ویرایش شد.', 'success');
+    showAlert('✅ ویرایش شد.'+(ar&&ar.message?' '+ar.message:''), 'success');
   } else {
     if(!password){showAlert('کلمه عبور الزامی است.');return}
     
@@ -997,7 +999,7 @@ function renderPersons(){
     else if(p.role==='manager')rb='<span class="badge badge-role-manager">مدیر</span>';
     else if(p.role==='superadmin')rb='<span class="badge badge-role-superadmin">سوپر ادمین</span>';
     var locked=p.role==='superadmin'&&!isSuper;
-    var btns=locked?'<span style="color:var(--text3)">—</span>':'<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(p.id)+'">ویرایش</button><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(p.id)+'">حذف</button>';
+    var btns=locked?'<span style="color:var(--text3)">—</span>':'<button class="btn btn-warning btn-sm" data-action="edit" data-id="'+esc(p.id)+'">ویرایش</button><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+esc(p.id)+'">حذف</button><button class="btn btn-secondary btn-sm" data-action="pwd" data-id="'+esc(p.id)+'" title="تعیین رمز جدید">🔑</button>';
     h+='<tr><td data-label="نام">'+esc(p.firstName)+'</td><td data-label="نام خانوادگی">'+esc(p.lastName)+'</td><td data-label="شماره پرسنلی">'+esc(p.personnelId)+'</td><td data-label="نام کاربری">'+esc(p.username||'-')+'</td><td data-label="نقش">'+rb+'</td><td data-label="تعداد">'+(cnt[p.id]||0)+'</td><td data-label="عملیات" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+btns+'</td></tr>';
   });
   c.innerHTML=h+'</table>';
@@ -1015,6 +1017,24 @@ async function callAccountFn(action,payload){
     }
     return r.data||{ok:false,error:'پاسخ نامعتبر از سرور.'};
   }catch(e){return{ok:false,error:e.message}}
+}
+/** تعیین رمز جدید برای یک کاربر (ادمین/سوپر ادمین)؛ سرور ورود با رمز جدید را تأیید می‌کند */
+async function changePersonPassword(id){
+  var p=getData(KEYS.persons).find(x=>x.id===id);if(!p)return;
+  var pw=prompt('رمز جدید برای «'+p.firstName+' '+p.lastName+'» (حداقل '+MIN_PASSWORD_LEN+' کاراکتر):');
+  if(pw===null)return;
+  if(pw.length<MIN_PASSWORD_LEN){showAlert('رمز باید حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
+  var r=await callAccountFn('update_account',{id:id,password:pw});
+  if(!r.ok){showAlert('❌ '+(r.error||'خطا'),'error');return}
+  await pullTable(KEYS.persons);renderPersons();
+  showAlert('✅ '+(r.message||'رمز تغییر کرد.'),'success');
+}
+/** (سوپر ادمین) اصلاح گروهی ایمیل ورود همهٔ کاربران تا با نام کاربری فعلی هماهنگ باشد */
+async function repairLoginEmails(){
+  if(!confirm('ایمیل ورود همهٔ کاربران با نام کاربری فعلی‌شان هماهنگ شود؟'))return;
+  var r=await callAccountFn('repair_all',{});
+  if(!r.ok){showAlert('❌ '+(r.error||'خطا'),'error');return}
+  showAlert('✅ اصلاح‌شده: '+((r.fixed||[]).length?(r.fixed||[]).join('، '):'موردی نبود')+((r.skipped||[]).length?'\nرد شده: '+(r.skipped||[]).join('، '):''),'success');
 }
 /** حذف کامل کاربر: حساب ورود، ردیف persons و (در صورت امکان) نام او از اقدامات — از طریق Edge Function */
 async function deletePerson(id){
@@ -2102,7 +2122,8 @@ function bindEvents(){
 
   on('btn_save_person','click',savePerson);
   on('btn_cancel_person','click',resetPersonForm);
-  delegate('person_list_container',(a,id)=>{if(a==='edit')editPerson(id);else if(a==='delete')deletePerson(id)});
+  delegate('person_list_container',(a,id)=>{if(a==='edit')editPerson(id);else if(a==='delete')deletePerson(id);else if(a==='pwd')changePersonPassword(id)});
+  on('btn_repair_emails','click',repairLoginEmails);
   on('btn_save_topic','click',saveTopic);
   delegate('topic_list_container',(a,id)=>{if(a==='delete')deleteTopic(id);else if(a==='up')moveTopic(id,-1);else if(a==='down')moveTopic(id,1)});
   on('btn_save_imp','click',saveImportance);
