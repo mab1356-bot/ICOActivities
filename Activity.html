@@ -1844,16 +1844,17 @@ function renderDatepickerPopup(popup,year,month,input){
 }
 
 async function forceLogout(msg){
-  await dbClient.auth.signOut();
-  clearSession();
-  if(msg)sessionStorage.setItem('actbk_flash',msg);
-  location.reload();
-}
-var _idleStarted=false,_lastActivity=Date.now();
-function startIdleWatch(){
-  if(_idleStarted)return;_idleStarted=true;
-  ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{_lastActivity=Date.now()},{passive:true}));
-  setInterval(()=>{if(getSession()&&Date.now()-_lastActivity>3600000)forceLogout('به دلیل عدم فعالیت طولانی از حساب خارج شدید.')},60000);
+  try {
+    if (dbClient && dbClient.auth) {
+      await dbClient.auth.signOut();
+    }
+  } catch(e) {
+    console.warn('SignOut error (ignored):', e);
+  } finally {
+    clearSession();
+    if(msg) sessionStorage.setItem('actbk_flash',msg);
+    location.reload();
+  }
 }
 
 function showForcePasswordChange(userId) {
@@ -1948,7 +1949,10 @@ async function handleSetup(){
   }
 }
 
-function handleLogout(){if(!confirm('از حساب خارج می‌شوید؟'))return;forceLogout()}
+function handleLogout(){
+  if(!confirm('از حساب خارج می‌شوید؟')) return; 
+  forceLogout();
+}
 
 async function showLogin(){
   $('login_modal').style.display='flex';$('main_app').style.display='none';$('user_info').style.display='none';
@@ -2018,20 +2022,24 @@ async function initDbClient(){
  */
 function loadAppVersion(){
   var el=$('app_version_display');if(!el)return;
-  var show=function(v){if(v)el.textContent=v;return !!v};
-  var fromCaches=function(){
-    if(!window.caches||!caches.keys)return Promise.resolve(false);
-    return caches.keys().then(function(keys){
-      var k=keys.filter(function(x){return x.indexOf('actbk-cache-')===0}).sort().pop();
-      return show(k?k.replace('actbk-cache-',''):'');
-    }).catch(function(){return false});
-  };
-  var fromFile=function(){
-    return fetch('./sw.js',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('bad');return r.text()}).then(function(t){
-      var m=t.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);return show(m&&m[1]);
-    }).catch(function(){return false});
-  };
-  fromCaches().then(function(ok){return ok||fromFile()}).then(function(ok){if(!ok)el.textContent='نامشخص'});
+  // اولویت اول: خواندن مستقیم از فایل sw.js در شبکه
+  fetch('./sw.js?t='+Date.now(),{cache:'no-store'}).then(function(r){
+    if(!r.ok) throw new Error('bad');
+    return r.text();
+  }).then(function(t){
+    var m=t.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if(m&&m[1]) el.textContent=m[1];
+    else el.textContent='نامشخص';
+  }).catch(function(){
+    // اولویت دوم: اگر شبکه قطع بود، از نام کش استفاده کن
+    if(window.caches&&caches.keys){
+      caches.keys().then(function(keys){
+        var k=keys.filter(function(x){return x.indexOf('actbk-cache-')===0}).sort().pop();
+        if(k) el.textContent=k.replace('actbk-cache-','');
+        else el.textContent='نامشخص';
+      }).catch(function(){ el.textContent='نامشخص'; });
+    } else { el.textContent='نامشخص'; }
+  });
 }
 
 
