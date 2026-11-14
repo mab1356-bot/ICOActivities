@@ -950,7 +950,6 @@ async function savePerson(){
     if(!old){showAlert('یافت نشد.');return}
     if(password&&password.length<MIN_PASSWORD_LEN){showAlert('کلمه عبور حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
     var usernameChanged=old.username!==username;
-    // تغییر رمز یا نام کاربری باید روی حساب ورود (Supabase Auth) هم اعمال شود؛ فقط Edge Function این اجازه را دارد
     var ar=null;
     if(password||usernameChanged){
       ar=await callAccountFn('update_account',{id:id,username:usernameChanged?username:undefined,password:password||undefined});
@@ -1312,9 +1311,11 @@ function renderWeekView(){
       html+='<td class="slot-cell">';
       (grid[di+'_'+hr]||[]).forEach(a=>{
         var canEdit=isPriv()||a.createdBy===selfId;
+        var isJoined = selfId && (a.participants||[]).indexOf(selfId) !== -1;
+        var joinIcon = isJoined ? '<span title="شما در این اقدام شرکت کرده‌اید" style="font-size:10px;margin-left:2px;">🤝</span> ' : '';
         html+='<div class="slot-act" data-id="'+esc(a.id)+'" style="border-right-color:'+esc(getImpColor(a.importance))+';'+(a.onlyforme?'background:var(--warningS);':'')+'">';
         if(canEdit)html+='<button class="btn-edit-week" data-id="'+esc(a.id)+'" title="ویرایش">✏️</button>';
-        html+='<div class="slot-act-desc">'+esc(a.description)+'</div></div>';
+        html+='<div class="slot-act-desc">'+joinIcon+esc(a.description)+'</div></div>';
       });
       html+='</td>';
     }
@@ -1846,15 +1847,35 @@ function renderDatepickerPopup(popup,year,month,input){
 async function forceLogout(msg){
   try {
     if (dbClient && dbClient.auth) {
-      await dbClient.auth.signOut();
+      // منتظر ماندن حداکثر ۱ ثانیه برای signOut تا در موبایل با اینترنت ضعیف گیر نکنیم
+      await Promise.race([
+        dbClient.auth.signOut(),
+        new Promise(resolve => setTimeout(resolve, 1000))
+      ]);
     }
   } catch(e) {
-    console.warn('SignOut error (ignored):', e);
-  } finally {
-    clearSession();
-    if(msg) sessionStorage.setItem('actbk_flash',msg);
-    location.reload();
+    console.warn('SignOut error:', e);
   }
+  
+  // پاک کردن توکن‌های Supabase از حافظه محلی برای اطمینان کامل
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch(e) {}
+  
+  clearSession();
+  if(msg) sessionStorage.setItem('actbk_flash',msg);
+  location.reload();
+}
+
+var _idleStarted=false,_lastActivity=Date.now();
+function startIdleWatch(){
+  if(_idleStarted)return;_idleStarted=true;
+  ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{_lastActivity=Date.now()},{passive:true}));
+  setInterval(()=>{if(getSession()&&Date.now()-_lastActivity>3600000)forceLogout('به دلیل عدم فعالیت طولانی از حساب خارج شدید.')},60000);
 }
 
 function showForcePasswordChange(userId) {
@@ -1949,10 +1970,7 @@ async function handleSetup(){
   }
 }
 
-function handleLogout(){
-  if(!confirm('از حساب خارج می‌شوید؟')) return; 
-  forceLogout();
-}
+function handleLogout(){if(!confirm('از حساب خارج می‌شوید؟'))return;forceLogout()}
 
 async function showLogin(){
   $('login_modal').style.display='flex';$('main_app').style.display='none';$('user_info').style.display='none';
@@ -2016,32 +2034,27 @@ async function initDbClient(){
 }
 
 /**
- * نمایش نسخهٔ برنامه در هدر. ترتیب منابع:
- * ۱) نام کش سرویس‌ورکر فعال (actbk-cache-<نسخه>) ← نسخهٔ واقعاً در حال اجرا؛ در برنامهٔ نصب‌شده هم کار می‌کند
- * ۲) خواندن CACHE_VERSION از sw.js با دور زدن کش (بدون ذخیره در کش)
+ * نمایش نسخهٔ برنامه در هدر.
+ * همیشه فایل sw.js را مستقیماً از شبکه (با دور زدن کش) می‌خواند.
+ * این روش تضمین می‌کند نسخه در تمام مرورگرها (از جمله ویندوز) نمایش داده شود.
  */
-function loadAppVersion(){
-  var el=$('app_version_display');if(!el)return;
-  // اولویت اول: خواندن مستقیم از فایل sw.js در شبکه
-  fetch('./sw.js?t='+Date.now(),{cache:'no-store'}).then(function(r){
-    if(!r.ok) throw new Error('bad');
-    return r.text();
-  }).then(function(t){
-    var m=t.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
-    if(m&&m[1]) el.textContent=m[1];
-    else el.textContent='نامشخص';
-  }).catch(function(){
-    // اولویت دوم: اگر شبکه قطع بود، از نام کش استفاده کن
-    if(window.caches&&caches.keys){
-      caches.keys().then(function(keys){
-        var k=keys.filter(function(x){return x.indexOf('actbk-cache-')===0}).sort().pop();
-        if(k) el.textContent=k.replace('actbk-cache-','');
-        else el.textContent='نامشخص';
-      }).catch(function(){ el.textContent='نامشخص'; });
-    } else { el.textContent='نامشخص'; }
-  });
+function loadAppVersion() {
+  var el = $('app_version_display');
+  if (!el) return;
+  fetch('./sw.js?t=' + Date.now(), { cache: 'no-store' })
+    .then(res => {
+      if (!res.ok) throw new Error('Network error');
+      return res.text();
+    })
+    .then(text => {
+      var match = text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+      el.textContent = (match && match[1]) ? match[1] : 'نامشخص';
+    })
+    .catch(err => {
+      console.warn('Version fetch failed:', err);
+      el.textContent = 'نامشخص';
+    });
 }
-
 
 function setConnectionStatus(status,serverName){
   var dot=$('onlineDot');
@@ -2105,7 +2118,18 @@ async function startApp(){
   var tp=today.map(n=>parseInt(n,10));
   if(!$('rep_from').value)$('rep_from').value=fmtJalali(tp[0],tp[1],1);
   if(!$('rep_to').value)$('rep_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
-  populateParticipants();renderPersons();renderImportance();renderLocations();renderCalendar();updateCalculatedHours();updatePlanningBadge();
+  
+  populateParticipants();renderPersons();renderImportance();renderLocations();
+  
+  // پیش‌فرض: نمای هفته
+  if ($('cal_week_mode')) {
+    $('cal_week_mode').checked = true;
+    $('cal_month_group').style.display = 'none';
+    $('cal_year_group').style.display = 'none';
+    $('monthly_summary').style.display = 'none';
+  }
+  
+  renderCalendar(); updateCalculatedHours(); updatePlanningBadge();
   startIdleWatch();
   showSection('calendar');
 }

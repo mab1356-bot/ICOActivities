@@ -1,13 +1,12 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v4.2.6
+   نسخه: actbk-v4.2.7
    ================================================ */
 
-const CACHE_VERSION = 'Ver-4.2.6';
+const CACHE_VERSION = 'Ver-4.2.7';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
-// فایل‌های محلی که باید در اولین نصب کش شوند
 const PRECACHE_URLS = [
   './Activity.html',
   './index.html',
