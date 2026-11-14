@@ -351,7 +351,7 @@ tbody tr:last-child td{border-bottom:0}
         </div>
         <div class="form-row">
           <div class="form-group"><label>نام کاربری:</label><input type="text" id="p_username" autocomplete="off"></div>
-          <div class="form-group"><label>کلمه عبور:</label><input type="password" id="p_password" autocomplete="new-password" placeholder="برای کاربر جدید الزامی است"></div>
+          <div class="form-group"><label>کلمه عبور:</label><input type="password" id="p_password" autocomplete="new-password" placeholder="کاربر جدید: رمز اولیه = نام کاربری. ویرایش: رمز جدید (اختیاری)"></div>
           <div class="form-group"><label>نقش:</label>
             <select id="p_role"><option value="user">کاربر عادی</option><option value="manager">مدیر</option><option value="admin">ادمین</option><option value="superadmin">سوپر ادمین</option></select>
           </div>
@@ -945,11 +945,20 @@ async function savePerson(){
   if(persons.some(p=>p.personnelId===pid&&p.id!==id)){showAlert('شماره پرسنلی تکراری.');return}
   
   if(id){
-    const { error } = await dbClient.from('persons').update({ firstname: first, lastname: last, personnelid: pid, username: username, role: role }).eq('id', id);
+    var old=persons.find(x=>x.id===id);
+    if(!old){showAlert('یافت نشد.');return}
+    if(password&&password.length<MIN_PASSWORD_LEN){showAlert('کلمه عبور حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
+    var usernameChanged=old.username!==username;
+    // تغییر رمز یا نام کاربری باید روی حساب ورود (Supabase Auth) هم اعمال شود؛ فقط Edge Function این اجازه را دارد
+    if(password||usernameChanged){
+      var ar=await callAccountFn('update_account',{id:id,username:usernameChanged?username:undefined,password:password||undefined});
+      if(!ar.ok){showAlert('❌ '+(ar.error||'خطا'),'error');return}
+    }
+    var upd={ firstname: first, lastname: last, personnelid: pid, role: role };
+    const { error } = await dbClient.from('persons').update(upd).eq('id', id);
     if (error) { showAlert('❌ خطا در ویرایش: ' + error.message, 'error'); return; }
-    if (password) showAlert('تغییر رمز دیگران از اینجا ممکن نیست. کاربر باید خودش رمز را تغییر دهد.', 'warning');
-
-    await pullTable(KEYS.persons); renderPersons(); resetPersonForm(); showAlert('ویرایش شد.', 'success');
+    await pullTable(KEYS.persons); renderPersons(); resetPersonForm(); refreshDropdowns(); populateParticipants();
+    showAlert(password?'ویرایش شد. رمز جدید تنظیم شد؛ کاربر در اولین ورود باید آن را تغییر دهد.':'ویرایش شد.', 'success');
   } else {
     if(!password){showAlert('کلمه عبور الزامی است.');return}
     
@@ -993,16 +1002,29 @@ function renderPersons(){
   });
   c.innerHTML=h+'</table>';
 }
+/** فراخوانی Edge Function «account-admin» (تغییر رمز/نام کاربری/حذف حساب ورود)؛ خروجی همیشه {ok,error?} */
+async function callAccountFn(action,payload){
+  if(!dbClient||!navigator.onLine)return{ok:false,error:'اتصال به دیتابیس برقرار نیست.'};
+  try{
+    var r=await dbClient.functions.invoke('account-admin',{body:Object.assign({action:action},payload||{})});
+    if(r.error){
+      var m=r.error.message||'خطا';
+      try{if(r.error.context&&typeof r.error.context.json==='function'){var j=await r.error.context.json();if(j&&(j.error||j.message))m=j.error||j.message}}catch(e){}
+      if(/Failed to send a request|NOT_FOUND|not found/i.test(m))m='Edge Function «account-admin» مستقر نشده است.';
+      return{ok:false,error:m};
+    }
+    return r.data||{ok:false,error:'پاسخ نامعتبر از سرور.'};
+  }catch(e){return{ok:false,error:e.message}}
+}
+/** حذف کامل کاربر: حساب ورود، ردیف persons و (در صورت امکان) نام او از اقدامات — از طریق Edge Function */
 async function deletePerson(id){
   var s=getSession();if(!s)return;
   if(id===s.personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
-  if(!confirm('حذف کاربر باعث حذف نام او از اقدامات می‌شود. مطمئن؟'))return;
-  
-  var r=await dbClient.from('persons').delete().eq('id',id);
-  if(r.error){showAlert('❌ خطا در حذف: '+r.error.message,'error');return;}
-  
+  if(!confirm('حذف کاربر باعث حذف حساب ورود او می‌شود. مطمئن؟'))return;
+  var r=await callAccountFn('delete_account',{id:id});
+  if(!r.ok){showAlert('❌ '+(r.error||'خطا'),'error');return}
   await syncFromCloud(false);
-  renderPersons();refreshDropdowns();populateParticipants();showAlert('حذف شد.','success');
+  renderPersons();refreshDropdowns();populateParticipants();showAlert(r.warning?('حذف شد. '+r.warning):'حذف شد.','success');
 }
 
 async function saveTopic(){
