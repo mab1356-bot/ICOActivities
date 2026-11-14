@@ -1,9 +1,9 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v4.2.8
+   نسخه: actbk-v4.2.9
    ================================================ */
 
-const CACHE_VERSION = 'Ver-4.2.8';
+const CACHE_VERSION = 'Ver-4.2.9';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
@@ -56,10 +56,8 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // خود sw.js هرگز از کش/سرویس‌ورکر عبور نکند (جلوگیری از انباشت نسخه‌ها در کش)
   if (new URL(req.url).pathname.endsWith('/sw.js')) return;
 
-  // رد کردن تمام فراخوانی‌های API دیتابیس/احراز هویت از کش
   if (/\/(rest|auth|storage|functions)\/v\d+\//.test(req.url)) return;
 
   if (req.mode === 'navigate') {

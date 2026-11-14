@@ -750,7 +750,6 @@ async function setData(key,data){
   
   if(changed.length){
     try{
-      // جدا کردن رکوردهای جدید از رکوردهای قبلی برای جلوگیری از خطای RLS
       var toInsert = changed.filter(x => !prev.has(x.id));
       var toUpdate = changed.filter(x => prev.has(x.id));
 
@@ -2049,18 +2048,50 @@ async function initDbClient(){
 function loadAppVersion() {
   var el = $('app_version_display');
   if (!el) return;
+  
+  var done = false;
+  var timer = setTimeout(function() {
+    if (done) return;
+    done = true;
+    // Fallback to Cache API if fetch takes too long
+    if (window.caches && caches.keys) {
+      caches.keys().then(keys => {
+        var k = keys.filter(x => x.indexOf('actbk-cache-') === 0).sort().pop();
+        if (k) el.textContent = k.replace('actbk-cache-', '');
+        else el.textContent = 'نامشخص';
+      }).catch(() => { el.textContent = 'نامشخص'; });
+    } else {
+      el.textContent = 'نامشخص';
+    }
+  }, 3000);
+
   fetch('./sw.js?t=' + Date.now(), { cache: 'no-store' })
     .then(res => {
       if (!res.ok) throw new Error('Network error');
       return res.text();
     })
     .then(text => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
       var match = text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
-      el.textContent = (match && match[1]) ? match[1] : 'نامشخص';
+      if (match && match[1]) el.textContent = match[1];
+      else el.textContent = 'نامشخص';
     })
     .catch(err => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
       console.warn('Version fetch failed:', err);
-      el.textContent = 'نامشخص';
+      if (window.caches && caches.keys) {
+        caches.keys().then(keys => {
+          var k = keys.filter(x => x.indexOf('actbk-cache-') === 0).sort().pop();
+          if (k) el.textContent = k.replace('actbk-cache-', '');
+          else el.textContent = 'نامشخص';
+        }).catch(() => { el.textContent = 'نامشخص'; });
+      } else {
+        el.textContent = 'نامشخص';
+      }
     });
 }
 
@@ -2129,7 +2160,7 @@ async function startApp(){
   
   populateParticipants();renderPersons();renderImportance();renderLocations();
   
-  // پیش‌فرض: نمای هفته
+  // Set default view to week
   if ($('cal_week_mode')) {
     $('cal_week_mode').checked = true;
     $('cal_month_group').style.display = 'none';

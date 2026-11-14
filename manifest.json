@@ -3,7 +3,7 @@
   "name": "ثبت فعالیت ماهانه",
   "short_name": "فعالیت ماهانه",
   "description": "سیستم ثبت فعالیت ماهانه واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری",
-  "start_url": "./index.html",
+  "start_url": "./Activity.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
