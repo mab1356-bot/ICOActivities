@@ -263,6 +263,17 @@ tbody tr:last-child td{border-bottom:0}
 </head>
 <body>
 
+<div id="modal_day_activities" class="modal-overlay hidden">
+  <div class="modal" style="max-width:600px">
+    <h3 id="day_modal_title" style="color:var(--primary)">اقدامات روز</h3>
+    <div id="day_modal_list" style="max-height:400px;overflow-y:auto;margin-bottom:15px;"></div>
+    <div class="modal-actions" style="display:flex; justify-content:space-between">
+      <button class="btn btn-success" id="btn_day_modal_new">➕ افزودن اقدام جدید</button>
+      <button class="btn btn-secondary" id="btn_day_modal_close">بستن</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal_force_change_password" class="modal-overlay hidden" style="z-index: 3000;">
   <div class="modal" style="max-width:450px">
     <h3>🔐 تغییر رمز عبور (اجباری)</h3>
@@ -642,6 +653,7 @@ const PERSON_COLS='id,firstname,lastname,personnelid,username,role';
 
 let dbClient=null;          
 let activeServerName='';    
+let _currentModalDate = null;
 
 function $(id){return document.getElementById(id)}
 function val(id){var e=$(id);return e?String(e.value).trim():''}
@@ -1336,6 +1348,50 @@ function renderWeekView(){
     html+='</tr>';
   });
   container.innerHTML=html+'</tbody></table>';
+}
+
+function openDayActivitiesModal(dateStr){
+  _currentModalDate = dateStr;
+  $('day_modal_title').textContent = 'اقدامات روز ' + dateStr;
+  renderDayActivitiesModal();
+  $('modal_day_activities').classList.remove('hidden');
+}
+
+function renderDayActivitiesModal(){
+  if (!_currentModalDate) return;
+  var list = $('day_modal_list');
+  var acts = getVisibleActs().filter(a => a.date === _currentModalDate || (a.endDate && _currentModalDate >= a.date && _currentModalDate <= a.endDate));
+  acts.sort((a,b)=> (a.startTime||'').localeCompare(b.startTime||''));
+  
+  if (!acts.length) {
+    list.innerHTML = '<p style="text-align:center;color:var(--text3);padding:20px">اقدامی برای این روز ثبت نشده است.</p>';
+    return;
+  }
+
+  var session = getSession();
+  var html = '';
+  acts.forEach(a => {
+    var timeStr = a.startTime ? esc(a.startTime) + ' - ' + esc(a.endTime) : '—';
+    var isJoined = session && (a.participants||[]).indexOf(session.personId) !== -1;
+    var btn = '';
+    if (!isJoined && !a.onlyforme) {
+      btn = '<button class="btn btn-sm btn-success" onclick="window.joinFromModal(\'' + a.id + '\')">🤝 پیوستن</button>';
+    } else if (isJoined) {
+      btn = '<span class="badge badge-success" style="background:var(--success)">✅ عضو هستید</span>';
+    }
+    if (a.onlyforme) {
+      btn = '<span class="badge badge-warning">👤 فقط من</span>';
+    }
+
+    html += '<div style="border:1px solid var(--border); border-radius:var(--r-md); padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:var(--surface2)">' +
+              '<div style="flex:1; cursor:pointer" onclick="window.showActivityDetails(\'' + a.id + '\')">' +
+                '<div style="font-weight:bold; color:var(--primary); font-size:13px">' + timeStr + ' - ' + esc(topicName(a.topicId)) + '</div>' +
+                '<div style="font-size:12px; margin-top:4px">' + esc(a.description) + '</div>' +
+              '</div>' +
+              '<div style="margin-right:10px">' + btn + '</div>' +
+            '</div>';
+  });
+  list.innerHTML = html;
 }
 
 function showActivityDetails(id){
@@ -2053,7 +2109,6 @@ function loadAppVersion() {
   var timer = setTimeout(function() {
     if (done) return;
     done = true;
-    // Fallback to Cache API if fetch takes too long
     if (window.caches && caches.keys) {
       caches.keys().then(keys => {
         var k = keys.filter(x => x.indexOf('actbk-cache-') === 0).sort().pop();
@@ -2160,7 +2215,6 @@ async function startApp(){
   
   populateParticipants();renderPersons();renderImportance();renderLocations();
   
-  // Set default view to week
   if ($('cal_week_mode')) {
     $('cal_week_mode').checked = true;
     $('cal_month_group').style.display = 'none';
@@ -2208,11 +2262,22 @@ function bindEvents(){
   delegate('loc_list_container',(a,id)=>{if(a==='edit')editLocation(id);else if(a==='delete')deleteLocation(id);else if(a==='up')moveLocation(id,-1);else if(a==='down')moveLocation(id,1)});
 
   ['cal_person','cal_month','cal_year'].forEach(k=>on(k,'change',renderCalendar));
-  on('calendar_container','click',e=>{var c=e.target.closest('.day-cell');if(!c)return;showSection('activity');$('act_start_date').value=c.dataset.date;resetActivityForm(true)});
+  on('calendar_container','click',e=>{var c=e.target.closest('.day-cell');if(!c)return;openDayActivitiesModal(c.dataset.date)});
   on('week_grid','click',e=>{
     var add=e.target.closest('.btn-add-week');if(add){openNewActivityForDate(add.dataset.date);return}
     var ed=e.target.closest('.btn-edit-week');if(ed){editAct(ed.dataset.id);return}
     var cell=e.target.closest('.slot-act');if(cell)showActivityDetails(cell.dataset.id);
+  });
+
+  on('btn_day_modal_new', 'click', () => {
+    $('modal_day_activities').classList.add('hidden');
+    openNewActivityForDate(_currentModalDate);
+  });
+  on('btn_day_modal_close', 'click', () => {
+    $('modal_day_activities').classList.add('hidden');
+  });
+  on('modal_day_activities', 'click', (e) => {
+    if (e.target.id === 'modal_day_activities') $('modal_day_activities').classList.add('hidden');
   });
 
   on('btn_save_plan','click',savePlan);
@@ -2286,6 +2351,12 @@ window.weekGoToday=weekGoToday;
 window.cancelPendingConversion=cancelPendingConversion;
 window.renderPlanning=renderPlanning;
 window.onLocationChange=onLocationChange;
+window.joinFromModal = function(id) {
+  joinActivity(id).then(() => {
+    renderDayActivitiesModal();
+    renderCalendar();
+  });
+};
 
 })();
 </script>

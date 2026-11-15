@@ -1,4 +1,4 @@
-# 🗄 معماری بانک اطلاعاتی (Database Architecture) — نسخه ۴.۲.۶
+# 🗄 معماری بانک اطلاعاتی (Database Architecture) — نسخه ۴.۳.۰
 
 دیتابیس PostgreSQL در Supabase. برای ایجاد/به‌روزرسانی ساختار، فایل `migration_v3.0.0.sql` را اجرا کنید.
 
@@ -10,8 +10,8 @@
 | `id` | TEXT (PK) | شناسه (حفظ‌شده از نسخه‌های قبل) |
 | `user_id` | UUID | کلید خارجی به `auth.users(id)` (اتصال به Supabase Auth) |
 | `firstname`, `lastname` | TEXT | نام و نام خانوادگی |
-| `personnelid` | TEXT | شماره پرسنلی (یکتا، برای اتصال تاریخچه استفاده می‌شود) |
-| `username` | TEXT | نام کاربری (یکتا) |
+| `personnelid` | TEXT | شماره پرسنلی (یکتا) |
+| `username` | TEXT | نام کاربری (یکتا، حداقل ۵ کاراکتر) |
 | `must_change_password` | BOOLEAN | آیا کاربر باید در اولین ورود رمز خود را تغییر دهد؟ |
 | `role` | TEXT | `superadmin` / `admin` / `manager` / `user` |
 
@@ -21,11 +21,11 @@
 
 ## توابع SQL (Functions)
 - `check_has_users()`: بررسی وجود کاربر برای نمایش فرم راه‌اندازی اولیه.
-- `app_mark_password_changed()`: ثبت تغییر موفقیت‌آمیز رمز عبور توسط کاربر.
-- `custom_access_token_hook(event jsonb)`: هوک تزریق نقش (`user_role`) به توکن JWT.
-- `is_manager_or_admin()`: تابع کمکی برای تشخیص نقش‌های مدیریتی جهت استفاده در RLS.
-- `prevent_unauthorized_activity_edit()`: **تریگر امنیتی**. اگر کاربر عادی سعی کند به یک اقدام بپیوندد، فقط اجازه اضافه شدن خودش را می‌دهد و اگر سعی کند فیلدهای دیگر را تغییر دهد یا کسی را حذف کند، خطا می‌دهد.
-- `app_remove_person_refs(p_id text)`: **تابع جدید**. هنگام حذف یک کاربر توسط ادمین، این تابع شناسه کاربر را به صورت امن از آرایه `participants` در جدول `activities` پاک می‌کند تا دیتابیس دچار خطا نشود.
+- `app_mark_password_changed()`: ثبت تغییر موفقیت‌آمیز رمز عبور.
+- `custom_access_token_hook(event jsonb)`: هوک تزریق نقش به توکن JWT.
+- `is_manager_or_admin()`: تابع کمکی برای تشخیص نقش‌های مدیریتی.
+- `prevent_unauthorized_activity_edit()`: تریگر امنیتی برای جلوگیری از ویرایش غیرمجاز.
+- `app_remove_person_refs(p_id text)`: هنگام حذف کاربر، شناسه او را از آرایه `participants` پاک می‌کند.
 
 ## 🔒 امنیت (RLS - Row Level Security)
 - **جدول persons**: خواندن برای همه کاربران لاگین‌شده. درج/ویرایش/حذف فقط برای ادمین و سوپر ادمین.
