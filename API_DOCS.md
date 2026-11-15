@@ -14,7 +14,9 @@
 - `forceLogout(msg)` — خروج کاملاً امن (با استفاده از `Promise.race` برای جلوگیری از گیر کردن در موبایل).
 
 ## مدیریت پرسنل
-- `savePerson()` — در حالت ایجاد، `create-user` را صدا می‌زند. در حالت ویرایش، از `account-admin` برای تغییر رمز/نام کاربری استفاده می‌کند.
+- ## مدیریت پرسنل
+- `savePerson()` — در حالت ایجاد، `create-user` را صدا می‌زند. در حالت ویرایش، از `account-admin` برای تغییر **تمام اطلاعات** (نام، نام خانوادگی، شماره پرسنلی، نقش، رمز و نام کاربری) استفاده می‌کند.
+- `callAccountFn(action, payload)` — فراخوانی Edge Function `account-admin`.
 - `callAccountFn(action, payload)` — فراخوانی Edge Function `account-admin`.
 - `changePersonPassword(id)` — تعیین رمز جدید توسط ادمین.
 - `deletePerson(id)` — حذف کامل کاربر از `auth.users` و `persons`.

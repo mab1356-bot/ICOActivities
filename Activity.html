@@ -966,30 +966,29 @@ async function savePerson(){
     if(!old){showAlert('یافت نشد.');return}
     if(password&&password.length<MIN_PASSWORD_LEN){showAlert('کلمه عبور حداقل '+MIN_PASSWORD_LEN+' کاراکتر باشد.');return}
     
-    var usernameChanged=old.username!==username;
-    var ar=null;
+    var ar=await callAccountFn('update_account',{
+       id: id,
+       firstname: first,
+       lastname: last,
+       personnelid: pid,
+       role: role,
+       username: (username !== old.username) ? username : undefined,
+       password: password || undefined
+    });
     
-    if(password||usernameChanged){
-      ar=await callAccountFn('update_account',{id:id,username:usernameChanged?username:undefined,password:password||undefined});
-      if(!ar.ok){showAlert('❌ '+(ar.error||'خطا'),'error');return}
-    }
-    
-    var upd={ firstname: first, lastname: last, personnelid: pid, role: role };
-    const { error } = await dbClient.from('persons').update(upd).eq('id', id);
-    if (error) { showAlert('❌ خطا در ویرایش: ' + error.message, 'error'); return; }
+    if(!ar.ok){showAlert('❌ '+(ar.error||'خطا'),'error');return}
     
     var pullOk = await pullTable(KEYS.persons); 
     
     renderPersons(); resetPersonForm(); refreshDropdowns(); populateParticipants();
-    showAlert('✅ ویرایش شد.'+(ar&&ar.message?' '+ar.message:''), 'success');
+    showAlert('✅ '+(ar.message||'ویرایش شد.'), 'success');
 
     if(!pullOk) {
       showAlert('✅ تغییرات در سرور ذخیره شد، اما دریافت اطلاعات جدید با خطا مواجه شد. لطفاً صفحه را رفرش کنید.', 'warning');
-    } else if (usernameChanged && id === s.personId) {
+    } else if (username !== old.username && id === s.personId) {
       showAlert('نام کاربری شما تغییر کرد. صفحه رفرش می‌شود...', 'success');
       setTimeout(() => location.reload(), 1500);
     }
-    
   } else {
     if(!password){showAlert('کلمه عبور الزامی است.');return}
     
@@ -1377,7 +1376,7 @@ function renderDayActivitiesModal(){
     if (!isJoined && !a.onlyforme) {
       btn = '<button class="btn btn-sm btn-success" onclick="window.joinFromModal(\'' + a.id + '\')">🤝 پیوستن</button>';
     } else if (isJoined) {
-      btn = '<span class="badge badge-success" style="background:var(--success)">✅ عضو هستید</span>';
+      btn = '<span class="badge" style="background:var(--success)">✅ عضو هستید</span>';
     }
     if (a.onlyforme) {
       btn = '<span class="badge badge-warning">👤 فقط من</span>';
