@@ -1,32 +1,31 @@
-# 📚 مستندات توابع (JavaScript API Reference) — نسخه ۴.۳.۰
+# مرجع توابع JavaScript
+
+منطق اصلی در `assets/js/app.js` قرار دارد و داخل IIFE اجرا می‌شود. نام‌ها و قراردادهای داده‌ای نسخه پایه حفظ شده‌اند.
 
 ## هسته و اتصال
 - `initDbClient()` — ساخت کلاینت Supabase.
-- `loadAppVersion()` — خواندن مستقیم نسخه از `sw.js` در شبکه (با دور زدن کش و تایم‌اوت ۳ ثانیه‌ای).
-- `checkDbConnection()` — بررسی اتصال با فراخوانی تابع `check_has_users`.
-- `setData(key,data)` — رکوردهای جدید را با `insert` و رکوردهای تغییریافته را با `update` می‌فرستد.
-- `syncFromCloud(showMessage)` — همگام‌سازی یک‌طرفه (Pull) تمام جداول از سرور.
+- `loadAppVersion()` — خواندن نسخه برنامه از Service Worker.
+- `checkDbConnection()` — بررسی اتصال پایگاه داده.
+- `setData(key, data)` — درج و به‌روزرسانی تفکیک‌شده.
+- `syncFromCloud(showMessage)` — دریافت داده‌ها از سرور.
 
-## احراز هویت
-- `handleLogin()` — ورود با `supabase.auth.signInWithPassword`.
-- `handleSetup()` — ساخت اولین کاربر (سوپر ادمین) با فراخوانی Edge Function `setup-admin`.
-- `showForcePasswordChange(userId)` — نمایش مودال تغییر رمز اجباری.
-- `forceLogout(msg)` — خروج کاملاً امن (با استفاده از `Promise.race` برای جلوگیری از گیر کردن در موبایل).
+## احراز هویت و کاربران
+- `handleLogin()`، `handleSetup()` — ورود و راه‌اندازی اولیه.
+- `showForcePasswordChange(userId)` — اجبار تغییر رمز.
+- `forceLogout(msg)` — خروج امن.
+- `savePerson()`، `callAccountFn(action, payload)` — مدیریت پرسنل.
+- `changePersonPassword(id)`، `deletePerson(id)`، `repairLoginEmails()` — عملیات مدیریتی حساب.
 
-## مدیریت پرسنل
-- ## مدیریت پرسنل
-- `savePerson()` — در حالت ایجاد، `create-user` را صدا می‌زند. در حالت ویرایش، از `account-admin` برای تغییر **تمام اطلاعات** (نام، نام خانوادگی، شماره پرسنلی، نقش، رمز و نام کاربری) استفاده می‌کند.
-- `callAccountFn(action, payload)` — فراخوانی Edge Function `account-admin`.
-- `callAccountFn(action, payload)` — فراخوانی Edge Function `account-admin`.
-- `changePersonPassword(id)` — تعیین رمز جدید توسط ادمین.
-- `deletePerson(id)` — حذف کامل کاربر از `auth.users` و `persons`.
-- `repairLoginEmails()` — اصلاح گروهی ایمیل‌های ورود.
+## اقدامات و تقویم
+- `saveActivity()` — ثبت یا ویرایش اقدام.
+- `joinActivity(id)` — پیوستن به اقدام.
+- `openDayActivitiesModal(dateStr)` — بازکردن پنجره اقدامات روز.
+- `renderDayActivitiesModal()` — نمایش کارت‌های کامل اقدامات روز.
+- `joinFromModal(id)` — پیوستن و تازه‌سازی پنجره.
+- `showActivityDetails(id)` — نمایش جزئیات کامل اقدام.
+- `renderCalendar()` — رندر تقویم ماهانه با ایندکس تاریخ‌محور.
+- `renderWeekView()` — رندر نمای هفتگی.
+- `calcDurationHours()` — محاسبه مدت اقدام.
 
-## اقدامات (Activities)
-- `saveActivity()` — ثبت/ویرایش اقدام با اعتبارسنجی‌های کامل و تشخیص شباهت.
-- `joinActivity(id)` — اضافه کردن کاربر به لیست شرکت‌کنندگان.
-- `openDayActivitiesModal(dateStr)` — **جدید**: باز کردن پاپ‌آپ اقدامات یک روز خاص از تقویم.
-- `renderDayActivitiesModal()` — **جدید**: رندر کردن لیست اقدامات داخل پاپ‌آپ.
-- `joinFromModal(id)` — **جدید**: پیوستن به اقدام از داخل پاپ‌آپ و رفرش آن.
-- `renderCalendar()` — نمایش تقویم با رنگ‌بندی بر اساس وضعیت.
-- `calcDurationHours()` — محاسبه ساعت (کسر روزهای تعطیل).
+## PWA
+ثبت Service Worker در `assets/js/pwa.js` انجام می‌شود. فایل‌های جدید CSS و JavaScript نیز در فهرست precache در `sw.js` قرار گرفته‌اند.

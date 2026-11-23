@@ -1,9 +1,9 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v4.3.1
+   نسخه: actbk-v4.3.2
    ================================================ */
 
-const CACHE_VERSION = 'Ver-4.3.1';
+const CACHE_VERSION = 'Ver-4.3.2';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const OFFLINE_URL = './Activity.html';
 
@@ -11,7 +11,10 @@ const PRECACHE_URLS = [
   './Activity.html',
   './index.html',
   './manifest.json',
-  './config.js'
+  './config.js',
+  './assets/css/app.css',
+  './assets/js/app.js',
+  './assets/js/pwa.js'
 ];
 
 self.addEventListener('install', event => {
@@ -30,7 +33,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => {
+        keys.filter(k => k.startsWith('actbk-cache-') && k !== CACHE_NAME).map(k => {
           console.log('[SW] Deleting old cache:', k);
           return caches.delete(k);
         })
