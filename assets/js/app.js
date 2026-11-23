@@ -126,29 +126,46 @@ function bindEvents(){
 }
 
 async function init(){
-  initTheme();
-  document.addEventListener('click',closePopups);
-  loadAppVersion();
-  bindEvents();
-  initDatepickers();
-  
-  var dbReady=await initDbClient();
-  if(dbReady)startConnectionMonitor();else setConnectionStatus('offline');
+  // Keep the login screen visible during boot. If initialization fails, users
+  // still see a usable entry point instead of a blank page.
+  var login = $('login_modal');
+  if (login) login.style.display = 'flex';
+  try {
+    initTheme();
+    document.addEventListener('click',closePopups);
+    loadAppVersion();
+    bindEvents();
+    initDatepickers();
+    
+    var dbReady=await initDbClient();
+    if(dbReady)startConnectionMonitor();else setConnectionStatus('offline');
 
-  if(!dbReady){ await showLogin(); return; }
+    if(!dbReady){ await showLogin(); return; }
 
-  const { data: { session } } = await dbClient.auth.getSession();
-  if(!session){ await showLogin(); return; }
+    const { data: { session } } = await dbClient.auth.getSession();
+    if(!session){ await showLogin(); return; }
 
-  const { data: person, error } = await dbClient.from('persons').select('*').eq('user_id', session.user.id).single();
-  if (error || !person) { await dbClient.auth.signOut(); await showLogin(); return; }
+    const { data: person, error } = await dbClient.from('persons').select('*').eq('user_id', session.user.id).single();
+    if (error || !person) { await dbClient.auth.signOut(); await showLogin(); return; }
 
-  setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
-  
-  if (person.must_change_password) { showForcePasswordChange(session.user.id); return; }
-  
-  await syncFromCloud(false);
-  await startApp();
+    setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
+    
+    if (person.must_change_password) { showForcePasswordChange(session.user.id); return; }
+    
+    await syncFromCloud(false);
+    await startApp();
+  } catch (err) {
+    console.error('[App] Initialization failed:', err);
+    if (login) login.style.display = 'flex';
+    var msg = $('login_msg');
+    if (msg) msg.innerHTML = '<div class="alert alert-error" style="display:block;margin-bottom:12px">راه‌اندازی برنامه با خطا مواجه شد. صفحه را تازه‌سازی کنید و در صورت تداوم مشکل، گزارش خطای مرورگر را بررسی کنید.</div>';
+    var form = $('login_form');
+    if (form) form.classList.remove('hidden');
+    var setup = $('setup_form');
+    if (setup) setup.classList.add('hidden');
+    var title = $('login_title');
+    if (title) title.textContent = 'ورود به سیستم';
+  }
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
