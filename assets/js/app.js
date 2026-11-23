@@ -130,6 +130,7 @@ async function init(){
   // still see a usable entry point instead of a blank page.
   var login = $('login_modal');
   if (login) login.style.display = 'flex';
+    if (typeof setConnectionStatus === 'function') setConnectionStatus('offline');
   try {
     initTheme();
     document.addEventListener('click',closePopups);
@@ -142,23 +143,41 @@ async function init(){
 
     if(!dbReady){ await showLogin(); return; }
 
-    const { data: { session } } = await dbClient.auth.getSession();
+    const sessionResult = await withTimeout(
+      () => dbClient.auth.getSession(),
+      10000,
+      'بازیابی نشست کاربر'
+    );
+    const { data: { session } } = sessionResult;
     if(!session){ await showLogin(); return; }
 
-    const { data: person, error } = await dbClient.from('persons').select('*').eq('user_id', session.user.id).single();
+    const profileResult = await withTimeout(
+      () => dbClient.from('persons').select('*').eq('user_id', session.user.id).single(),
+      12000,
+      'دریافت پروفایل کاربر'
+    );
+    const { data: person, error } = profileResult;
     if (error || !person) { await dbClient.auth.signOut(); await showLogin(); return; }
 
     setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
     
     if (person.must_change_password) { showForcePasswordChange(session.user.id); return; }
     
-    await syncFromCloud(false);
-    await startApp();
+    await withTimeout(
+      () => syncFromCloud(false),
+      20000,
+      'همگام‌سازی اولیه اطلاعات'
+    );
+    await withTimeout(
+      () => startApp(),
+      20000,
+      'راه‌اندازی محیط برنامه'
+    );
   } catch (err) {
     console.error('[App] Initialization failed:', err);
     if (login) login.style.display = 'flex';
     var msg = $('login_msg');
-    if (msg) msg.innerHTML = '<div class="alert alert-error" style="display:block;margin-bottom:12px">راه‌اندازی برنامه با خطا مواجه شد. صفحه را تازه‌سازی کنید و در صورت تداوم مشکل، گزارش خطای مرورگر را بررسی کنید.</div>';
+    if (msg) msg.innerHTML = '<div class="alert alert-error" style="display:block;margin-bottom:12px">راه‌اندازی برنامه کامل نشد: ' + (err.name === 'TimeoutError' ? 'پاسخ سرور در زمان مقرر دریافت نشد.' : (err.message || 'خطای نامشخص')) + ' اتصال و تنظیمات Supabase را بررسی کنید و دوباره تلاش کنید.</div>';
     var form = $('login_form');
     if (form) form.classList.remove('hidden');
     var setup = $('setup_form');

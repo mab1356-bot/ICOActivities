@@ -1,5 +1,26 @@
 'use strict';
 /* Extracted from the original 4.3.3 application without changing business logic. */
+
+/**
+ * محدود کردن زمان انتظار درخواست‌های شبکه؛ درخواست اصلی در پس‌زمینه متوقف نمی‌شود،
+ * اما رابط کاربری پس از پایان مهلت می‌تواند خطا را مدیریت کند.
+ */
+function withTimeout(task, timeoutMs, label) {
+  var timer;
+  var work = Promise.resolve().then(function () {
+    return typeof task === 'function' ? task() : task;
+  });
+  var timeout = new Promise(function (_, reject) {
+    timer = setTimeout(function () {
+      var err = new Error((label || 'درخواست') + ' بیش از زمان مجاز طول کشید.');
+      err.name = 'TimeoutError';
+      reject(err);
+    }, timeoutMs);
+  });
+  return Promise.race([work, timeout]).finally(function () {
+    clearTimeout(timer);
+  });
+}
 function initDatepickers(){document.querySelectorAll('.date-picker').forEach(el=>el.addEventListener('click',openDatepicker))}
 function openDatepicker(e){
   e.stopPropagation();var input=this;closePopups();
@@ -89,31 +110,53 @@ async function handleLogin(){
   var username=val('login_username'),password=$('login_password').value;
   if(!username||!password){showAlert('نام کاربری و رمز الزامی است.','warning');return}
   if(!dbClient||!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return}
-  
+
+  var btn=$('btn_login');
+  if(btn){btn.disabled=true;btn.textContent='در حال بررسی...'}
   showAlert('⏳ در حال بررسی...','info');
-  const { data, error } = await dbClient.auth.signInWithPassword({ email: username + '@app.com', password });
 
-  if (error) {
-    showAlert(error.message.includes('Invalid login credentials') ? '❌ نام کاربری یا کلمه عبور نادرست است.' : '❌ خطا: ' + error.message, 'error');
-    return;
-  }
+  try {
+    const result = await withTimeout(
+      () => dbClient.auth.signInWithPassword({ email: username + '@app.com', password }),
+      15000,
+      'ورود به سامانه'
+    );
+    const data=result.data,error=result.error;
 
-  const { data: person, error: personError } = await dbClient.from('persons').select('*').eq('user_id', data.user.id).single();
-  
-  if (personError || !person) { 
-    showAlert('❌ اطلاعات پروفایل یافت نشد.\nدلیل: ' + (personError ? personError.message : 'رکوردی یافت نشد'), 'error'); 
-    await dbClient.auth.signOut(); 
-    return; 
-  }
+    if (error) {
+      showAlert(error.message.includes('Invalid login credentials') ? '❌ نام کاربری یا کلمه عبور نادرست است.' : '❌ خطا: ' + error.message, 'error');
+      return;
+    }
 
-  setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
-  $('login_password').value = '';
-  
-  if (person.must_change_password) { 
-    location.reload(); 
-  } else { 
-    $('login_modal').style.display = 'none';
-    await startApp(); 
+    const profileResult = await withTimeout(
+      () => dbClient.from('persons').select('*').eq('user_id', data.user.id).single(),
+      12000,
+      'دریافت پروفایل کاربر'
+    );
+    const person=profileResult.data,personError=profileResult.error;
+
+    if (personError || !person) {
+      showAlert('❌ اطلاعات پروفایل یافت نشد.\nدلیل: ' + (personError ? personError.message : 'رکوردی یافت نشد'), 'error');
+      await withTimeout(() => dbClient.auth.signOut(), 5000, 'خروج از حساب').catch(()=>{});
+      return;
+    }
+
+    setSession({ personId: person.id, username: person.username, role: person.role, name: person.firstname + ' ' + person.lastname });
+    $('login_password').value = '';
+
+    if (person.must_change_password) {
+      location.reload();
+    } else {
+      $('login_modal').style.display = 'none';
+      await startApp();
+    }
+  } catch (err) {
+    console.error('[Auth] Login failed:', err);
+    showAlert(err.name==='TimeoutError'
+      ? '⏱️ پاسخ سرور در زمان مقرر دریافت نشد. اتصال اینترنت و تنظیمات Supabase را بررسی و دوباره تلاش کنید.'
+      : '❌ خطا در ورود: ' + (err.message || 'خطای نامشخص'), 'error');
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='ورود'}
   }
 }
 
@@ -127,9 +170,13 @@ async function handleSetup(){
   showAlert('⏳ در حال ایجاد حساب...','info');
 
   try {
-    const { data, error } = await dbClient.functions.invoke('setup-admin', {
-      body: { username, firstname: first, lastname: last, personnelid: pid, password }
-    });
+    const { data, error } = await withTimeout(
+      () => dbClient.functions.invoke('setup-admin', {
+        body: { username, firstname: first, lastname: last, personnelid: pid, password }
+      }),
+      20000,
+      'ایجاد حساب مدیر اصلی'
+    );
 
     if (error) {
       console.error("Edge Function Error:", error);
@@ -155,28 +202,64 @@ async function handleSetup(){
 function handleLogout(){if(!confirm('از حساب خارج می‌شوید؟'))return;forceLogout()}
 
 async function showLogin(){
-  $('login_modal').style.display='flex';$('main_app').style.display='none';$('user_info').style.display='none';
-  var lb=$('login_alert_box');if(lb){lb.style.display='none';lb.textContent='';lb.className='alert'}
+  $('login_modal').style.display='flex';
+  $('main_app').style.display='none';
+  $('user_info').style.display='none';
+  var lb=$('login_alert_box');
+  if(lb){lb.style.display='none';lb.textContent='';lb.className='alert'}
   $('btn_login').disabled=false;
+
   var flash=sessionStorage.getItem('actbk_flash');
-  
-  if(dbClient&&navigator.onLine){
-    const { data: hasUsers, error } = await dbClient.rpc('check_has_users');
-    if(error){
-      $('login_msg').innerHTML='<div class="alert alert-error" style="display:block;margin-bottom:12px"><b>⚠️ خطا:</b><br>'+esc(error.message)+'</div>';
-      $('login_form').classList.add('hidden');$('setup_form').classList.add('hidden');$('login_title').textContent='خطای دیتابیس';
-    }else if(!hasUsers){
-      $('login_form').classList.add('hidden');$('setup_form').classList.remove('hidden');
-      $('login_title').textContent='ایجاد حساب مدیر اصلی';$('login_msg').innerHTML='👋 به برنامه خوش آمدید.<br>لطفاً اولین حساب را ایجاد کنید.';
-    }else{
-      $('login_form').classList.remove('hidden');$('setup_form').classList.add('hidden');
-      $('login_title').textContent='ورود به سیستم';$('login_msg').textContent='لطفاً نام کاربری و کلمه عبور خود را وارد کنید.';
-    }
+  var loginForm=$('login_form'),setupForm=$('setup_form'),title=$('login_title'),msg=$('login_msg');
+
+  // فرم ورود همیشه در دسترس می‌ماند؛ خطای RPC نباید کل فرم را مخفی کند.
+  if(loginForm)loginForm.classList.remove('hidden');
+  if(setupForm)setupForm.classList.add('hidden');
+  if(title)title.textContent='ورود به سیستم';
+  if(msg)msg.textContent='لطفاً نام کاربری و کلمه عبور خود را وارد کنید.';
+
+  if(!dbClient||!navigator.onLine){
+    setConnectionStatus('offline');
+    if(title)title.textContent='عدم اتصال';
+    if(msg)msg.textContent=(window.dbInitError||'اتصال به دیتابیس برقرار نیست.')+' برای ورود باید به اینترنت متصل باشید.';
   }else{
-    $('login_form').classList.remove('hidden');$('setup_form').classList.add('hidden');
-    $('login_title').textContent='عدم اتصال';
-    $('login_msg').innerHTML='<div class="alert alert-warning" style="display:block;margin-bottom:12px">'+esc(window.dbInitError||'اتصال به دیتابیس برقرار نیست.')+'<br>برای ورود باید به اینترنت متصل باشید.</div>';
+    setConnectionStatus('checking');
+    try {
+      const result = await withTimeout(
+        () => dbClient.rpc('check_has_users'),
+        10000,
+        'بررسی کاربران سامانه'
+      );
+      const hasUsers=result.data,error=result.error;
+
+      if(error){
+        console.warn('[Auth] check_has_users failed:',error.message);
+        setConnectionStatus('offline');
+        if(title)title.textContent='عدم امکان بررسی کاربران';
+        if(msg)msg.textContent='ارتباط با پایگاه داده برقرار نشد یا تابع بررسی کاربران پاسخ معتبر نداد. می‌توانید دوباره تلاش کنید یا اطلاعات ورود را وارد کنید.';
+      }else if(!hasUsers){
+        if(loginForm)loginForm.classList.add('hidden');
+        if(setupForm)setupForm.classList.remove('hidden');
+        if(title)title.textContent='ایجاد حساب مدیر اصلی';
+        if(msg)msg.innerHTML='👋 به برنامه خوش آمدید.<br>لطفاً اولین حساب را ایجاد کنید.';
+        setConnectionStatus('online',activeServerName);
+      }else{
+        if(loginForm)loginForm.classList.remove('hidden');
+        if(setupForm)setupForm.classList.add('hidden');
+        if(title)title.textContent='ورود به سیستم';
+        if(msg)msg.textContent='لطفاً نام کاربری و کلمه عبور خود را وارد کنید.';
+        setConnectionStatus('online',activeServerName);
+      }
+    } catch(err) {
+      console.warn('[Auth] User check unavailable:',err);
+      setConnectionStatus('offline');
+      if(title)title.textContent='عدم پاسخ‌گویی سرور';
+      if(msg)msg.textContent=err.name==='TimeoutError'
+        ? 'سرور در زمان مقرر پاسخ نداد. تنظیمات اتصال و اینترنت را بررسی کنید؛ سپس «تلاش مجدد» را بزنید. در صورت معتبر بودن اطلاعات ورود، امکان تلاش برای ورود نیز وجود دارد.'
+        : 'بررسی وضعیت کاربران با خطا مواجه شد. می‌توانید دوباره تلاش کنید.';
+    }
   }
+
   if(flash){sessionStorage.removeItem('actbk_flash');showAlert(flash,'error')}
 }
 
@@ -207,7 +290,10 @@ async function initDbClient(){
       cfg={url:window.APP_CONFIG.DB_URL||window.APP_CONFIG.SUPABASE_URL,key:window.APP_CONFIG.DB_ANON_KEY||window.APP_CONFIG.SUPABASE_ANON_KEY};
     }
   }
-  if(!cfg||!cfg.url||!cfg.key||String(cfg.url).includes('YOUR_')){window.dbInitError='پیکربندی اتصال در Activity.html ناقص است.';return false}
+  if(!cfg||!cfg.url||!cfg.key||String(cfg.url).includes('YOUR_')||/^(my key is hear|your[_ -].*|replace[_ -].*)$/i.test(String(cfg.key).trim())){
+    window.dbInitError='پیکربندی Supabase در config.js ناقص است؛ آدرس پروژه و کلید عمومی معتبر را وارد کنید.';
+    return false;
+  }
   try{
     dbClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
     activeServerName=cfg.name||'';
@@ -284,8 +370,13 @@ async function checkDbConnection(){
     if(!dbClient||!navigator.onLine){setConnectionStatus('offline');return false}
     setConnectionStatus('checking');
     try{
-      const {error}=await dbClient.rpc('check_has_users');
-      if(!error){setConnectionStatus('online',activeServerName);return true}
+      const result=await withTimeout(
+        () => dbClient.rpc('check_has_users'),
+        8000,
+        'بررسی اتصال پایگاه داده'
+      );
+      if(!result.error){setConnectionStatus('online',activeServerName);return true}
+      console.warn('[Conn] check failed:',result.error.message);
     }catch(e){console.warn('[Conn] check failed:',e.message)}
     setConnectionStatus('offline');return false;
   })();
@@ -303,11 +394,17 @@ async function connectionTick(){
   }
 }
 
+var _connListenersBound=false;
 function startConnectionMonitor(){
   if(_connTimer)clearInterval(_connTimer);
+  // بررسی اولیه بلافاصله اجرا می‌شود؛ منتظر چرخه ۶۰ ثانیه‌ای نمی‌مانیم.
+  checkDbConnection();
   _connTimer=setInterval(()=>{if(document.visibilityState==='visible')connectionTick()},60000);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')connectionTick()});
-  window.addEventListener('online',()=>connectionTick());
-  window.addEventListener('offline',()=>{setConnectionStatus('offline');if(getSession())forceLogout('اتصال اینترنت قطع شد.')});
+  if(!_connListenersBound){
+    _connListenersBound=true;
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')connectionTick()});
+    window.addEventListener('online',()=>checkDbConnection());
+    window.addEventListener('offline',()=>{setConnectionStatus('offline');if(getSession())forceLogout('اتصال اینترنت قطع شد.')});
+  }
 }
 
