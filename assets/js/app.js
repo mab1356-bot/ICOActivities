@@ -42,7 +42,6 @@ function bindEvents(){
   on('btn_change_password','click',openChangePasswordModal);
   on('btn_submit_change_pass','click',submitChangePassword);
   on('btn_cancel_change_pass','click',()=>$('modal_change_password').classList.add('hidden'));
-  on('btn_login','click',handleLogin);
   on('btn_setup','click',handleSetup);
   on('btn_retry_connection','click',()=>showLogin());
   on('login_username','keypress',e=>{if(e.key==='Enter')handleLogin()});
@@ -185,6 +184,25 @@ async function init(){
     var title = $('login_title');
     if (title) title.textContent = 'ورود به سیستم';
   }
+}
+
+// اتصال مستقل دکمه ورود: حتی اگر بخشی از راه‌اندازی برنامه خطا بدهد،
+// رویداد ورود از همان ابتدا فعال می‌ماند. از ثبت دوباره در bindEvents جلوگیری شده است.
+window.handleLogin = handleLogin;
+var _loginButton = $('btn_login');
+if (_loginButton) {
+  _loginButton.type = 'button';
+  _loginButton.addEventListener('click', function (event) {
+    event.preventDefault();
+    if (_loginButton.dataset.busy === '1') return;
+    Promise.resolve(handleLogin()).catch(function (error) {
+      console.error('[Login] Unhandled click error:', error);
+      _loginButton.disabled = false;
+      _loginButton.dataset.busy = '0';
+      _loginButton.textContent = 'ورود';
+      if (typeof showAlert === 'function') showAlert('خطا هنگام اجرای ورود. لطفاً دوباره تلاش کنید.', 'error');
+    });
+  });
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

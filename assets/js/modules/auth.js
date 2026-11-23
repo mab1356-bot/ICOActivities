@@ -109,10 +109,12 @@ function showForcePasswordChange(userId) {
 async function handleLogin(){
   var username=val('login_username'),password=$('login_password').value;
   if(!username||!password){showAlert('نام کاربری و رمز الزامی است.','warning');return}
-  if(!dbClient||!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return}
+  if(!dbClient){showAlert((window.dbInitError||'اتصال به پایگاه داده آماده نیست.')+'؛ تنظیمات اتصال و بارگذاری کتابخانه Supabase را بررسی کنید.','error');return}
+  if(!navigator.onLine){showAlert('برای ورود باید به اینترنت متصل باشید.','error');return}
 
   var btn=$('btn_login');
-  if(btn){btn.disabled=true;btn.textContent='در حال بررسی...'}
+  if(btn && btn.dataset.busy==='1')return;
+  if(btn){btn.dataset.busy='1';btn.disabled=true;btn.textContent='در حال بررسی...'}
   showAlert('⏳ در حال بررسی...','info');
 
   try {
@@ -156,7 +158,7 @@ async function handleLogin(){
       ? '⏱️ پاسخ سرور در زمان مقرر دریافت نشد. اتصال اینترنت و تنظیمات Supabase را بررسی و دوباره تلاش کنید.'
       : '❌ خطا در ورود: ' + (err.message || 'خطای نامشخص'), 'error');
   } finally {
-    if(btn){btn.disabled=false;btn.textContent='ورود'}
+    if(btn){btn.dataset.busy='0';btn.disabled=false;btn.textContent='ورود'}
   }
 }
 
