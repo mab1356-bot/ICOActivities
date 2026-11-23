@@ -2,16 +2,16 @@
 
 ## فایل‌هایی که باید روی هاست قرار گیرند
 تمام محتویات بسته را با حفظ ساختار پوشه‌ها بارگذاری کنید. حداقل فایل‌های اجرایی عبارت‌اند از:
-- `Activity.html`, `index.html`, `config.js`, `manifest.json`, `sw.js`
+- `Activity.html` (شامل پیکربندی اتصال inline)، `index.html`, `manifest.json`, `sw.js`
 - `assets/css/app.css`
 - `assets/js/app.js`, `assets/js/pwa.js`
 - پوشه `icons/`
 
 ## نسخه و مدیریت کش
-نسخه انتشار این بسته **4.3.2** و مقدار کش در `sw.js` برابر **Ver-4.3.2** است. مقدار نام کش به‌صورت خودکار از `CACHE_VERSION` ساخته می‌شود:
+نسخه انتشار این بسته **4.3.3** و مقدار کش در `sw.js` برابر **Ver-4.3.3** است. مقدار نام کش به‌صورت خودکار از `CACHE_VERSION` ساخته می‌شود:
 
 ```js
-const CACHE_VERSION = 'Ver-4.3.2';
+const CACHE_VERSION = 'Ver-4.3.3';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 ```
 
@@ -33,4 +33,4 @@ const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 8. در موبایل، چیدمان مودال و تقویم را بررسی کنید.
 
 ## نکته امنیتی
-کلید داخل `config.js` باید فقط کلید عمومی Supabase باشد. هرگز کلید `service_role` را در برنامه سمت کاربر منتشر نکنید.
+پیکربندی اتصال در بخش inline فایل `Activity.html` قرار دارد و باید فقط کلید عمومی Supabase را شامل شود. هرگز کلید `service_role` را در برنامه سمت کاربر منتشر نکنید.

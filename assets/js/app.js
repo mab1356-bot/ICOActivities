@@ -745,7 +745,9 @@ function renderDayActivitiesModal(){
     var dateText = a.endDate && a.endDate !== a.date
       ? esc(a.date) + ' تا ' + esc(a.endDate) : esc(a.date || '—');
     var timeText = a.startTime
-      ? esc(a.startTime) + ' تا ' + esc(a.endTime || '—') : '—';
+      ? esc(a.startTime) + (a.endTime ? ' تا ' + esc(a.endTime) : '') : '';
+    var locationText = a.location ? '📍 ' + esc(a.location) : '';
+    var participantsText = '👥 ' + esc(participants);
     var actionButton = '';
     if (a.onlyforme) {
       actionButton = '<span class="badge badge-warning">👤 فقط من</span>';
@@ -760,15 +762,12 @@ function renderDayActivitiesModal(){
         '<h3>' + esc(topicName(a.topicId)) + '</h3>' +
         '<button type="button" class="btn btn-sm btn-secondary" data-details-activity="' + esc(a.id) + '">جزئیات</button>' +
       '</div>' +
-      '<dl class="activity-detail-grid">' +
-        '<div><dt>تاریخ شروع</dt><dd>' + dateText + '</dd></div>' +
-        '<div><dt>ساعت</dt><dd>' + timeText + '</dd></div>' +
-        '<div><dt>موضوع</dt><dd>' + esc(topicName(a.topicId)) + '</dd></div>' +
-        '<div><dt>محل</dt><dd>' + esc(a.location || '—') + '</dd></div>' +
-        '<div class="activity-detail-grid__wide"><dt>شرح اقدام</dt><dd>' + esc(a.description || '—') + '</dd></div>' +
-        '<div class="activity-detail-grid__wide"><dt>شرکت‌کنندگان</dt><dd>' + esc(participants) + '</dd></div>' +
-        '<div class="activity-detail-grid__wide"><dt>توضیحات تکمیلی</dt><dd>' + esc(a.privateDescription || '—') + '</dd></div>' +
-      '</dl>' +
+      '<div class="activity-summary">' +
+        '<div class="activity-summary__meta">' + dateText + (timeText ? ' · ' + timeText : '') + (locationText ? ' · ' + locationText : '') + '</div>' +
+        '<div class="activity-summary__body">' + esc(a.description || '—') + '</div>' +
+        (participantsText ? '<div class="activity-summary__participants">' + participantsText + '</div>' : '') +
+        '<div class="activity-summary__body">' + esc(a.privateDescription || '—') + '</div>' +
+      '</div>' +
       '<div class="day-activity-card__actions">' + actionButton + '</div>' +
     '</article>';
   }).join('');
@@ -777,15 +776,15 @@ function showActivityDetails(id){
   var a=idxGet(KEYS.acts,id);if(!a||!canSeeAct(a))return;
   var pNames=(a.participants||[]).map(personName).join('، ');
   var session=getSession(),isJoined=session&&(a.participants||[]).indexOf(session.personId)!==-1;
-  var html='<div class="modal"><h3>'+esc(topicName(a.topicId))+'</h3>';
+  var html='<div class="modal activity-detail-modal"><h3>'+esc(topicName(a.topicId))+'</h3>';
   var dStr=(a.endDate&&a.endDate!==a.date)?esc(a.date)+' تا '+esc(a.endDate):esc(a.date);
-  html+='<div class="form-group"><label>تاریخ شروع:</label><div>'+dStr+'</div></div>';
-  html+='<div class="form-group"><label>ساعت:</label><div>'+esc(a.startTime)+' - '+esc(a.endTime)+' ('+esc(fmtHours(a.hours))+')</div></div>';
-  html+='<div class="form-group"><label>شرح اقدام:</label><div style="background:var(--surface2);padding:10px;border-radius:6px;line-height:1.8">'+esc(a.description)+'</div></div>';
-  html+='<div class="form-group"><label>محل برگزاری:</label><div>'+esc(a.location||'—')+'</div></div>';
-  html+='<div class="form-group"><label>شرکت‌کنندگان:</label><div><span class="chip">'+esc(pNames)+'</span></div></div>';
-  html+='<div class="form-group"><label>درجه اهمیت:</label><div>'+impBadge(a.importance)+'</div></div>';
-  html+='<div class="form-group"><label>توضیحات تکمیلی:</label><div style="background:var(--surface2);padding:10px;border-radius:6px;">'+esc(a.privateDescription||'—')+'</div></div>';
+  var timeStr=(a.startTime||'')+(a.endTime?' تا '+a.endTime:'');
+  html+='<div class="activity-summary">';
+  html+='<div class="activity-summary__meta">'+dStr+(timeStr?' · '+esc(timeStr):'')+(a.hours?' · '+esc(fmtHours(a.hours)):'')+(a.location?' · 📍 '+esc(a.location):'')+'</div>';
+  html+='<div class="activity-summary__body">'+esc(a.description||'—')+'</div>';
+  html+='<div class="activity-summary__participants">👥 '+esc(pNames||'—')+'</div>';
+  html+='<div class="activity-summary__body">'+esc(a.privateDescription||'—')+'</div>';
+  html+='</div>';
   if(a.onlyforme)html+='<div class="alert alert-warning" style="display:block;margin-top:10px;">👤 این اقدام فقط برای شما ثبت شده است.</div>';
   html+='<div class="modal-actions" style="margin-top:20px;"><button class="btn btn-secondary" data-act="close">بستن</button>';
   if(!isJoined&&!a.onlyforme)html+='<button class="btn btn-success" data-act="join">🤝 پیوستن به اقدام</button>';
@@ -1472,7 +1471,7 @@ async function initDbClient(){
       cfg={url:window.APP_CONFIG.DB_URL||window.APP_CONFIG.SUPABASE_URL,key:window.APP_CONFIG.DB_ANON_KEY||window.APP_CONFIG.SUPABASE_ANON_KEY};
     }
   }
-  if(!cfg||!cfg.url||!cfg.key||String(cfg.url).includes('YOUR_')){window.dbInitError='تنظیمات اتصال در config.js ناقص است.';return false}
+  if(!cfg||!cfg.url||!cfg.key||String(cfg.url).includes('YOUR_')){window.dbInitError='پیکربندی اتصال در Activity.html ناقص است.';return false}
   try{
     dbClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
     activeServerName=cfg.name||'';

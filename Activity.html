@@ -397,7 +397,17 @@
 
 <div id="print_area"></div>
 
-<script src="config.js"></script>
+<script>
+/* پیکربندی اتصال عمومی Supabase؛ کلید باید از نوع anon/publishable باشد. */
+window.APP_CONFIG = {
+  SERVERS: [{
+    type: 'supabase',
+    name: 'Main_Data',
+    url: 'https://chvauhqfpdimsatnlsgu.supabase.co',
+    key: 'my key is hear'
+  }]
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
