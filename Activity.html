@@ -397,21 +397,22 @@
 
 <div id="print_area"></div>
 
-<script>
-/* پیکربندی اتصال عمومی Supabase؛ کلید باید از نوع anon/publishable باشد. */
-window.APP_CONFIG = {
-  SERVERS: [{
-    type: 'supabase',
-    name: 'Main_Data',
-    url: 'https://chvauhqfpdimsatnlsgu.supabase.co',
-    key: 'my key is hear'
-  }]
-};
-</script>
+<script src="./config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
-<script src="./assets/js/app.js" defer></script>
+<!--
+  فایل‌های JavaScript به ترتیب وابستگی بارگذاری می‌شوند.
+  این‌ها عمداً classic script باقی مانده‌اند تا محدوده مشترک متغیرها و توابع
+  نسخه 4.3.3 حفظ شود و رفتار برنامه هنگام تفکیک تغییر نکند.
+-->
+<script src="./assets/js/modules/core.js" defer></script>
+<script src="./assets/js/modules/admin.js" defer></script>
+<script src="./assets/js/modules/calendar.js" defer></script>
+<script src="./assets/js/modules/activities.js" defer></script>
+<script src="./assets/js/modules/reports.js" defer></script>
+<script src="./assets/js/modules/auth.js" defer></script>
+<script src="./assets/js/App.js" defer></script>
 <script src="./assets/js/pwa.js" defer></script>
 </body>
 </html>
