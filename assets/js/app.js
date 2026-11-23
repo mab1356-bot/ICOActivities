@@ -186,24 +186,7 @@ async function init(){
   }
 }
 
-// اتصال مستقل دکمه ورود: حتی اگر بخشی از راه‌اندازی برنامه خطا بدهد،
-// رویداد ورود از همان ابتدا فعال می‌ماند. از ثبت دوباره در bindEvents جلوگیری شده است.
-window.handleLogin = handleLogin;
-var _loginButton = $('btn_login');
-if (_loginButton) {
-  _loginButton.type = 'button';
-  _loginButton.addEventListener('click', function (event) {
-    event.preventDefault();
-    if (_loginButton.dataset.busy === '1') return;
-    Promise.resolve(handleLogin()).catch(function (error) {
-      console.error('[Login] Unhandled click error:', error);
-      _loginButton.disabled = false;
-      _loginButton.dataset.busy = '0';
-      _loginButton.textContent = 'ورود';
-      if (typeof showAlert === 'function') showAlert('خطا هنگام اجرای ورود. لطفاً دوباره تلاش کنید.', 'error');
-    });
-  });
-}
+// رویداد دکمه ورود در ماژول auth.js متصل می‌شود تا به App.js وابسته نباشد.
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 

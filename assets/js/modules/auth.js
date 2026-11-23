@@ -162,6 +162,27 @@ async function handleLogin(){
   }
 }
 
+// انتشار handler در سطح window برای فراخوانی مستقیم HTML و اتصال مستقل از App.js.
+window.handleLogin = handleLogin;
+
+// اتصال مستقیم در ماژول احراز هویت؛ حتی اگر App.js به هر دلیل اجرا نشود.
+(function bindLoginButtonFromAuthModule(){
+  var button = document.getElementById('btn_login');
+  if (!button || button.dataset.authBound === '1') return;
+  button.dataset.authBound = '1';
+  button.addEventListener('click', function(event){
+    event.preventDefault();
+    if (button.dataset.busy === '1') return;
+    Promise.resolve().then(function(){ return handleLogin(); }).catch(function(error){
+      console.error('[Auth] Login button handler failed:', error);
+      button.dataset.busy = '0';
+      button.disabled = false;
+      button.textContent = 'ورود';
+      showAlert('اجرای عملیات ورود با خطا مواجه شد: ' + (error && error.message ? error.message : 'خطای نامشخص'), 'error');
+    });
+  }, true);
+})();
+
 async function handleSetup(){
   if(!navigator.onLine||!dbClient){showAlert('برای ایجاد حساب باید به اینترنت متصل باشید.','error');return}
   var first=val('setup_first'),last=val('setup_last'),pid=val('setup_pid'),username=val('setup_username'),password=$('setup_password').value;

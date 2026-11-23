@@ -1,4 +1,4 @@
-# 🗄 معماری بانک اطلاعاتی (Database Architecture) — نسخه انتشار 4.4.3
+# 🗄 معماری بانک اطلاعاتی (Database Architecture) — نسخه انتشار 4.4.4
 
 دیتابیس PostgreSQL در Supabase. برای ایجاد/به‌روزرسانی ساختار، فایل `migration_v3.0.0.sql` را اجرا کنید.
 
