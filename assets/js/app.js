@@ -813,75 +813,22 @@ function calcDurationHours(startDate,startTime,endDate,endTime){
   return total;
 }
 
-// تبدیل ارقام فارسی و عربی به رقم لاتین برای نگهداری مقدار استاندارد HH:mm
-function timeDigitsToEnglish(value){
-  return String(value||'').replace(/[۰-۹٠-٩]/g,function(ch){
-    var fa='۰۱۲۳۴۵۶۷۸۹',ar='٠١٢٣٤٥٦٧٨٩';
-    var i=fa.indexOf(ch);return i>-1?String(i):String(ar.indexOf(ch));
-  });
+// تنظیم مقدار ورودی ساعت بومی مرورگر؛ مقدار استاندارد HH:mm در فرم نگهداری می‌شود.
+function setTimePickerValue(id, value) {
+  var input = $(id);
+  if (!input) return;
+  var normalized = String(value || '').trim();
+  input.value = /^([01]\\d|2[0-3]):[0-5]\\d$/.test(normalized) ? normalized : '';
 }
-// نمایش ساعت با ارقام فارسی؛ مقدار ذخیره‌شده در فرم همچنان HH:mm لاتین است.
-function timeDigitsToPersian(value){
-  return String(value||'').replace(/\d/g,function(ch){return '۰۱۲۳۴۵۶۷۸۹'[Number(ch)]});
-}
-// مقدار ساعت را از ورودی متنی نرمال کرده و در فیلد پنهان استاندارد ثبت می‌کند.
-function normalizeTimeValue(value){
-  var raw=timeDigitsToEnglish(value).trim().replace(/[٫،]/g,':').replace(/\s/g,'');
-  var match=raw.match(/^(\d{1,2}):?(\d{2})$/);
-  if(!match)return '';
-  var hour=Number(match[1]),minute=Number(match[2]);
-  if(hour<0||hour>23||minute<0||minute>59)return '';
-  return String(hour).padStart(2,'0')+':'+String(minute).padStart(2,'0');
-}
-// همگام‌سازی مقدار داخلی و نمای فارسی انتخاب‌گر ساعت.
-function setTimePickerValue(id,value){
-  var hidden=$(id),display=$(id+'_display');
-  if(!hidden||!display)return;
-  var normalized=normalizeTimeValue(value);
-  hidden.value=normalized;
-  display.value=normalized?timeDigitsToPersian(normalized):'';
-  var wrap=display.closest('.time-picker-wrap');
-  if(wrap&&normalized){
-    var parts=normalized.split(':');
-    wrap.querySelector('.time-hour').value=parts[0];
-    wrap.querySelector('.time-minute').value=parts[1];
-  }
-}
-// ساخت انتخاب‌گر ساعت و دقیقه، پشتیبانی از تایپ مستقیم و ارقام فارسی/انگلیسی.
-function initTimePickers(){
-  document.querySelectorAll('.time-picker-wrap[data-time-picker]').forEach(function(wrap){
-    var id=wrap.getAttribute('data-time-picker');
-    var display=$(id+'_display'),hidden=$(id),hour=wrap.querySelector('.time-hour'),minute=wrap.querySelector('.time-minute'),panel=wrap.querySelector('.time-picker-panel');
-    if(!display||!hidden||!hour||!minute||!panel)return;
-    if(!hour.options.length){
-      for(var h=0;h<24;h++){var ho=document.createElement('option');ho.value=String(h).padStart(2,'0');ho.textContent=timeDigitsToPersian(ho.value);hour.appendChild(ho)}
-      for(var m=0;m<60;m++){var mo=document.createElement('option');mo.value=String(m).padStart(2,'0');mo.textContent=timeDigitsToPersian(mo.value);minute.appendChild(mo)}
-    }
-    function commitFromSelect(){
-      if(hour.value!==''&&minute.value!=='')setTimePickerValue(id,hour.value+':'+minute.value);
-      updateCalculatedHours();
-    }
-    display.addEventListener('focus',function(){panel.classList.remove('hidden')});
-    display.addEventListener('click',function(){panel.classList.remove('hidden')});
-    display.addEventListener('input',function(){
-      var normalized=normalizeTimeValue(display.value);
-      hidden.value=normalized;
-      updateCalculatedHours();
-    });
-    display.addEventListener('blur',function(){
-      var normalized=normalizeTimeValue(display.value);
-      if(display.value.trim()&&!normalized){display.setCustomValidity('ساعت را به شکل ۰۸:۳۰ وارد کنید.');}
-      else{display.setCustomValidity('');if(normalized)setTimePickerValue(id,normalized);}
-      updateCalculatedHours();
-    });
-    hour.addEventListener('change',commitFromSelect);
-    minute.addEventListener('change',commitFromSelect);
-    setTimePickerValue(id,hidden.value);
-  });
-  document.addEventListener('click',function(event){
-    document.querySelectorAll('.time-picker-wrap').forEach(function(wrap){
-      if(!wrap.contains(event.target))wrap.querySelector('.time-picker-panel').classList.add('hidden');
-    });
+
+// فعال‌سازی رویدادهای انتخاب ساعت بومی در موبایل و دسکتاپ و به‌روزرسانی مدت اقدام.
+function initTimePickers() {
+  ['act_start_time', 'act_end_time'].forEach(function (id) {
+    var input = $(id);
+    if (!input) return;
+    input.addEventListener('input', updateCalculatedHours);
+    input.addEventListener('change', updateCalculatedHours);
+    input.addEventListener('blur', updateCalculatedHours);
   });
 }
 

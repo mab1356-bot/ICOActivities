@@ -1,10 +1,10 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v4.3.5
+   نسخه: actbk-v4.3.6
    مدیریت نسخه و کش با پاک‌سازی امن کش‌های همین برنامه
    ================================================ */
 
-const CACHE_VERSION = 'Ver-4.3.5';
+const CACHE_VERSION = 'Ver-4.3.6';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const CACHE_PREFIX = 'actbk-cache-';
 const PRECACHE_URLS = [

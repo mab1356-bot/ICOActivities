@@ -273,15 +273,6 @@ tbody tr:last-child td{border-bottom:0}
 }
 
 
-/* انتخاب‌گر ساعت یکپارچه فارسی برای فرم ثبت و ویرایش اقدام */
-.time-picker-wrap{position:relative;width:100%;direction:rtl}
-.time-picker-input{direction:ltr;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:1px;font-weight:700;cursor:text;background:var(--surface);width:100%}
-.time-picker-panel{position:absolute;top:calc(100% + 6px);right:0;z-index:1200;width:min(320px,95vw);padding:13px;background:var(--surface);border:1px solid var(--borderS);border-radius:var(--r-md);box-shadow:var(--e3)}
-.time-picker-selects{display:flex;align-items:end;justify-content:center;gap:12px}
-.time-picker-selects label{display:flex;flex:1;flex-direction:column;gap:6px;font-size:12px;color:var(--text2);font-weight:700}
-.time-picker-selects select{width:100%;min-height:44px;text-align:center;text-align-last:center;font-size:18px;font-weight:700;direction:ltr;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:6px}
-.time-picker-selects>span{font-size:22px;font-weight:800;padding-bottom:8px;color:var(--primary)}
-.time-picker-hint{font-size:11px;line-height:1.8;color:var(--text3);margin-top:9px;text-align:center}
 #pwa-update-banner{position:fixed;z-index:10050;right:14px;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:620px;margin:0 auto;padding:13px 15px;display:flex;align-items:center;gap:14px;background:var(--surface);color:var(--text);border:1px solid var(--primary);border-radius:var(--r-lg);box-shadow:0 8px 30px rgba(15,23,42,.22);direction:rtl}
 .pwa-update-message{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
 .pwa-update-message strong{font-size:13px;color:var(--primary)}
@@ -289,3 +280,40 @@ tbody tr:last-child td{border-bottom:0}
 .pwa-update-button{flex:0 0 auto;border:0;border-radius:var(--r-sm);background:var(--primary);color:#fff;padding:10px 13px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .pwa-update-button:disabled{opacity:.65;cursor:wait}
 @media(max-width:480px){#pwa-update-banner{right:8px;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));gap:8px;padding:10px}.pwa-update-button{padding:9px 10px}}
+
+
+/* ورودی ساعت بومی مرورگر؛ نمایش ساعت‌گیر استاندارد در موبایل و دسکتاپ */
+.native-time-input {
+  direction: ltr;
+  text-align: center;
+  text-align-last: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  accent-color: var(--primary);
+  color-scheme: light dark;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.native-time-input:hover {
+  border-color: var(--primary);
+  background: var(--surface2);
+}
+.native-time-input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+.native-time-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: .85;
+  padding: 4px;
+}
