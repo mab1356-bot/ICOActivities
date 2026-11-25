@@ -1,10 +1,12 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v4.3.4
+   نسخه: actbk-v4.3.5
+   مدیریت نسخه و کش با پاک‌سازی امن کش‌های همین برنامه
    ================================================ */
 
-const CACHE_VERSION = 'Ver-4.3.4';
+const CACHE_VERSION = 'Ver-4.3.5';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
+const CACHE_PREFIX = 'actbk-cache-';
 const PRECACHE_URLS = [
   './Activity.html',
   './index.html',
@@ -15,61 +17,74 @@ const PRECACHE_URLS = [
   './assets/js/pwa.js'
 ];
 
+// هنگام نصب، فایل‌های نسخه جدید را با دور زدن HTTP cache دریافت می‌کنیم.
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => Promise.allSettled(
-        PRECACHE_URLS.map(url =>
-          cache.add(url).catch(err => console.warn('[SW] Precache miss:', url, err))
-        )
-      ))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(PRECACHE_URLS.map(async url => {
+      try {
+        const request = new Request(url, { cache: 'reload' });
+        const response = await fetch(request);
+        if (response.ok) await cache.put(url, response);
+        else console.warn('[SW] Precache response not OK:', url, response.status);
+      } catch (error) {
+        console.warn('[SW] Precache failed:', url, error);
+      }
+    }));
+
+    // مهاجرت یک‌باره از ۴.۳.۴: نسخه قبلی رابط تأیید به‌روزرسانی ندارد،
+    // بنابراین برای جلوگیری از گیرکردن نسخه منتظر، فقط این ارتقا خودکار فعال می‌شود.
+    const previousCaches = await caches.keys();
+    if (previousCaches.includes('actbk-cache-Ver-4.3.4')) {
+      await self.skipWaiting();
+    }
+  })());
 });
 
+// فقط کش‌های متعلق به همین برنامه حذف می‌شوند؛ کش سایر برنامه‌ها باقی می‌ماند.
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(k => k.startsWith('actbk-cache-') && k !== CACHE_NAME).map(k => {
-          console.log('[SW] Deleting old cache:', k);
-          return caches.delete(k);
-        })
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
+// درخواست شبکه با مهلت زمانی مشخص؛ صفحه برنامه در حالت آفلاین ارائه نمی‌شود.
 function fetchWithTimeout(request, timeoutMs) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Network timeout')), timeoutMs);
-    fetch(request).then(res => {
+    fetch(request).then(response => {
       clearTimeout(timer);
-      resolve(res);
-    }).catch(err => {
+      resolve(response);
+    }).catch(error => {
       clearTimeout(timer);
-      reject(err);
+      reject(error);
     });
   });
 }
 
 self.addEventListener('fetch', event => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
+  const request = event.request;
+  if (request.method !== 'GET') return;
 
-  if (new URL(req.url).pathname.endsWith('/sw.js')) return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith('/sw.js')) return;
+  if (/\/(rest|auth|storage|functions)\/v\d+\//.test(request.url)) return;
 
-  if (/\/(rest|auth|storage|functions)\/v\d+\//.test(req.url)) return;
-
-  if (req.mode === 'navigate') {
+  // برای مسیرهای صفحه، شبکه اولویت دارد و نسخه قدیمی هرگز جایگزین صفحه آنلاین نمی‌شود.
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetchWithTimeout(req, 8000)
-        .then(res => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(req, clone)).catch(() => {});
+      fetchWithTimeout(new Request(request, { cache: 'no-store' }), 8000)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => {});
           }
-          return res;
+          return response;
         })
         .catch(() => new Response(
           '<!DOCTYPE html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>عدم اتصال</title><body style="font-family:Tahoma,sans-serif;padding:24px;text-align:center"><h2>اتصال اینترنت برقرار نیست</h2><p>این برنامه فقط در حالت آنلاین قابل استفاده است.</p><p>پس از اتصال به اینترنت، صفحه را دوباره بارگذاری کنید.</p></body></html>',
@@ -79,20 +94,24 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  event.respondWith(
-    caches.match(req).then(cached => {
-      if (cached) return cached;
-      return fetch(req).then(res => {
-        if (res.ok && res.type === 'basic') {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, clone)).catch(() => {});
-        }
-        return res;
-      }).catch(() => new Response('', { status: 503 }));
-    })
-  );
+  // فایل‌های ثابت از کش نسخه فعال خوانده می‌شوند؛ در نبود فایل، شبکه فراخوانی می‌شود.
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    try {
+      const response = await fetch(request);
+      if (response.ok && response.type === 'basic') {
+        cache.put(request, response.clone()).catch(() => {});
+      }
+      return response;
+    } catch (error) {
+      return new Response('', { status: 503 });
+    }
+  })());
 });
 
+// فعال‌سازی نسخه منتظر فقط پس از تأیید کاربر (به‌جز نصب اولیه).
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

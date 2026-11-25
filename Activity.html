@@ -279,11 +279,25 @@
         <input type="hidden" id="act_id">
         <div class="form-row">
           <div class="form-group"><label>تاریخ شروع (شمسی):</label><input type="text" id="act_start_date" class="date-picker" placeholder="انتخاب تاریخ" readonly></div>
-          <div class="form-group"><label>ساعت شروع:</label><input type="time" id="act_start_time" style="direction:ltr;text-align:center"></div>
+          <div class="form-group"><label>ساعت شروع:</label><div class="time-picker-wrap" data-time-picker="act_start_time">
+              <input type="hidden" id="act_start_time">
+              <input type="text" id="act_start_time_display" class="time-picker-input" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="--:--" aria-label="ساعت شروع، قالب ساعت و دقیقه">
+              <div class="time-picker-panel hidden" role="group" aria-label="انتخاب ساعت شروع">
+                <div class="time-picker-selects"><label>ساعت<select class="time-hour" aria-label="ساعت شروع"></select></label><span>:</span><label>دقیقه<select class="time-minute" aria-label="دقیقه شروع"></select></label></div>
+                <div class="time-picker-hint">می‌توانید ساعت را مستقیماً نیز با اعداد فارسی یا انگلیسی وارد کنید.</div>
+              </div>
+            </div></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>تاریخ پایان (شمسی):</label><input type="text" id="act_end_date" class="date-picker" placeholder="اختیاری" readonly></div>
-          <div class="form-group"><label>ساعت پایان:</label><input type="time" id="act_end_time" style="direction:ltr;text-align:center"></div>
+          <div class="form-group"><label>ساعت پایان:</label><div class="time-picker-wrap" data-time-picker="act_end_time">
+              <input type="hidden" id="act_end_time">
+              <input type="text" id="act_end_time_display" class="time-picker-input" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="--:--" aria-label="ساعت پایان، قالب ساعت و دقیقه">
+              <div class="time-picker-panel hidden" role="group" aria-label="انتخاب ساعت پایان">
+                <div class="time-picker-selects"><label>ساعت<select class="time-hour" aria-label="ساعت پایان"></select></label><span>:</span><label>دقیقه<select class="time-minute" aria-label="دقیقه پایان"></select></label></div>
+                <div class="time-picker-hint">می‌توانید ساعت را مستقیماً نیز با اعداد فارسی یا انگلیسی وارد کنید.</div>
+              </div>
+            </div></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>موضوع اقدام:</label><select id="act_topic" class="topic-dropdown"></select></div>
