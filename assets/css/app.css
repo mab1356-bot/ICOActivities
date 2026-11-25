@@ -317,3 +317,48 @@ tbody tr:last-child td{border-bottom:0}
   opacity: .85;
   padding: 4px;
 }
+
+
+/* انتخاب‌گر ساعت دسکتاپ (Flatpickr)؛ موبایل همچنان از کنترل بومی سیستم‌عامل استفاده می‌کند. */
+.desktop-time-input { cursor: pointer; background: var(--surface); padding-left: 42px !important; }
+.desktop-time-input[readonly] { user-select: none; }
+.flatpickr-calendar.noCalendar {
+  width: 244px;
+  max-width: calc(100vw - 24px);
+  direction: ltr;
+  border: 1px solid var(--borderS);
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, .18);
+  background: var(--surface);
+}
+.flatpickr-calendar.noCalendar.open { z-index: 5000; }
+.flatpickr-calendar.noCalendar:before,
+.flatpickr-calendar.noCalendar:after { display: none; }
+.flatpickr-calendar.noCalendar .flatpickr-time {
+  max-height: 66px;
+  height: 66px;
+  border-top: 0;
+  border-radius: 10px;
+  background: var(--surface2);
+  overflow: hidden;
+}
+.flatpickr-calendar.noCalendar .flatpickr-time input,
+.flatpickr-calendar.noCalendar .flatpickr-time .flatpickr-time-separator {
+  height: 54px;
+  max-height: 54px;
+  font-family: Tahoma, var(--font-main), sans-serif;
+  font-size: 25px;
+  font-weight: 800;
+  color: var(--text);
+  background: transparent;
+}
+.flatpickr-calendar.noCalendar .flatpickr-time input:focus { background: var(--primaryS); }
+.flatpickr-calendar.noCalendar .flatpickr-time .flatpickr-time-separator { color: var(--primary); }
+.flatpickr-calendar.noCalendar .numInputWrapper { height: 54px; }
+.flatpickr-calendar.noCalendar .numInputWrapper:hover { background: var(--primaryS); }
+.flatpickr-calendar.noCalendar .numInputWrapper span.arrowUp:after { border-bottom-color: var(--primary); }
+.flatpickr-calendar.noCalendar .numInputWrapper span.arrowDown:after { border-top-color: var(--primary); }
+.flatpickr-calendar.noCalendar .flatpickr-am-pm { display: none; }
+.flatpickr-calendar.noCalendar .flatpickr-time input::-webkit-inner-spin-button,
+.flatpickr-calendar.noCalendar .flatpickr-time input::-webkit-outer-spin-button { opacity: 1; }

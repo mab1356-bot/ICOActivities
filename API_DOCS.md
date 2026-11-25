@@ -1,4 +1,4 @@
-<!-- نسخه مستندات: 4.3.3 -->
+<!-- نسخه مستندات: 4.3.7 -->
 # مرجع توابع JavaScript
 
 منطق اصلی در `assets/js/app.js` قرار دارد و داخل IIFE اجرا می‌شود. نام‌ها و قراردادهای داده‌ای نسخه پایه حفظ شده‌اند.
@@ -30,3 +30,18 @@
 
 ## PWA
 ثبت Service Worker در `assets/js/pwa.js` انجام می‌شود. فایل‌های جدید CSS و JavaScript نیز در فهرست precache در `sw.js` قرار گرفته‌اند.
+
+
+## گزارش‌گیری و خروجی‌ها (نسخه 4.3.7)
+- `gatherReportData()` — گردآوری داده‌های گزارش مطابق فیلترهای جاری.
+- `getReportSortedActivities(data)` — مرتب‌سازی سوابق بر اساس تاریخ و ساعت شروع.
+- `getReportKeyActivities(data)` و `getReportKeyGroups(data)` — استخراج و گروه‌بندی اقدامات کلیدی.
+- `buildWordReportHtml(data, withDetails)` و `exportWord()` — ساخت و دریافت گزارش Word با قالب مدیریتی.
+- `exportPPTX()` — تولید ارائه PowerPoint با داشبورد، اقدامات کلیدی و جدول سوابق.
+- `getReportKpis(data)` و `reportActivityDuration(activity)` — آماده‌سازی شاخص‌ها و مدت فعالیت.
+
+## انتخاب‌گر ساعت (نسخه 4.3.7)
+- `initTimePickers()` — حفظ انتخاب‌گر بومی در دستگاه‌های لمسی و فعال‌سازی Flatpickr 24 ساعته در دسکتاپ.
+- `setTimePickerValue(id, value)` — تنظیم مقدار ساعت با قالب استاندارد `HH:mm` در ورودی بومی یا Flatpickr.
+- `updateCalculatedHours()` — محاسبه مدت اقدام پس از تغییر ساعت شروع یا پایان.
+- کتابخانه Flatpickr از CDN بارگیری می‌شود؛ در صورت در دسترس نبودن، ورودی بومی مرورگر fallback است.

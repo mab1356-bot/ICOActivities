@@ -813,22 +813,82 @@ function calcDurationHours(startDate,startTime,endDate,endTime){
   return total;
 }
 
-// تنظیم مقدار ورودی ساعت بومی مرورگر؛ مقدار استاندارد HH:mm در فرم نگهداری می‌شود.
+// نگهداری مقدار ساعت در قالب استاندارد HH:mm؛ در دسکتاپ مقدار از نمونه Flatpickr نیز همگام می‌شود.
 function setTimePickerValue(id, value) {
   var input = $(id);
   if (!input) return;
   var normalized = String(value || '').trim();
-  input.value = /^([01]\\d|2[0-3]):[0-5]\\d$/.test(normalized) ? normalized : '';
+  normalized = /^([01]\d|2[0-3]):[0-5]\d$/.test(normalized) ? normalized : '';
+  if (input._flatpickr) {
+    if (normalized) input._flatpickr.setDate(normalized, false, 'H:i');
+    else input._flatpickr.clear();
+  } else {
+    input.value = normalized;
+  }
 }
 
-// فعال‌سازی رویدادهای انتخاب ساعت بومی در موبایل و دسکتاپ و به‌روزرسانی مدت اقدام.
+// تشخیص دستگاه لمسی برای حفظ انتخاب‌گر بومی محبوب موبایل؛ در دسکتاپ از رابط کلیکی Flatpickr استفاده می‌شود.
+function isTouchTimePickerDevice() {
+  try {
+    var coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    var touchOnSmallScreen = Number(navigator.maxTouchPoints || 0) > 0 && window.matchMedia('(max-width: 900px)').matches;
+    return coarsePointer || touchOnSmallScreen;
+  } catch (e) {
+    return (window.innerWidth || 1200) <= 900;
+  }
+}
+
+// فعال‌سازی ساعت ۲۴ ساعته؛ موبایل از انتخاب‌گر سیستم‌عامل و دسکتاپ از پنجره انتخاب ساعت با کنترل‌های بالا/پایین استفاده می‌کند.
 function initTimePickers() {
+  var useNativePicker = isTouchTimePickerDevice();
   ['act_start_time', 'act_end_time'].forEach(function (id) {
     var input = $(id);
     if (!input) return;
-    input.addEventListener('input', updateCalculatedHours);
-    input.addEventListener('change', updateCalculatedHours);
-    input.addEventListener('blur', updateCalculatedHours);
+
+    var initialized = false;
+    if (!useNativePicker && typeof window.flatpickr === 'function') {
+      // دسکتاپ: انتخاب‌گر دیداری ۲۴ ساعته با کنترل‌های افزایش و کاهش ساعت و دقیقه.
+      try {
+        input.type = 'text';
+        input.classList.add('desktop-time-input');
+        input.setAttribute('placeholder', 'برای انتخاب ساعت کلیک کنید');
+        input.setAttribute('autocomplete', 'off');
+        input.removeAttribute('step');
+        window.flatpickr(input, {
+          enableTime: true,
+          noCalendar: true,
+          dateFormat: 'H:i',
+          time_24hr: true,
+          enableSeconds: false,
+          hourIncrement: 1,
+          minuteIncrement: 1,
+          allowInput: false,
+          clickOpens: true,
+          disableMobile: true,
+          defaultDate: input.value || null,
+          onChange: function (selectedDates, dateStr) {
+            input.value = dateStr || '';
+            updateCalculatedHours();
+          }
+        });
+        initialized = !!input._flatpickr;
+      } catch (pickerError) {
+        console.warn('Desktop time picker initialization failed; using native picker.', pickerError);
+        if (input._flatpickr && typeof input._flatpickr.destroy === 'function') {
+          try { input._flatpickr.destroy(); } catch (destroyError) {}
+        }
+      }
+    }
+
+    if (!initialized) {
+      // موبایل: انتخاب‌گر سیستم‌عامل؛ در صورت خطای بارگذاری کتابخانه نیز fallback بومی استفاده می‌شود.
+      input.type = 'time';
+      input.step = '60';
+      input.classList.remove('desktop-time-input');
+      input.addEventListener('input', updateCalculatedHours);
+      input.addEventListener('change', updateCalculatedHours);
+      input.addEventListener('blur', updateCalculatedHours);
+    }
   });
 }
 
@@ -1248,64 +1308,401 @@ function generateReport(){
 function printReport(){var c=$('report_area');if(!c.querySelector('.dashboard-report')){showAlert('ابتدا گزارش را تولید کنید.');return}$('print_area').innerHTML=c.innerHTML;window.print()}
 function printData(containerId,needTable){var c=$(containerId);if(!c.innerHTML.trim()||(needTable&&!c.querySelector('table'))){showAlert('موردی برای چاپ نیست.');return}var HEAD='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px"><h2>واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری</h2></div>';var SIGN='<div style="margin-top:50px;display:flex;justify-content:space-between"><div>امضای کاربر: ............................</div><div>امضای مسئول: ............................</div></div>';$('print_area').innerHTML=HEAD+'<div>'+c.innerHTML+'</div>'+SIGN;window.print()}
 
-function exportWord(){
-  if(!generateReport())return;
-  var c=$('report_area');var content=c.innerHTML;
-  var style='<style>@page{size:A4 landscape;margin:1cm}body{font-family:"Vazirmatn",Tahoma,sans-serif;direction:rtl;font-size:12pt;color:#222}.db-header{text-align:center;border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:20px}.db-header h1{font-size:20pt;margin:0 0 6pt 0;color:#1a2530}.db-header p{font-size:11pt;color:#555;margin:0}.db-kpi-grid{display:block;margin-bottom:20px;text-align:center}.db-kpi{display:inline-block;width:22%;margin:0 1% 10px 1%;padding:10px;border:1px solid #ddd;text-align:center;vertical-align:top}.db-kpi-val{font-size:18pt;color:#1a2530;margin-bottom:4pt}.db-kpi-title{font-size:10pt;color:#555}.db-section-bar{background:#1a2530;color:white;padding:8px;text-align:center;margin-bottom:15px;font-size:14pt}.db-columns{display:block}.db-col{display:inline-block;width:45%;margin:5px 2% 15px 2%;border:1px solid #ccc;vertical-align:top;page-break-inside:avoid}.db-col-header{background:#2980b9;color:white;padding:6px;text-align:center;font-size:12pt}.db-col-body{padding:8px}.db-box{border:1px solid #ccc;padding:10px;margin-bottom:15px;page-break-inside:avoid}.db-box h3{font-size:13pt;margin:0 0 8px 0;border-bottom:2px solid #eee;padding-bottom:4px}.db-details-page{page-break-before:always}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4pt;text-align:right}th{background:#eee;font-size:11pt}ul{margin:0;padding-right:18pt}li{margin-bottom:4pt;font-size:11pt}</style>';
-  var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><title>گزارش عملکرد</title>'+style+'</head><body>'+content+'</body></html>';
-  var blob=new Blob(['\ufeff',html],{type:'application/msword'});
-  var url=URL.createObjectURL(blob);var a=document.createElement('a');
-  a.href=url;a.download='report_'+getTodayJalali().replace(/\//g,'-')+'.doc';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
-  showAlert('فایل Word دانلود شد.','success');
-}
-function chunkArray(arr,size){var out=[];for(var i=0;i<arr.length;i+=size)out.push(arr.slice(i,i+size));return out}
-async function exportPPTX(){
-  if(typeof PptxGenJS==='undefined'){showAlert('کتابخانه PowerPoint لود نشده.','error');return}
-  var data=gatherReportData();if(!data){showAlert('ابتدا بازه را انتخاب کنید.','error');return}
-  var pptx=new PptxGenJS();pptx.rtlMode=true;pptx.layout='LAYOUT_WIDE';var FONT='Vazirmatn';
-  var slide=pptx.addSlide();slide.background={color:'1a2530'};
-  slide.addText('عملکرد واحد کنترل و نظارت',{x:.5,y:2.2,w:12.3,h:1.5,fontSize:32,bold:true,color:'FFFFFF',align:'center',fontFace:FONT,rtlMode:true});
-  slide.addText('دوره: '+data.periodTitle,{x:.5,y:3.9,w:12.3,h:1,fontSize:20,color:'c9a227',align:'center',fontFace:FONT,rtlMode:true});
-  slide=pptx.addSlide();
-  slide.addText('شاخص‌های کلیدی',{x:.5,y:.2,w:12.3,h:.7,fontSize:26,bold:true,color:'1a2530',align:'center',fontFace:FONT,rtlMode:true});
-  var pal=['3498db','2c3e50','16a085','f39c12','9b59b6','e74c3c'];
-  var kpis=[{val:String(data.totalActs),title:'فعالیت‌ها',color:'8e6c3e'}].concat(data.topicStats.map((s,i)=>({val:String(s.count),title:s.name,color:pal[i%pal.length]})),[{val:fmtPersonHours(data.totalPersonHours),title:'نفر-ساعت',color:'27ae60'}]);
-  var kw=Math.min(3,12.4/kpis.length-.2);
-  kpis.forEach((kpi,i)=>{
-    var x=.3+i*(kw+.2);
-    slide.addShape(pptx.ShapeType.rect,{x,y:1.3,w:kw,h:2.6,fill:{color:'FFFFFF'},line:{color:'DDDDDD',width:1}});
-    slide.addShape(pptx.ShapeType.rect,{x,y:1.3,w:.12,h:2.6,fill:{color:kpi.color}});
-    slide.addText(kpi.val,{x,y:1.7,w:kw,h:1.2,fontSize:30,bold:true,color:'1a2530',align:'center',fontFace:FONT});
-    slide.addText(kpi.title,{x,y:3,w:kw,h:.7,fontSize:13,color:'555',align:'center',fontFace:FONT,rtlMode:true});
+// مرتب‌سازی مشترک سوابق برای خروجی Word و PowerPoint؛ ترتیب تاریخ و سپس ساعت شروع.
+function getReportSortedActivities(data) {
+  return data.list.slice().sort(function (a, b) {
+    return (jalaliToTimestamp(a.date) - jalaliToTimestamp(b.date)) ||
+      String(a.startTime || '').localeCompare(String(b.startTime || ''));
   });
-  var keyTopics=Object.keys(data.topicsData).filter(tid=>data.topicsData[tid].acts.some(a=>isKeyImp(a.importance)));
-  var topicColors=['2980b9','16a085','f39c12','27ae60','2c3e50'];
-  for(var i=0;i<keyTopics.length;i+=2){
-    slide=pptx.addSlide();
-    slide.addText('اقدامات کلیدی — '+data.periodTitle,{x:.5,y:.15,w:12.3,h:.6,fontSize:20,bold:true,color:'1a2530',align:'center',fontFace:FONT,rtlMode:true});
-    for(var j=0;j<2&&i+j<keyTopics.length;j++){
-      var tid=keyTopics[i+j];var topic=data.topicsData[tid];var viActs=topic.acts.filter(a=>isKeyImp(a.importance));
-      var x=.3+j*6.4;var color=topicColors[(i+j)%topicColors.length];
-      slide.addShape(pptx.ShapeType.rect,{x,y:.85,w:6.2,h:6.2,fill:{color},line:{color}});
-      slide.addText(topic.name+' ('+viActs.length+')',{x,y:.85,w:6.2,h:.55,fontSize:16,bold:true,color:'FFFFFF',align:'center',fontFace:FONT,rtlMode:true});
-      var text=viActs.map(a=>'• '+a.description+(a.location?' — '+a.location:'')).join('\n');
-      slide.addText(text,{x:x+.12,y:1.45,w:5.96,h:5.5,fontSize:11,color:'FFFFFF',align:'right',fontFace:FONT,valign:'top',rtlMode:true});
-    }
+}
+
+// استخراج اقدامات کلیدی بر اساس همان سطح اهمیتی که در تنظیمات موضوعات تعریف شده است.
+function getReportKeyActivities(data) {
+  return getReportSortedActivities(data).filter(function (activity) {
+    return isKeyImp(activity.importance);
+  });
+}
+
+// گروه‌بندی اقدامات کلیدی بر اساس موضوع واقعی ثبت‌شده؛ در صورت تعدد موضوعات، موارد بعدی زیر عنوان «سایر حوزه‌ها» قرار می‌گیرند.
+// گروه‌بندی همه اقدامات کلیدی بر اساس موضوع برای صفحات تفصیلی Word و PowerPoint.
+function getReportKeyGroupsByTopic(data) {
+  return Object.keys(data.topicsData).map(function (topicId) {
+    var topic = data.topicsData[topicId];
+    var items = topic.acts.filter(function (activity) { return isKeyImp(activity.importance); })
+      .sort(function (a, b) {
+        return (jalaliToTimestamp(a.date) - jalaliToTimestamp(b.date)) ||
+          String(a.startTime || '').localeCompare(String(b.startTime || ''));
+      });
+    return { name: topic.name, items: items };
+  }).filter(function (group) { return group.items.length > 0; });
+}
+
+function getReportKeyGroups(data) {
+  var groups = Object.keys(data.topicsData).map(function (topicId) {
+    var topic = data.topicsData[topicId];
+    var items = topic.acts.filter(function (activity) { return isKeyImp(activity.importance); })
+      .sort(function (a, b) {
+        return (jalaliToTimestamp(a.date) - jalaliToTimestamp(b.date)) ||
+          String(a.startTime || '').localeCompare(String(b.startTime || ''));
+      });
+    return { name: topic.name, items: items };
+  }).filter(function (group) { return group.items.length > 0; });
+
+  groups.sort(function (a, b) {
+    return (b.items.length - a.items.length) || a.name.localeCompare(b.name, 'fa');
+  });
+  if (groups.length <= 3) return groups;
+
+  var mergedItems = [];
+  groups.slice(2).forEach(function (group) {
+    group.items.forEach(function (activity) {
+      mergedItems.push({
+        date: activity.date,
+        description: activity.description,
+        location: activity.location,
+        topicName: group.name
+      });
+    });
+  });
+  return [groups[0], groups[1], { name: 'سایر حوزه‌های کلیدی', items: mergedItems }];
+}
+
+// تبدیل ارقام به شکل فارسی برای شاخص‌های مدیریتی؛ مقادیر تاریخ و مدت سوابق بدون دست‌کاری باقی می‌مانند.
+function reportFaDigits(value) {
+  return String(value == null ? '' : value).replace(/[0-9]/g, function (digit) {
+    return '۰۱۲۳۴۵۶۷۸۹'[Number(digit)];
+  });
+}
+
+// آماده‌سازی مجموعه شاخص‌ها با همان ترتیب دسته‌بندی‌های موجود در داده‌ها.
+function getReportKpis(data) {
+  return [{ value: reportFaDigits(data.totalActs), label: 'کل فعالیت‌ها', tone: 'orange' }]
+    .concat(data.topicStats.map(function (item) {
+      return { value: reportFaDigits(item.count), label: item.name, tone: 'teal' };
+    }))
+    .concat([{ value: reportFaDigits((Math.round(Number(data.totalPersonHours || 0) * 100) / 100).toFixed(2)), label: 'نفر-ساعت', tone: 'teal' }]);
+}
+
+function reportActivityDuration(activity) {
+  var hours = Number(activity.hours) || 0;
+  return String(Math.round(hours * 100) / 100);
+}
+
+// تولید محتوای Word در قالب سازگار با Word؛ فایل HTML با پسوند DOC برای باز شدن مستقیم در Word صادر می‌شود.
+function buildWordReportHtml(data, withDetails) {
+  var kpis = getReportKpis(data);
+  var keyGroups = getReportKeyGroups(data);
+  var keyActivities = getReportKeyActivities(data);
+  var activities = getReportSortedActivities(data);
+  var kpiRows = chunkArray(kpis, 11).map(function (row) {
+    return '<tr>' + row.map(function (item) {
+      var bg = item.tone === 'orange' ? '#fff0df' : '#eef5f7';
+      var accent = item.tone === 'orange' ? '#e69a38' : '#0b8f91';
+      return '<td style="width:' + (100 / row.length).toFixed(2) + '%;border:1px solid #d6e1e5;border-right:4px solid ' + accent + ';background:' + bg + ';padding:6px 3px;text-align:center;vertical-align:middle;">' +
+        '<div style="font-family:Tahoma,Arial,sans-serif;font-size:15pt;font-weight:bold;color:#17364b;line-height:1.25;">' + esc(item.value) + '</div>' +
+        '<div style="font-family:Tahoma,Arial,sans-serif;font-size:7.5pt;color:#465b66;line-height:1.35;margin-top:3px;">' + esc(item.label) + '</div></td>';
+    }).join('') + '</tr>';
+  }).join('');
+
+  var colors = ['#0a8f91', '#3689b8', '#e39a2f'];
+  var groupCells = keyGroups.map(function (group, index) {
+    var previewItems = group.items.slice(0, 3).map(function (activity) {
+      var shortText = String(activity && activity.description || '—');
+      if (shortText.length > 108) shortText = shortText.slice(0, 105) + '…';
+      return '<div style="margin:0 0 3px 0;">• ' + esc(shortText) + '</div>';
+    }).join('');
+    var remaining = Math.max(0, group.items.length - 3);
+    var accent = colors[index % colors.length];
+    return '<td width="' + (keyGroups.length === 3 ? 30 : 94) + '%" style="width:' +
+      (keyGroups.length === 3 ? 30 : 94) + '%;vertical-align:top;padding:7px 8px;border:1px solid #d8e1e5;border-top:5px solid ' +
+      accent + ';background:#f5f8f9;">' +
+      '<div style="font:bold 10pt Tahoma,Arial,sans-serif;color:' + accent + ';margin-bottom:6px;">' + esc(group.name) + '</div>' +
+      '<div style="font:7.6pt Tahoma,Arial,sans-serif;color:#273f50;line-height:1.28;">' + previewItems + '</div>' +
+      (remaining ? '<div style="font:bold 7.5pt Tahoma,Arial,sans-serif;color:#647782;margin-top:4px;">' + reportFaDigits(remaining) + ' اقدام کلیدی دیگر</div>' : '') +
+      '</td>';
+  }).join('');
+  if (!groupCells) groupCells = '<td style="text-align:center;padding:18px;border:1px solid #d8e1e5;">اقدام کلیدی ثبت نشده است.</td>';
+
+  var summaryHtml = '<div class="report-page report-summary">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 12px 0;"><tr><td bgcolor="#0b8f91" style="background:#0b8f91;height:7px;line-height:7px;font-size:1px;">&nbsp;</td></tr></table>' +
+    '<table class="report-heading"><tr><td><h1>گزارش عملکرد ماهانه</h1><p>واحد کنترل و نظارت پروژه‌های توسعه</p></td><td class="period-cell">' + esc(data.periodTitle) + '</td></tr></table>' +
+    '<p class="summary-caption">خلاصه شاخص‌های عملکرد و اقدامات اثرگذار در دوره گزارش</p>' +
+    '<table class="kpi-table"><tbody>' + kpiRows + '</tbody></table>' +
+    '<h2 class="section-title">اقدامات کلیدی ' + esc(data.periodTitle) + '</h2>' +
+    '<p class="section-note">خلاصه اقدامات اثرگذار؛ شرح کامل اقدامات کلیدی و ریز سوابق در بخش‌های بعدی آمده است.</p>' +
+    '<table class="key-groups" width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;margin-top:10px;"><tr>' + groupCells + '</tr></table>' +
+    '<div class="report-footer">واحد کنترل و نظارت پروژه‌های توسعه <span>' + esc(data.periodTitle) + '</span></div>' +
+    '</div>';
+
+  // برای صفحه دوم، اقدامات کلیدی به تفکیک موضوع در ردیف‌های فشرده نمایش داده می‌شوند؛
+  // این ساختار با صفحه «اقدامات کلیدی این ماه» در گزارش مرجع هم‌خوان است.
+  var detailedKeyGroups = getReportKeyGroupsByTopic(data);
+
+  var keyItemsHtml = detailedKeyGroups.map(function (group, index) {
+    var leadDescription = String(group.items[0].description || '—');
+    if (leadDescription.length > 155) leadDescription = leadDescription.slice(0, 152) + '…';
+    var descriptions = '<span class="key-detail">' + esc(leadDescription) + '</span>' +
+      (group.items.length > 1 ? '<span class="key-separator">؛ ' + reportFaDigits(group.items.length - 1) + ' اقدام مرتبط دیگر</span>' : '');
+    return '<table class="key-action-item" width="100%" style="width:100%;border-collapse:collapse;background:' + (index % 2 ? '#f5f8f9' : '#ffffff') + '"><tr>' +
+      '<td class="key-check" width="30" style="width:30px;padding:2px 5px;vertical-align:top;color:#0b8f91;font:bold 14pt Tahoma,Arial,sans-serif;">✓</td><td style="padding:3px 6px;vertical-align:top;">' + '<div class="key-meta" style="font:bold 9pt Tahoma,Arial,sans-serif;color:#17364b;margin-bottom:1px;">' + esc(group.name) + '</div>' +
+      '<div class="key-description" style="font:8pt Tahoma,Arial,sans-serif;color:#273f50;line-height:1.25;">' + descriptions + '</div></td></tr></table>';
+  }).join('') || '<p class="empty-note">در این بازه اقدام کلیدی ثبت نشده است.</p>';
+
+  var keyPage = '<div class="report-page key-actions-page">' + '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 12px 0;"><tr><td bgcolor="#0b8f91" style="background:#0b8f91;height:7px;line-height:7px;font-size:1px;">&nbsp;</td></tr></table>' +
+    '<h2 class="page-heading">اقدامات کلیدی این ماه</h2>' +
+    '<p class="section-note">جمع‌بندی اقدامات اثرگذار به تفکیک موضوع</p>' +
+    '<div class="key-actions-list">' + keyItemsHtml + '</div>' +
+    '<div class="report-footer">واحد کنترل و نظارت پروژه‌های توسعه <span>' + esc(data.periodTitle) + '</span></div></div>';
+
+  var detailsPage = '';
+  if (withDetails) {
+    var detailRows = activities.map(function (activity, index) {
+      var bg = index % 2 ? '#eaf2f5' : '#ffffff';
+      var cellBase = 'border:1px solid #91aab3;padding:1px 3px;vertical-align:middle;font:6.8pt Tahoma,Arial,sans-serif;line-height:1.05;mso-line-height-rule:exactly;';
+      return '<tr style="background:' + bg + ';height:22pt;mso-height-rule:exactly;page-break-inside:avoid;">' +
+        '<td class="col-date" style="' + cellBase + 'width:11%;text-align:center;white-space:nowrap;">' + esc(activity.date || '—') + '</td>' +
+        '<td class="col-topic" style="' + cellBase + 'width:15%;text-align:center;">' + esc(topicName(activity.topicId)) + '</td>' +
+        '<td class="col-hours" style="' + cellBase + 'width:8%;text-align:center;white-space:nowrap;">' + esc(reportActivityDuration(activity)) + '</td>' +
+        '<td class="col-description" style="' + cellBase + 'width:52%;text-align:right;">' + esc(activity.description || '—') + '</td>' +
+        '<td class="col-location" style="' + cellBase + 'width:14%;text-align:center;">' + esc(activity.location || '—') + '</td></tr>';
+    }).join('');
+    detailsPage = '<div class="report-page details-page" style="page-break-before:always;">' + '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 12px 0;"><tr><td bgcolor="#0b8f91" style="background:#0b8f91;height:7px;line-height:7px;font-size:1px;">&nbsp;</td></tr></table>' +
+      '<h2 class="page-heading" style="page-break-before:always;mso-break-before:page;">ریز اقدامات</h2>' +
+      '<p class="section-note">فهرست زمانی فعالیت‌های ثبت‌شده در ' + esc(data.periodTitle) + '</p>' +
+      '<table class="details-table" width="100%" border="1" cellpadding="2" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">' +
+      '<colgroup><col width="11%"><col width="15%"><col width="8%"><col width="52%"><col width="14%"></colgroup>' +
+      '<thead><tr>' +
+      '<th style="background:#4daabd;color:#fff;border:1px solid #8aabb6;padding:2px 3px;text-align:center;font: bold 7pt Tahoma,Arial,sans-serif;">تاریخ</th>' +
+      '<th style="background:#4daabd;color:#fff;border:1px solid #8aabb6;padding:2px 3px;text-align:center;font: bold 7pt Tahoma,Arial,sans-serif;">موضوع</th>' +
+      '<th style="background:#4daabd;color:#fff;border:1px solid #8aabb6;padding:2px 3px;text-align:center;font: bold 7pt Tahoma,Arial,sans-serif;">مدت (ساعت)</th>' +
+      '<th style="background:#4daabd;color:#fff;border:1px solid #8aabb6;padding:2px 3px;text-align:center;font: bold 7pt Tahoma,Arial,sans-serif;">شرح</th>' +
+      '<th style="background:#4daabd;color:#fff;border:1px solid #8aabb6;padding:2px 3px;text-align:center;font: bold 7pt Tahoma,Arial,sans-serif;">محل</th>' +
+      '</tr></thead><tbody>' + detailRows + '</tbody></table>' +
+      '<div class="report-footer">واحد کنترل و نظارت پروژه‌های توسعه <span>' + esc(data.periodTitle) + '</span></div></div>';
   }
-  if($('rep_details').checked){
-    var chunks=chunkArray(data.list.slice().sort((x,y)=>jalaliToTimestamp(x.date)-jalaliToTimestamp(y.date)),12);
-    chunks.forEach((chunk,ci)=>{
-      slide=pptx.addSlide();
-      slide.addText('ریز اقدامات ('+(ci+1)+'/'+chunks.length+')',{x:.5,y:.15,w:12.3,h:.55,fontSize:18,bold:true,color:'1a2530',align:'center',fontFace:FONT,rtlMode:true});
-      var rows=chunk.map(a=>[{text:a.date,options:{fontSize:9,align:'center',fontFace:FONT}},{text:topicName(a.topicId),options:{fontSize:9,align:'right',fontFace:FONT,rtlMode:true}},{text:String(a.hours),options:{fontSize:9,align:'center',fontFace:FONT}},{text:a.description,options:{fontSize:9,align:'right',fontFace:FONT,rtlMode:true}},{text:a.location||'—',options:{fontSize:9,align:'right',fontFace:FONT,rtlMode:true}}]);
-      var header=[{text:'تاریخ',options:{fontSize:10,bold:true,fill:{color:'2c3e50'},color:'FFFFFF',align:'center',fontFace:FONT}},{text:'موضوع',options:{fontSize:10,bold:true,fill:{color:'2c3e50'},color:'FFFFFF',align:'center',fontFace:FONT}},{text:'مدت',options:{fontSize:10,bold:true,fill:{color:'2c3e50'},color:'FFFFFF',align:'center',fontFace:FONT}},{text:'شرح',options:{fontSize:10,bold:true,fill:{color:'2c3e50'},color:'FFFFFF',align:'center',fontFace:FONT}},{text:'محل',options:{fontSize:10,bold:true,fill:{color:'2c3e50'},color:'FFFFFF',align:'center',fontFace:FONT}}];
-      slide.addTable([header].concat(rows),{x:.3,y:.8,w:12.7,border:{type:'solid',color:'CCCCCC',pt:1},colW:[1.2,1.8,.8,6.9,2]});
+
+  var style = '<style>' +
+    '@page{size:A4 landscape;margin:1cm 1cm 1.05cm 1cm;}' +
+    '@page Section1{size:A4 landscape;mso-page-orientation:landscape;margin:1cm 1cm 1.05cm 1cm;}' +
+    'html,body{width:27cm;min-width:27cm;}' +
+    '.Section1{width:27cm;min-width:27cm;}' +
+    'div.Section1{page:Section1;}' +
+    'body{font-family:Tahoma,Arial,sans-serif;direction:rtl;color:#1c3445;font-size:10pt;line-height:1.65;margin:0;}' +
+    '.report-page{position:relative;width:100%;}' +
+    '.report-summary{page-break-after:always;}' +
+    '.key-actions-page{page-break-after:always;}' +
+    '.top-rule{height:7px;background:#0b8f91;margin:0 0 15px 0;}' +
+    '.report-heading{width:100%;border-collapse:collapse;margin-bottom:8px;}' +
+    '.report-heading h1{font-size:21pt;color:#17364b;margin:0;font-weight:bold;}' +
+    '.report-heading p{font-size:11pt;color:#4e6570;margin:2px 0 0 0;}' +
+    '.period-cell{width:20%;text-align:left;vertical-align:middle;font-size:14pt;font-weight:bold;color:#0b8f91;}' +
+    '.summary-caption,.section-note{color:#647782;font-size:9pt;margin:7px 0 10px 0;}' +
+    '.kpi-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:3px;margin:8px 0 18px 0;}' +
+    '.section-title{font-size:16pt;color:#17364b;margin:15px 0 0 0;border-bottom:2px solid #0b8f91;padding-bottom:6px;}' +
+    '.key-groups{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:10px;}' +
+    '.key-groups td{vertical-align:top;}' +
+    '.key-groups ul{margin:0;padding-right:18px;}' +
+    '.key-groups li{font-size:9pt;line-height:1.65;margin-bottom:5px;}' +
+    '.page-heading{font-size:18pt;color:#17364b;margin:0 0 10px 0;border-bottom:2px solid #0b8f91;padding-bottom:7px;}' +
+    '.key-action-item{width:100%;border-collapse:collapse;margin:0 0 5px 0;page-break-inside:avoid;border-bottom:1px solid #e0e8eb;}' +
+    '.key-check{width:30px;color:#0b8f91;font-size:16pt;font-weight:bold;vertical-align:top;padding:4px 5px;}' +
+    '.key-meta{font-size:9.5pt;font-weight:bold;color:#17364b;margin-bottom:1px;}' +
+    '.key-description{font-size:8.8pt;color:#273f50;line-height:1.45;}' +
+    '.key-location{font-size:8.5pt;color:#6c7f89;margin-top:2px;}' +
+    '.empty-note{padding:18px;background:#eef5f7;border-right:4px solid #0b8f91;}' +
+    '.details-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.6pt;mso-table-lspace:0pt;mso-table-rspace:0pt;}' +
+    '.details-table thead{display:table-header-group;}' +
+    '.details-table th{background:#4daabd;color:#fff;font-weight:bold;padding:4px 4px;border:1px solid #8aabb6;text-align:center;}' +
+    '.details-table td{padding:3px 4px;border:1px solid #9aabb1;vertical-align:middle;line-height:1.22;}' +
+    '.details-table .col-date{width:11%;text-align:center;white-space:nowrap;}' +
+    '.details-table .col-topic{width:15%;text-align:center;}' +
+    '.details-table .col-hours{width:8%;text-align:center;white-space:nowrap;}' +
+    '.details-table .col-description{width:52%;text-align:right;}' +
+    '.details-table .col-location{width:14%;text-align:center;}' +
+    '.report-footer{border-top:1px solid #d5e0e4;margin-top:12px;padding-top:5px;color:#71838c;font-size:8pt;}' +
+    '.report-footer span{float:left;}' +
+    'tr{page-break-inside:avoid;}' +
+    '</style>';
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40" lang="fa" dir="rtl"><head><meta charset="UTF-8"><meta name="ProgId" content="Word.Document"><title>گزارش عملکرد ماهانه</title>' + style + '</head><body><div class="Section1">' + summaryHtml + keyPage + detailsPage + '</div></body></html>';
+}
+
+function exportWord() {
+  var data = gatherReportData();
+  if (!data) { showAlert('اقدامی یافت نشد یا بازه گزارش نامعتبر است.', 'warning'); return; }
+  var withDetails = !!($('rep_details') && $('rep_details').checked);
+  var html = buildWordReportHtml(data, withDetails);
+  var blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'گزارش_عملکرد_' + data.periodTitle.replace(/\s+/g, '_') + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  showAlert('گزارش Word با قالب مدیریتی دانلود شد.', 'success');
+}
+
+function chunkArray(arr, size) {
+  var out = [];
+  for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// سربرگ و پابرگ یکپارچه برای تمام اسلایدها با نوار فیروزه‌ای گزارش مرجع.
+function addReportPptxFrame(slide, pptx, data, pageNumber, totalPages, title) {
+  slide.background = { color: 'FFFFFF' };
+  slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 0.09, fill: { color: '0B8F91' }, line: { color: '0B8F91', transparency: 100 } });
+  slide.addText(title || 'گزارش عملکرد ماهانه', { x: 0.42, y: 0.20, w: 10.4, h: 0.42, fontFace: 'Tahoma', fontSize: 21, bold: true, color: '17364B', align: 'right', rtlMode: true, margin: 0.02, breakLine: false });
+  slide.addText(data.periodTitle, { x: 10.9, y: 0.22, w: 2.0, h: 0.34, fontFace: 'Tahoma', fontSize: 13, bold: true, color: '0B8F91', align: 'left', rtlMode: true, margin: 0.02 });
+  slide.addShape(pptx.ShapeType.rect, { x: 0.42, y: 7.16, w: 12.48, h: 0.012, fill: { color: 'D9E4E8' }, line: { color: 'D9E4E8', transparency: 100 } });
+  slide.addText('واحد کنترل و نظارت پروژه‌های توسعه', { x: 0.42, y: 7.20, w: 8.5, h: 0.16, fontFace: 'Tahoma', fontSize: 7.5, color: '6A7D86', align: 'right', rtlMode: true, margin: 0 });
+  slide.addText(reportFaDigits(pageNumber + ' / ' + totalPages), { x: 11.2, y: 7.20, w: 1.7, h: 0.16, fontFace: 'Tahoma', fontSize: 7.5, color: '6A7D86', align: 'left', margin: 0 });
+}
+
+// تولید بسته خروجی PowerPoint شامل داشبورد، اقدامات کلیدی و جدول سوابق با سرصفحه‌های تکرارشونده.
+async function exportPPTX() {
+  if (typeof PptxGenJS === 'undefined') { showAlert('کتابخانه PowerPoint بارگذاری نشده است.', 'error'); return; }
+  var data = gatherReportData();
+  if (!data) { showAlert('اقدامی یافت نشد یا بازه گزارش نامعتبر است.', 'warning'); return; }
+
+  var withDetails = !!($('rep_details') && $('rep_details').checked);
+  var kpis = getReportKpis(data);
+  var keyGroups = getReportKeyGroups(data);
+  var keyActivities = getReportKeyActivities(data);
+  var detailChunks = withDetails ? chunkArray(getReportSortedActivities(data), 22) : [];
+  var keyGroupChunks = getReportKeyGroupsByTopic(data).length ? chunkArray(getReportKeyGroupsByTopic(data), 9) : [];
+  var totalPages = 1 + keyGroupChunks.length + detailChunks.length;
+  var pageNumber = 0;
+  var pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+  pptx.rtlMode = true;
+  pptx.author = 'واحد کنترل و نظارت پروژه‌های توسعه';
+  pptx.subject = 'گزارش عملکرد ماهانه ' + data.periodTitle;
+  pptx.title = 'گزارش عملکرد ماهانه - ' + data.periodTitle;
+  pptx.company = 'واحد کنترل و نظارت پروژه‌های توسعه';
+  var FONT = 'Tahoma';
+  var roundRect = pptx.ShapeType.roundRect || pptx.ShapeType.rect;
+
+  // اسلاید نخست: شاخص‌های مدیریتی در یک ردیف و سه کارت خلاصه اقدامات کلیدی.
+  var slide = pptx.addSlide();
+  pageNumber++;
+  addReportPptxFrame(slide, pptx, data, pageNumber, totalPages, 'گزارش عملکرد ماهانه | واحد کنترل و نظارت پروژه‌های توسعه');
+
+  var maxPerRow = 11;
+  var kpiRows = chunkArray(kpis, maxPerRow);
+  var kpiY = 0.82;
+  var kpiH = kpiRows.length > 1 ? 0.62 : 0.88;
+  kpiRows.forEach(function (row, rowIndex) {
+    var gap = 0.065;
+    var available = 12.48;
+    var cardW = (available - gap * (row.length - 1)) / row.length;
+    row.forEach(function (item, index) {
+      // ترتیب کارت‌ها راست به چپ است تا شاخص کل در سمت راست و نفرساعت در انتها قرار گیرد.
+      var x = 0.42 + (row.length - 1 - index) * (cardW + gap);
+      var y = kpiY + rowIndex * (kpiH + 0.08);
+      var fill = item.tone === 'orange' ? 'FFF0DF' : 'F0F6F8';
+      var accent = item.tone === 'orange' ? 'E49A39' : '0B8F91';
+      slide.addShape(roundRect, { x: x, y: y, w: cardW, h: kpiH, rectRadius: 0.07, fill: { color: fill }, line: { color: 'D6E2E6', width: 0.8 }, shadow: { type: 'outer', color: '7A8C93', opacity: 0.10, blur: 1, angle: 45, distance: 1 } });
+      slide.addShape(pptx.ShapeType.rect, { x: x + cardW - 0.055, y: y + 0.07, w: 0.055, h: kpiH - 0.14, fill: { color: accent }, line: { color: accent, transparency: 100 } });
+      slide.addText(item.value, { x: x + 0.03, y: y + 0.10, w: cardW - 0.12, h: kpiH * 0.52, fontFace: FONT, fontSize: kpis.length > 9 ? 15 : 18, bold: true, color: '17364B', align: 'center', valign: 'mid', margin: 0.01, fit: 'shrink' });
+      slide.addText(item.label, { x: x + 0.035, y: y + kpiH * 0.58, w: cardW - 0.13, h: kpiH * 0.34, fontFace: FONT, fontSize: kpis.length > 9 ? 7 : 8.5, bold: true, color: '526A75', align: 'center', valign: 'mid', rtlMode: true, margin: 0.01, fit: 'shrink' });
+    });
+  });
+
+  var summaryY = kpiY + kpiRows.length * (kpiH + 0.08) + 0.16;
+  slide.addText('اقدامات کلیدی ' + data.periodTitle, { x: 0.45, y: summaryY, w: 12.35, h: 0.35, fontFace: FONT, fontSize: 17, bold: true, color: '17364B', align: 'right', rtlMode: true, margin: 0.01 });
+  slide.addText('خلاصه اقدامات اثرگذار؛ جزئیات و پیگیری‌های مرتبط در اسلایدهای بعدی آمده است.', { x: 0.45, y: summaryY + 0.34, w: 12.35, h: 0.22, fontFace: FONT, fontSize: 8.5, color: '657984', align: 'right', rtlMode: true, margin: 0.01 });
+
+  var cardY = summaryY + 0.68;
+  var cardH = Math.min(2.55, Math.max(2.15, 6.86 - cardY));
+  var cardGap = 0.13;
+  var groupCount = Math.max(1, Math.min(3, keyGroups.length));
+  var groupW = (12.48 - cardGap * (groupCount - 1)) / groupCount;
+  var groupColors = ['0B8F91', '368AB7', 'E39A2F'];
+  if (!keyGroups.length) {
+    slide.addShape(roundRect, { x: 0.42, y: cardY, w: 12.48, h: cardH, fill: { color: 'F0F6F8' }, line: { color: 'D6E2E6', width: 1 } });
+    slide.addText('در این دوره اقدام کلیدی ثبت نشده است.', { x: 0.65, y: cardY + 0.35, w: 12.0, h: 0.6, fontFace: FONT, fontSize: 16, color: '526A75', align: 'center', rtlMode: true, margin: 0.05 });
+  } else {
+    keyGroups.forEach(function (group, index) {
+      var x = 0.42 + (groupCount - 1 - index) * (groupW + cardGap);
+      var color = groupColors[index % groupColors.length];
+      slide.addShape(roundRect, { x: x, y: cardY, w: groupW, h: cardH, fill: { color: 'F1F6F7' }, line: { color: 'D6E2E6', width: 0.9 }, shadow: { type: 'outer', color: '7A8C93', opacity: 0.08, blur: 1, angle: 45, distance: 1 } });
+      slide.addShape(pptx.ShapeType.rect, { x: x + groupW - 0.07, y: cardY + 0.12, w: 0.07, h: cardH - 0.24, fill: { color: color }, line: { color: color, transparency: 100 } });
+      slide.addText(group.name, { x: x + 0.16, y: cardY + 0.12, w: groupW - 0.34, h: 0.42, fontFace: FONT, fontSize: 13.2, bold: true, color: color, align: 'right', rtlMode: true, margin: 0.02 });
+      slide.addShape(pptx.ShapeType.rect, { x: x + 0.16, y: cardY + 0.58, w: groupW - 0.34, h: 0.015, fill: { color: 'C9D8DE' }, line: { color: 'C9D8DE', transparency: 100 } });
+      var previewItems = group.items.slice(0, 3).map(function (activity) {
+        var prefix = activity.topicName ? activity.topicName + ' - ' : '';
+        var shortText = String(activity.description || '—');
+        if (shortText.length > 108) shortText = shortText.slice(0, 105) + '…';
+        return '• ' + prefix + shortText;
+      });
+      if (group.items.length > 3) previewItems.push('… ' + reportFaDigits(group.items.length - 3) + ' اقدام مرتبط دیگر');
+      slide.addText(previewItems.join('\n'), { x: x + 0.17, y: cardY + 0.69, w: groupW - 0.38, h: cardH - 0.83, fontFace: FONT, fontSize: 8.4, color: '263E4D', align: 'right', valign: 'top', rtlMode: true, breakLine: false, margin: 0.03, paraSpaceAfterPt: 3, fit: 'shrink' });
     });
   }
-  try{await pptx.writeFile({fileName:'report_'+getTodayJalali().replace(/\//g,'-')+'.pptx'});showAlert('فایل PowerPoint دانلود شد.','success')}
-  catch(e){showAlert('خطا: '+e.message,'error')}
+
+  // اسلاید اقدامات کلیدی: گروه‌بندی بر اساس موضوع مشابه صفحه دوم گزارش مرجع.
+  keyGroupChunks.forEach(function (chunk) {
+    slide = pptx.addSlide();
+    pageNumber++;
+    addReportPptxFrame(slide, pptx, data, pageNumber, totalPages, 'اقدامات کلیدی این ماه');
+    var top = 0.86;
+    var gap = 0.055;
+    var cardHeight = Math.min(0.64, (6.10 - gap * (chunk.length - 1)) / chunk.length);
+    chunk.forEach(function (group, itemIndex) {
+      var y = top + itemIndex * (cardHeight + gap);
+      slide.addShape(roundRect, { x: 0.45, y: y, w: 12.42, h: cardHeight, fill: { color: itemIndex % 2 ? 'F4F8FA' : 'EDF4F6' }, line: { color: 'D8E3E7', width: 0.7 } });
+      slide.addShape(pptx.ShapeType.rect, { x: 12.78, y: y + 0.07, w: 0.055, h: cardHeight - 0.14, fill: { color: '0B8F91' }, line: { color: '0B8F91', transparency: 100 } });
+      var groupText = String(group.items[0].description || '—');
+      if (groupText.length > 180) groupText = groupText.slice(0, 177) + '…';
+      if (group.items.length > 1) groupText += '؛ ' + reportFaDigits(group.items.length - 1) + ' اقدام مرتبط دیگر';
+      slide.addText(group.name, { x: 0.68, y: y + 0.055, w: 11.92, h: 0.18, fontFace: FONT, fontSize: 9.2, bold: true, color: '17364B', align: 'right', rtlMode: true, margin: 0 });
+      slide.addText(groupText, { x: 0.68, y: y + 0.245, w: 11.92, h: cardHeight - 0.28, fontFace: FONT, fontSize: 8.2, color: '2E4654', align: 'right', valign: 'mid', rtlMode: true, margin: 0.01, fit: 'shrink' });
+    });
+  });
+
+  // جداول تفصیلی با ردیف‌های راه‌راه و سرستون آبی فیروزه‌ای، مشابه جدول PDF مرجع.
+  detailChunks.forEach(function (chunk, chunkIndex) {
+    slide = pptx.addSlide();
+    pageNumber++;
+    addReportPptxFrame(slide, pptx, data, pageNumber, totalPages, 'ریز اقدامات');
+    slide.addText('فهرست زمانی فعالیت‌های ثبت‌شده در ' + data.periodTitle, { x: 0.45, y: 0.64, w: 12.4, h: 0.20, fontFace: FONT, fontSize: 8.5, color: '647985', align: 'right', rtlMode: true, margin: 0.01 });
+
+    var headerFill = { color: '4DAABD' };
+    var headerOptions = { fontFace: FONT, fontSize: 9, bold: true, color: 'FFFFFF', fill: headerFill, align: 'center', valign: 'mid', rtlMode: true, margin: 0.035 };
+    var header = ['تاریخ', 'موضوع', 'مدت (ساعت)', 'شرح', 'محل'].map(function (label) {
+      return { text: label, options: headerOptions };
+    });
+    var rows = chunk.map(function (activity, rowIndex) {
+      var fill = { color: rowIndex % 2 ? 'EAF2F5' : 'FFFFFF' };
+      var base = { fontFace: FONT, fontSize: 7.0, color: '203744', fill: fill, valign: 'mid', margin: 0.035, breakLine: false };
+      return [
+        { text: String(activity.date || '—'), options: Object.assign({}, base, { align: 'center' }) },
+        { text: topicName(activity.topicId), options: Object.assign({}, base, { align: 'center', rtlMode: true }) },
+        { text: reportActivityDuration(activity), options: Object.assign({}, base, { align: 'center' }) },
+        { text: String(activity.description || '—'), options: Object.assign({}, base, { align: 'right', rtlMode: true }) },
+        { text: String(activity.location || '—'), options: Object.assign({}, base, { align: 'center', rtlMode: true }) }
+      ];
+    });
+    slide.addTable([header].concat(rows), {
+      x: 0.42, y: 0.92, w: 12.48,
+      colW: [1.18, 1.72, 0.88, 6.88, 1.82],
+      rowH: 0.265,
+      border: { type: 'solid', color: 'A6B8BF', pt: 0.65 },
+      fontFace: FONT, fontSize: 7.0, color: '203744',
+      margin: 0.035, valign: 'mid', rtlMode: true,
+      autoFit: false,
+      breakLine: false
+    });
+  });
+
+  try {
+    await pptx.writeFile({ fileName: 'گزارش_عملکرد_' + data.periodTitle.replace(/\s+/g, '_') + '.pptx' });
+    showAlert('گزارش PowerPoint با قالب مدیریتی دانلود شد.', 'success');
+  } catch (error) {
+    showAlert('خطا در ساخت فایل PowerPoint: ' + (error && error.message ? error.message : 'خطای ناشناخته'), 'error');
+  }
 }
 
 function exportJSON(){
