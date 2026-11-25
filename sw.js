@@ -1,12 +1,10 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v4.3.3
+   نسخه: actbk-v4.3.4
    ================================================ */
 
-const CACHE_VERSION = 'Ver-4.3.3';
+const CACHE_VERSION = 'Ver-4.3.4';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
-const OFFLINE_URL = './Activity.html';
-
 const PRECACHE_URLS = [
   './Activity.html',
   './index.html',
@@ -73,14 +71,10 @@ self.addEventListener('fetch', event => {
           }
           return res;
         })
-        .catch(() => {
-          return caches.match(OFFLINE_URL)
-            .then(c => c || caches.match('./index.html'))
-            .then(c => c || new Response(
-              '<!DOCTYPE html><html dir="rtl"><body style="font-family:Tahoma;padding:20px;text-align:center"><h2>اتصال برقرار نیست</h2><p>لطفاً اینترنت را بررسی و صفحه را دوباره باز کنید.</p></body></html>',
-              { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-            ));
-        })
+        .catch(() => new Response(
+          '<!DOCTYPE html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>عدم اتصال</title><body style="font-family:Tahoma,sans-serif;padding:24px;text-align:center"><h2>اتصال اینترنت برقرار نیست</h2><p>این برنامه فقط در حالت آنلاین قابل استفاده است.</p><p>پس از اتصال به اینترنت، صفحه را دوباره بارگذاری کنید.</p></body></html>',
+          { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
+        ))
     );
     return;
   }

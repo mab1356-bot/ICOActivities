@@ -788,11 +788,13 @@ function showActivityDetails(id){
   if(a.onlyforme)html+='<div class="alert alert-warning" style="display:block;margin-top:10px;">👤 این اقدام فقط برای شما ثبت شده است.</div>';
   html+='<div class="modal-actions" style="margin-top:20px;"><button class="btn btn-secondary" data-act="close">بستن</button>';
   if(!isJoined&&!a.onlyforme)html+='<button class="btn btn-success" data-act="join">🤝 پیوستن به اقدام</button>';
+  if(isJoined)html+='<button class="btn btn-warning" data-act="leave">↩️ حذف خود از اقدام</button>';
   html+='</div></div>';
   var overlay=document.createElement('div');overlay.className='modal-overlay';overlay.innerHTML=html;
   overlay.addEventListener('click',function(e){
     if(e.target===overlay||e.target.closest('[data-act="close"]')){overlay.remove();return}
-    if(e.target.closest('[data-act="join"]')){overlay.remove();joinActivity(id)}
+    if(e.target.closest('[data-act="join"]')){overlay.remove();joinActivity(id);return}
+    if(e.target.closest('[data-act="leave"]')){overlay.remove();leaveActivity(id);return}
   });
   document.body.appendChild(overlay);
 }
@@ -859,14 +861,14 @@ async function saveActivity(){
       if(!canEditAct(acts[idx],session)){showAlert('اجازه ویرایش ندارید.','error');return}
       obj.createdAt=acts[idx].createdAt;obj.createdBy=acts[idx].createdBy||session.personId;acts[idx]=obj;
     }else{obj.createdAt=Date.now();obj.createdBy=session.personId;acts.push(obj)}
-    if(await setData(KEYS.acts,acts)){afterSave('اقدام ویرایش شد.');handlePendingPlanConversion(obj.id)}
+    if(await setData(KEYS.acts,acts)){afterSave('اقدام ویرایش شد.',obj);handlePendingPlanConversion(obj.id)}
     return;
   }
   var sims=findSimilar(obj,0.4);
   if(sims.length){showSimilarBlockModal(sims,obj);return}
   obj.createdAt=Date.now();obj.createdBy=session.personId;
   var all=getData(KEYS.acts);all.push(obj);
-  if(await setData(KEYS.acts,all)){afterSave('اقدام با موفقیت ثبت شد.');handlePendingPlanConversion(obj.id)}
+  if(await setData(KEYS.acts,all)){afterSave('اقدام با موفقیت ثبت شد.',obj);handlePendingPlanConversion(obj.id)}
 }
 function findSimilar(obj,threshold){
   threshold=threshold||0.4;
@@ -896,13 +898,49 @@ function showSimilarBlockModal(sims,obj){
     if(e.target.closest('[data-act="close"]'))overlay.remove();
   });
 }
-function afterSave(msg){
-  if(msg)showAlert(msg,'success');
+function showSaveSuccessPopup(msg,activity){
+  // نتیجه ذخیره را در پنجره مستقل نشان می‌دهد و سپس تقویم ماه اقدام را باز می‌کند.
+  var old=document.getElementById('activity-save-success-overlay');
+  if(old)old.remove();
+  var date=(activity&&activity.date)||getTodayJalali();
+  var overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='activity-save-success-overlay';
+  overlay.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="activity-save-success-title">'+
+    '<h3 id="activity-save-success-title" style="color:var(--success)">✅ عملیات موفق</h3>'+
+    '<div class="alert alert-success" style="display:block;margin:14px 0">'+esc(msg||'اقدام با موفقیت ذخیره شد.')+'</div>'+
+    '<p>تاریخ اقدام: <b>'+esc(date)+'</b></p>'+
+    '<p style="color:var(--text2)">اقدام در تقویم ماهانه نمایش داده خواهد شد.</p>'+
+    '<div class="modal-actions"><button type="button" class="btn btn-success" id="activity-save-success-continue">مشاهده تقویم ماهانه</button></div></div>';
+  document.body.appendChild(overlay);
+  var continueButton=overlay.querySelector('#activity-save-success-continue');
+  continueButton.addEventListener('click',function(){
+    overlay.remove();
+    var parts=date.split('/');
+    if(parts.length===3&&$('cal_year')&&$('cal_month')){
+      $('cal_year').value=parseInt(parts[0],10);
+      $('cal_month').value=parseInt(parts[1],10);
+    }
+    // پس از ثبت، نمای ماهانه (نه نمای هفته) انتخاب می‌شود تا اقدام ثبت‌شده دیده شود.
+    if($('cal_week_mode')){
+      $('cal_week_mode').checked=false;
+      onWeekModeChange();
+    }
+    showSection('calendar');
+    renderCalendar();
+  });
+  continueButton.focus();
+}
+function afterSave(msg,activity){
+  // پس از تأیید ذخیره در سرور، فرم پاک و پنجره نتیجه نمایش داده می‌شود.
   setActivityEditMode(false);
   $('act_id').value='';$('act_start_time').value='';$('act_end_time').value='';$('act_desc').value='';$('act_calc_hours').value='';$('act_end_date').value='';$('act_private_desc').value='';
   setLocationFields('');$('act_only_for_me').checked=false;
   var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
-  populateParticipants();renderDayActs();renderCalendar();
+  populateParticipants();
+  renderDayActs();
+  renderCalendar();
+  showSaveSuccessPopup(msg,activity);
 }
 async function joinActivity(id){
   var session=getSession();if(!session)return;
@@ -913,6 +951,22 @@ async function joinActivity(id){
   if(a.participants.indexOf(session.personId)!==-1){showAlert('از قبل در این اقدام هستید.','warning');return}
   a.participants.push(session.personId);
   if(await setData(KEYS.acts,acts)){showAlert('به شرکت‌کنندگان اضافه شدید.','success');renderDayActs();renderRecords();renderCalendar()}
+}
+
+async function leaveActivity(id){
+  // کاربر فقط شناسه خودش را حذف می‌کند؛ محدودیت نهایی در تریگر Supabase نیز اعمال می‌شود.
+  var session=getSession();if(!session)return;
+  if(!navigator.onLine||!dbClient){showAlert('برای خروج از اقدام باید به اینترنت متصل باشید.','error');return}
+  await getFresh(KEYS.acts);
+  var acts=getData(KEYS.acts),a=acts.find(x=>x.id===id);
+  if(!a||!canSeeAct(a)){showAlert('اقدام یافت نشد.','error');return}
+  var participants=Array.isArray(a.participants)?a.participants:[];
+  if(participants.indexOf(session.personId)===-1){showAlert('شما عضو این اقدام نیستید.','warning');return}
+  a.participants=participants.filter(pid=>pid!==session.personId);
+  if(await setData(KEYS.acts,acts)){
+    showAlert('از فهرست شرکت‌کنندگان این اقدام خارج شدید.','success');
+    renderDayActs();renderRecords();renderCalendar();
+  }
 }
 
 function actButtons(a,session,isRecords){
@@ -977,7 +1031,14 @@ async function deleteAct(id){
 
 function renderRecords(){
   var personId=val('rec_person'),topicId=val('rec_topic'),imp=val('rec_imp'),search=normText(val('rec_search'));
-  var from=val('rec_from'),to=val('rec_to'),vf=isValidJalaliDate(from),vt=isValidJalaliDate(to);
+  // در صورت خالی بودن فیلترها، بازه ماه جاری به‌عنوان مقدار پیش‌فرض اعمال می‌شود.
+  var todayParts=getTodayJalali().split('/'),currentYear=parseInt(todayParts[0],10),currentMonth=parseInt(todayParts[1],10);
+  var defaultFrom=fmtJalali(currentYear,currentMonth,1);
+  var defaultTo=fmtJalali(currentYear,currentMonth,jalaliMonthLength(currentYear,currentMonth));
+  var from=val('rec_from')||defaultFrom,to=val('rec_to')||defaultTo;
+  if(!$('rec_from').value)$('rec_from').value=from;
+  if(!$('rec_to').value)$('rec_to').value=to;
+  var vf=isValidJalaliDate(from),vt=isValidJalaliDate(to);
   var fromTs=vf?jalaliToTimestamp(from):0,toTs=vt?jalaliToTimestamp(to):0;
   var list=getVisibleActs().filter(a=>{
     if(personId&&(!a.participants||a.participants.indexOf(personId)===-1))return false;
@@ -988,7 +1049,10 @@ function renderRecords(){
     return true;
   });
   var tsCache={};list.forEach(a=>{tsCache[a.id]=jalaliToTimestamp(a.date)});
-  list.sort((x,y)=>(tsCache[y.id]-tsCache[x.id])||(getImpOrder(y.importance)-getImpOrder(x.importance)));
+  // ترتیب سوابق: تاریخ صعودی، سپس ساعت شروع صعودی و در نهایت زمان ثبت.
+  list.sort((x,y)=>(tsCache[x.id]-tsCache[y.id])||
+    String(x.startTime||'00:00').localeCompare(String(y.startTime||'00:00'))||
+    ((x.createdAt||0)-(y.createdAt||0)));
   var c=$('records_list_container'),session=getSession();
   if(!list.length){c.innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">رکوردی یافت نشد.</p>';return}
   var h='<table class="records-table"><thead><tr><th style="width:6%;">تاریخ</th><th style="width:8%;">موضوع</th><th style="width:8%;">محل</th><th style="width:5%;">مدت</th><th style="width:7%;">اهمیت</th><th style="width:20%;">شرح</th><th style="width:15%;">📝 توضیحات تکمیلی</th><th style="width:12%;">شرکت‌کنندگان</th><th style="width:7%;">ثبت‌کننده</th><th style="width:12%;">عملیات</th></tr></thead><tbody>';
@@ -1154,8 +1218,8 @@ function generateReport(){
   if(!withDetails)h+='<div class="db-box"><h3>توضیحات</h3><p style="color:var(--text2)">(محل درج دستی)</p></div>';
   h+='</div>';
   if(withDetails){
-    var trs=data.list.slice().sort((x,y)=>jalaliToTimestamp(x.date)-jalaliToTimestamp(y.date)).map(x=>'<tr><td>'+esc(topicName(x.topicId))+'</td><td>'+esc(fmtHours(x.hours))+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.location||'—')+'</td></tr>').join('');
-    h+='<div class="db-details-page"><div class="db-box"><h3>ریز اقدامات</h3><div class="table-wrap"><table><tr><th>موضوع</th><th>مدت</th><th>شرح</th><th>محل</th></tr>'+trs+'</table></div></div></div>';
+    var trs=data.list.slice().sort((x,y)=>(jalaliToTimestamp(x.date)-jalaliToTimestamp(y.date))||String(x.startTime||'').localeCompare(String(y.startTime||''))).map(x=>'<tr><td>'+esc(x.date||'—')+'</td><td>'+esc(topicName(x.topicId))+'</td><td>'+esc(fmtHours(x.hours))+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.location||'—')+'</td></tr>').join('');
+    h+='<div class="db-details-page"><div class="db-box"><h3>ریز اقدامات</h3><div class="table-wrap"><table><tr><th>تاریخ</th><th>موضوع</th><th>مدت</th><th>شرح</th><th>محل</th></tr>'+trs+'</table></div></div></div>';
   }
   h+='</div>';
   $('report_area').innerHTML=h;return true;
@@ -1375,9 +1439,16 @@ async function handleLogin(){
   
   if (person.must_change_password) { 
     location.reload(); 
-  } else { 
+  } else {
+    var initialSync=await syncFromCloud(false);
+    if(!initialSync.ok){
+      await dbClient.auth.signOut();clearSession();
+      await showLogin();
+      showAlert('ورود انجام شد، اما دریافت اطلاعات از سرور ناموفق بود. اتصال اینترنت را بررسی و دوباره تلاش کنید.','error');
+      return;
+    }
     $('login_modal').style.display = 'none';
-    await startApp(); 
+    await startApp();
   }
 }
 
@@ -1588,6 +1659,9 @@ async function startApp(){
   $('cal_year').value=parseInt(today[0],10);$('cal_month').value=parseInt(today[1],10);$('h_default_year').value=parseInt(today[0],10);
   if(!$('act_start_date').value)$('act_start_date').value=getTodayJalali();
   var tp=today.map(n=>parseInt(n,10));
+  // فیلتر پیش‌فرض سوابق روی بازه کامل ماه جاری تنظیم می‌شود.
+  if(!$('rec_from').value)$('rec_from').value=fmtJalali(tp[0],tp[1],1);
+  if(!$('rec_to').value)$('rec_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
   if(!$('rep_from').value)$('rep_from').value=fmtJalali(tp[0],tp[1],1);
   if(!$('rep_to').value)$('rep_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
   
@@ -1688,7 +1762,14 @@ function bindEvents(){
 
   ['rec_person','rec_topic','rec_imp','rec_from','rec_to'].forEach(k=>on(k,'change',renderRecords));
   on('rec_search','input',debounce(renderRecords,250));
-  on('btn_clear_rec','click',()=>{$('rec_person').value='';$('rec_topic').value='';$('rec_imp').value='';$('rec_search').value='';$('rec_from').value='';$('rec_to').value='';renderRecords()});
+  on('btn_clear_rec','click',()=>{
+    $('rec_person').value='';$('rec_topic').value='';$('rec_imp').value='';$('rec_search').value='';
+    // پاک‌سازی فیلترها، بازه پیش‌فرض ماه جاری را حفظ می‌کند.
+    var p=getTodayJalali().split('/'),y=parseInt(p[0],10),m=parseInt(p[1],10);
+    $('rec_from').value=fmtJalali(y,m,1);
+    $('rec_to').value=fmtJalali(y,m,jalaliMonthLength(y,m));
+    renderRecords();
+  });
   on('btn_print_records','click',()=>printData('records_list_container',true));
   delegate('records_list_container',(a,id)=>{if(a==='edit')editAct(id);else if(a==='delete')deleteAct(id);else if(a==='join')joinActivity(id)});
 
@@ -1710,7 +1791,7 @@ async function init(){
   var dbReady=await initDbClient();
   if(dbReady)startConnectionMonitor();else setConnectionStatus('offline');
 
-  if(!dbReady){ await showLogin(); return; }
+  if(!dbReady||!navigator.onLine){ await showLogin(); return; }
 
   const { data: { session } } = await dbClient.auth.getSession();
   if(!session){ await showLogin(); return; }
@@ -1722,7 +1803,14 @@ async function init(){
   
   if (person.must_change_password) { showForcePasswordChange(session.user.id); return; }
   
-  await syncFromCloud(false);
+  if(!navigator.onLine){await dbClient.auth.signOut();clearSession();await showLogin();return}
+  var initialSync=await syncFromCloud(false);
+  if(!initialSync.ok){
+    await dbClient.auth.signOut();clearSession();
+    await showLogin();
+    showAlert('برای اجرای برنامه اتصال پایدار به سرور لازم است.','error');
+    return;
+  }
   await startApp();
 }
 
