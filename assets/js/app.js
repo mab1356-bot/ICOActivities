@@ -2428,7 +2428,7 @@ async function generateAttendanceReport(){
   var from=val('att_report_from'),to=val('att_report_to'),person=val('att_report_person');
   if(!isValidJalaliDate(from)||!isValidJalaliDate(to)||jalaliToTimestamp(to)<jalaliToTimestamp(from)){attendanceMessage('بازه گزارش معتبر نیست.','error');return}
   if(!(await loadAttendanceEvents()))return;
-  var persons=getData(KEYS.persons).filter(p=>!person||p.id===person),personIds=new Set(persons.map(p=>p.id));
+  var persons=sortPersonsById(getData(KEYS.persons).filter(p=>!person||p.id===person)),personIds=new Set(persons.map(p=>p.id));
   var rows=attendanceCache.filter(e=>personIds.has(e.person_id)&&jalaliToTimestamp(e.start_date)<=jalaliToTimestamp(to)&&jalaliToTimestamp(e.end_date)>=jalaliToTimestamp(from));
   var totalsByPerson=persons.map(p=>{
     var pr=rows.filter(e=>e.person_id===p.id),o={person:p,leave_daily:0,leave_hourly:0,mission_in:0,mission_out:0,training:0,other:0,workingEventDays:0,nonWorkingEventDays:0};
@@ -2440,7 +2440,7 @@ async function generateAttendanceReport(){
         dayRows.forEach(d=>{if(d.isOffDay)o.nonWorkingEventDays++;else o.workingEventDays++});
       }
     });
-    o.events=pr.sort((a,b)=>jalaliToTimestamp(a.start_date)-jalaliToTimestamp(b.start_date));
+    o.events=pr.sort((a,b)=>jalaliToTimestamp(a.start_date)-jalaliToTimestamp(b.start_date)||jalaliToTimestamp(a.end_date)-jalaliToTimestamp(b.end_date));
     o.totalEventDays=o.leave_daily+o.mission_in+o.mission_out+o.training+o.other;
     return o;
   });
@@ -2473,19 +2473,30 @@ function exportAttendanceCsv(){
   if(!isAttendanceReportAdmin()){attendanceMessage('دریافت گزارش عدم حضور دیگران فقط برای ادمین و سوپر ادمین مجاز است.','error');return}
   if(!attendanceReportRows.length){attendanceMessage('ابتدا گزارش را تهیه کنید.','error');return}
   var meta=attendanceReportMeta||{},totals=meta.totals||{};
+  // شماره پرسنلی معیار اصلی مرتب‌سازی است؛ تاریخ شروع معیار دوم برای رویدادهای هر فرد است.
+  var orderedPeople=attendanceReportRows.slice().sort((a,b)=>
+    (Number(a.person.personnelId)||0)-(Number(b.person.personnelId)||0)
+  );
   var lines=[['گزارش عدم حضور','بازه',(meta.from||'')+' تا '+(meta.to||'')].map(csvCell).join(',')];
   lines.push(['خلاصه کلی','تعداد افراد','مجموع روزهای رویداد','روزهای کاری رویدادها','روزهای غیرکاری رویدادها','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','ماموریت داخل استان (روز تقویمی)','ماموریت خارج استان (روز تقویمی)','آموزش (روز تقویمی)','سایر (روز تقویمی)','تعداد رویداد'].map(csvCell).join(','));
   lines.push(['کل',meta.peopleCount||0,totals.totalEventDays||0,totals.workingEventDays||0,totals.nonWorkingEventDays||0,totals.leaveDaily||0,Number(totals.leaveHourly||0).toFixed(2),totals.missionIn||0,totals.missionOut||0,totals.training||0,totals.other||0,totals.eventCount||0].map(csvCell).join(','));
-  lines.push('');lines.push(['خلاصه افراد','کارمند','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','مأموریت داخل استان','مأموریت خارج استان','دوره آموزشی','سایر','روز کاری رویدادها','روز غیرکاری رویدادها','مجموع روز رویداد','تعداد رویداد'].map(csvCell).join(','));
-  attendanceReportRows.forEach(o=>lines.push(['خلاصه',o.person.firstName+' '+o.person.lastName,o.leave_daily,o.leave_hourly.toFixed(2),o.mission_in,o.mission_out,o.training,o.other,o.workingEventDays,o.nonWorkingEventDays,o.totalEventDays,(o.events||[]).length].map(csvCell).join(',')));
-  lines.push('');lines.push(['جزئیات روزانه','کارمند','نوع رویداد','تاریخ','نوع روز','ساعت/بازه','مدت','شرح'].map(csvCell).join(','));
-  attendanceReportRows.forEach(o=>(o.events||[]).forEach(e=>{
-    var from=(attendanceReportMeta||{}).from||val('att_report_from'),to=(attendanceReportMeta||{}).to||val('att_report_to');
-    expandAttendanceEventDays(e,from,to).forEach(d=>{
-      var duration=e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':'۱ روز تقویمی';
-      lines.push(['جزئیات',o.person.firstName+' '+o.person.lastName,ATT_TYPES[e.event_type]||e.event_type,d.date,d.dayLabel,d.timeLabel,duration,e.description||''].map(csvCell).join(','));
+  lines.push('');
+  // در خلاصه افراد، شماره پرسنلی جایگزین نام/عنوان کارمند می‌شود.
+  lines.push(['خلاصه افراد','شماره پرسنلی','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','مأموریت داخل استان','مأموریت خارج استان','دوره آموزشی','سایر','روز کاری رویدادها','روز غیرکاری رویدادها','مجموع روز رویداد','تعداد رویداد'].map(csvCell).join(','));
+  orderedPeople.forEach(o=>lines.push(['خلاصه',o.person.personnelId||o.person.id,o.leave_daily,o.leave_hourly.toFixed(2),o.mission_in,o.mission_out,o.training,o.other,o.workingEventDays,o.nonWorkingEventDays,o.totalEventDays,(o.events||[]).length].map(csvCell).join(',')));
+  lines.push('');
+  // جزئیات روزانه نیز با شماره پرسنلی و سپس تاریخ شروع رویداد مرتب می‌شود.
+  lines.push(['جزئیات روزانه','شماره پرسنلی','نوع رویداد','تاریخ','نوع روز','ساعت/بازه','مدت','شرح'].map(csvCell).join(','));
+  orderedPeople.forEach(o=>{
+    var orderedEvents=(o.events||[]).slice().sort((a,b)=>jalaliToTimestamp(a.start_date)-jalaliToTimestamp(b.start_date)||jalaliToTimestamp(a.end_date)-jalaliToTimestamp(b.end_date));
+    orderedEvents.forEach(e=>{
+      var from=(attendanceReportMeta||{}).from||val('att_report_from'),to=(attendanceReportMeta||{}).to||val('att_report_to');
+      expandAttendanceEventDays(e,from,to).forEach(d=>{
+        var duration=e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':'۱ روز تقویمی';
+        lines.push(['جزئیات',o.person.personnelId||o.person.id,ATT_TYPES[e.event_type]||e.event_type,d.date,d.dayLabel,d.timeLabel,duration,e.description||''].map(csvCell).join(','));
+      });
     });
-  }));
+  });
   var blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='attendance-dashboard-'+getTodayJalali().replaceAll('/','-')+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 
