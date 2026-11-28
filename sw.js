@@ -1,10 +1,10 @@
 /* ================================================
    Service Worker — ثبت فعالیت ماهانه
-   نسخه: actbk-v5.0.3
+   نسخه: actbk-v5.0.4
    مدیریت نسخه و کش با پاک‌سازی امن کش‌های همین برنامه
    ================================================ */
 
-const CACHE_VERSION = 'Ver-5.0.3';
+const CACHE_VERSION = 'Ver-5.0.4';
 const CACHE_NAME = 'actbk-cache-' + CACHE_VERSION;
 const CACHE_PREFIX = 'actbk-cache-';
 const PRECACHE_URLS = [
@@ -32,10 +32,10 @@ self.addEventListener('install', event => {
       }
     }));
 
-    // مهاجرت یک‌باره از ۵.۰.۳: نسخه قبلی رابط تأیید به‌روزرسانی ندارد،
+    // مهاجرت یک‌باره از 5.0.4: نسخه قبلی رابط تأیید به‌روزرسانی ندارد،
     // بنابراین برای جلوگیری از گیرکردن نسخه منتظر، فقط این ارتقا خودکار فعال می‌شود.
     const previousCaches = await caches.keys();
-    if (previousCaches.includes('actbk-cache-Ver-4.3.7') || previousCaches.includes('actbk-cache-Ver-5.0.0')) {
+    if (previousCaches.includes('actbk-cache-Ver-5.0.1') || previousCaches.includes('actbk-cache-Ver-5.0.2')) {
       await self.skipWaiting();
     }
   })());

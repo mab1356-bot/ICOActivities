@@ -840,7 +840,7 @@ function calcDurationHours(startDate,startTime,endDate,endTime){
   return total;
 }
 
-// نگهداری مقدار ساعت در قالب استاندارد HH:mm؛ در دسکتاپ مقدار از نمونه Flatpickr نیز همگام می‌شود.
+// نگهداری ساعت در قالب قطعی ۲۴ ساعته HH:mm؛ این تابع برای هر دو ماژول استفاده می‌شود.
 function setTimePickerValue(id, value) {
   var input = $(id);
   if (!input) return;
@@ -854,32 +854,21 @@ function setTimePickerValue(id, value) {
   }
 }
 
-// تشخیص دستگاه لمسی برای حفظ انتخاب‌گر بومی محبوب موبایل؛ در دسکتاپ از رابط کلیکی Flatpickr استفاده می‌شود.
-function isTouchTimePickerDevice() {
-  try {
-    var coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-    var touchOnSmallScreen = Number(navigator.maxTouchPoints || 0) > 0 && window.matchMedia('(max-width: 900px)').matches;
-    return coarsePointer || touchOnSmallScreen;
-  } catch (e) {
-    return (window.innerWidth || 1200) <= 900;
-  }
-}
-
-// فعال‌سازی ساعت ۲۴ ساعته؛ موبایل از انتخاب‌گر سیستم‌عامل و دسکتاپ از پنجره انتخاب ساعت با کنترل‌های بالا/پایین استفاده می‌کند.
+// انتخاب‌گر مشترک هر دو ماژول را به ساعت ۲۴ ساعته محدود می‌کند تا AM/PM مبهم یا وابسته به زبان دستگاه نباشد.
 function initTimePickers() {
-  var useNativePicker = isTouchTimePickerDevice();
-  ['act_start_time', 'act_end_time'].forEach(function (id) {
+  ['act_start_time', 'act_end_time', 'att_start_time', 'att_end_time'].forEach(function (id) {
     var input = $(id);
-    if (!input) return;
+    if (!input || input.dataset.timePickerInitialized === 'true') return;
 
     var initialized = false;
-    if (!useNativePicker && typeof window.flatpickr === 'function') {
-      // دسکتاپ: انتخاب‌گر دیداری ۲۴ ساعته با کنترل‌های افزایش و کاهش ساعت و دقیقه.
+    if (typeof window.flatpickr === 'function') {
       try {
+        // در همه دستگاه‌ها از نمایش ۲۴ ساعته استفاده می‌شود؛ 08:00 صبح و 15:00 بعدازظهر است.
         input.type = 'text';
-        input.classList.add('desktop-time-input');
-        input.setAttribute('placeholder', 'برای انتخاب ساعت کلیک کنید');
+        input.classList.add('time-picker-input');
+        input.setAttribute('placeholder', 'انتخاب ساعت (۲۴ ساعته)');
         input.setAttribute('autocomplete', 'off');
+        input.setAttribute('inputmode', 'none');
         input.removeAttribute('step');
         window.flatpickr(input, {
           enableTime: true,
@@ -895,12 +884,12 @@ function initTimePickers() {
           defaultDate: input.value || null,
           onChange: function (selectedDates, dateStr) {
             input.value = dateStr || '';
-            updateCalculatedHours();
+            if (id.indexOf('act_') === 0) updateCalculatedHours();
           }
         });
         initialized = !!input._flatpickr;
       } catch (pickerError) {
-        console.warn('Desktop time picker initialization failed; using native picker.', pickerError);
+        console.warn('24-hour time picker initialization failed; using native picker.', pickerError);
         if (input._flatpickr && typeof input._flatpickr.destroy === 'function') {
           try { input._flatpickr.destroy(); } catch (destroyError) {}
         }
@@ -908,14 +897,18 @@ function initTimePickers() {
     }
 
     if (!initialized) {
-      // موبایل: انتخاب‌گر سیستم‌عامل؛ در صورت خطای بارگذاری کتابخانه نیز fallback بومی استفاده می‌شود.
+      // در صورت در دسترس نبودن Flatpickr، ورودی بومی با مقدار استاندارد ۲۴ ساعته فعال می‌شود.
       input.type = 'time';
       input.step = '60';
-      input.classList.remove('desktop-time-input');
-      input.addEventListener('input', updateCalculatedHours);
-      input.addEventListener('change', updateCalculatedHours);
-      input.addEventListener('blur', updateCalculatedHours);
+      input.lang = 'en-GB';
+      input.classList.remove('time-picker-input');
+      if (id.indexOf('act_') === 0) {
+        input.addEventListener('input', updateCalculatedHours);
+        input.addEventListener('change', updateCalculatedHours);
+        input.addEventListener('blur', updateCalculatedHours);
+      }
     }
+    input.dataset.timePickerInitialized = 'true';
   });
 }
 
@@ -2304,15 +2297,16 @@ function setAttendanceTab(tab){
 
 function showAttendanceTypeFields(){
   var hourly=val('att_type')==='leave_hourly';
-  // ساعت شروع و پایان برای همه انواع رویداد قابل ثبت است؛ در مرخصی ساعتی اجباری است.
+  // ساعت شروع بعد از تاریخ شروع و ساعت پایان بعد از تاریخ پایان نمایش داده می‌شود؛ ساعت‌ها برای همه رویدادها قابل ثبت‌اند.
   $('att_time_row').style.display='';
   $('att_end_date_group').style.display=hourly?'none':'';
   $('att_start_time').required=hourly;$('att_end_time').required=hourly;
-  var hint=$('att_time_hint');if(hint)hint.textContent=hourly?'برای مرخصی ساعتی، هر دو ساعت الزامی است.':'ثبت ساعت شروع و پایان اختیاری است؛ در صورت ثبت، هر دو ساعت را وارد کنید.';
+  var hint=$('att_time_hint');if(hint)hint.textContent=hourly?'برای مرخصی ساعتی، ساعت شروع و پایان همان روز الزامی است.':'برای رویداد چندروزه، ساعت شروع مربوط به تاریخ شروع و ساعت پایان مربوط به تاریخ پایان است؛ ثبت ساعت اختیاری است.';
   if(hourly)$('att_end_date').value=val('att_start_date');
 }
 function resetAttendanceForm(){
-  ['att_event_id','att_description','att_start_time','att_end_time'].forEach(id=>{if($(id))$(id).value=''});
+  ['att_event_id','att_description'].forEach(id=>{if($(id))$(id).value=''});
+  setTimePickerValue('att_start_time','');setTimePickerValue('att_end_time','');
   $('att_type').value='leave_daily';$('att_start_date').value=getTodayJalali();$('att_end_date').value=getTodayJalali();
   $('btn_att_save').textContent='ثبت رویداد';$('att_form_message').style.display='none';showAttendanceTypeFields();
 }
@@ -2337,7 +2331,8 @@ function validateAttendanceForm(){
   var validTime=/^([01]\d|2[0-3]):[0-5]\d$/;
   if(type==='leave_hourly'&&(!st||!et)){attendanceMessage('برای مرخصی ساعتی، ساعت شروع و پایان الزامی است.','error');return null}
   if((st&&!et)||(!st&&et)){attendanceMessage('در صورت ثبت ساعت، ساعت شروع و پایان را هر دو وارد کنید.','error');return null}
-  if(st&&(!validTime.test(st)||!validTime.test(et)||et<=st)){attendanceMessage('ساعت پایان باید بعد از ساعت شروع باشد.','error');return null}
+  if(st&&(!validTime.test(st)||!validTime.test(et))){attendanceMessage('قالب ساعت معتبر نیست؛ ساعت را به شکل ۲۴ ساعته وارد کنید.','error');return null}
+  if(st&&normJ(start)===normJ(end)&&et<=st){attendanceMessage('در رویداد یک‌روزه، ساعت پایان باید بعد از ساعت شروع باشد.','error');return null}
   var normalized={event_type:type,start_date:normJ(start),end_date:normJ(end),start_time:st,end_time:et,description:val('att_description')};
   var editing=val('att_event_id'),self=getSession().personId;
   var conflict=attendanceCache.find(function(old){
@@ -2372,7 +2367,7 @@ async function saveAttendanceEvent(){
 function editAttendanceEvent(id){
   var row=attendanceCache.find(x=>x.id===id);if(!row||row.person_id!==getSession().personId){attendanceMessage('فقط رویدادهای خودتان قابل ویرایش است.','error');return}
   $('att_event_id').value=row.id;$('att_type').value=row.event_type;$('att_start_date').value=row.start_date;$('att_end_date').value=row.end_date;
-  $('att_start_time').value=normalizeTime(row.start_time);$('att_end_time').value=normalizeTime(row.end_time);$('att_description').value=row.description||'';
+  setTimePickerValue('att_start_time',normalizeTime(row.start_time));setTimePickerValue('att_end_time',normalizeTime(row.end_time));$('att_description').value=row.description||'';
   $('btn_att_save').textContent='ذخیره تغییرات';showAttendanceTypeFields();setAttendanceTab('form');window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -2389,7 +2384,7 @@ function renderAttendanceHistory(){
   var c=$('att_my_events');if(!c)return;var self=getSession().personId;
   var rows=attendanceCache.filter(x=>x.person_id===self).sort((a,b)=>jalaliToTimestamp(b.start_date)-jalaliToTimestamp(a.start_date));
   if(!rows.length){c.innerHTML='<p class="hint">هنوز رویدادی ثبت نکرده‌اید.</p>';return}
-  c.innerHTML='<table><thead><tr><th>نوع رویداد</th><th>از تاریخ</th><th>تا تاریخ</th><th>ساعت</th><th>شرح</th><th>عملیات</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(ATT_TYPES[x.event_type]||x.event_type)+'</td><td>'+esc(x.start_date)+'</td><td>'+esc(x.end_date)+'</td><td>'+esc(x.start_time?normalizeTime(x.start_time)+' تا '+normalizeTime(x.end_time):'—')+'</td><td>'+esc(x.description||'—')+'</td><td><div class="att-event-actions"><button class="btn btn-warning btn-sm" data-att-edit="'+esc(x.id)+'">ویرایش</button><button class="btn btn-danger btn-sm" data-att-delete="'+esc(x.id)+'">حذف</button></div></td></tr>').join('')+'</tbody></table>';
+  c.innerHTML='<table><thead><tr><th>نوع رویداد</th><th>از تاریخ</th><th>تا تاریخ</th><th>ساعت شروع / پایان</th><th>شرح</th><th>عملیات</th></tr></thead><tbody>'+rows.map(x=>{var timeText=x.start_time?(x.start_date===x.end_date?normalizeTime(x.start_time)+' تا '+normalizeTime(x.end_time):'شروع '+normalizeTime(x.start_time)+' / پایان '+normalizeTime(x.end_time)):'—';return '<tr><td>'+esc(ATT_TYPES[x.event_type]||x.event_type)+'</td><td>'+esc(x.start_date)+'</td><td>'+esc(x.end_date)+'</td><td>'+esc(timeText)+'</td><td>'+esc(x.description||'—')+'</td><td><div class="att-event-actions"><button class="btn btn-warning btn-sm" data-att-edit="'+esc(x.id)+'">ویرایش</button><button class="btn btn-danger btn-sm" data-att-delete="'+esc(x.id)+'">حذف</button></div></td></tr>'}).join('')+'</tbody></table>';
 }
 
 // فهرست کارکنان را برای فیلتر گزارش مدیر از داده‌های همگام‌شده سامانه پر می‌کند.
@@ -2399,20 +2394,35 @@ function populateAttendanceReportPeople(){
   el.innerHTML='<option value="">همه کارکنان</option>'+sortPersonsById(getData(KEYS.persons)).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.firstName+' '+p.lastName)+'</option>').join('');
   if(old&&Array.from(el.options).some(o=>o.value===old))el.value=old;
 }
+// هر رویداد چندروزه را به ردیف‌های روزانه تبدیل می‌کند؛ تعطیلات رسمی و پنجشنبه/جمعه غیرکاری‌اند.
+function expandAttendanceEventDays(row,from,to){
+  if(!row||!row.start_date||!row.end_date||!from||!to)return [];
+  var rowStart=normJ(row.start_date),rowEnd=normJ(row.end_date),rangeStart=normJ(from),rangeEnd=normJ(to);
+  var start=jalaliToTimestamp(rowStart),end=jalaliToTimestamp(rowEnd),lo=jalaliToTimestamp(rangeStart),hi=jalaliToTimestamp(rangeEnd);
+  if(end<lo||start>hi)return [];
+  var a=start<lo?rangeStart:rowStart,b=end>hi?rangeEnd:rowEnd,holMap=getHolidayMap(),out=[];
+  for(var d=a,guard=0;jalaliToTimestamp(d)<=jalaliToTimestamp(b)&&guard<4000;d=addDaysStr(d,1),guard++){
+    var p=parseJalali(d),dow=getJalaliDayOfWeek(p.jy,p.jm,p.jd),holiday=holMap[d]||'',off=isOffDay(d,holMap),dayName=DAY_NAMES[dow]||'';
+    var dayLabel=holiday?'غیرکاری - تعطیل رسمی: '+holiday:(off?'غیرکاری - '+dayName:'کاری - '+dayName);
+    var isStart=d===rowStart,isEnd=d===rowEnd,timeLabel='تمام روز';
+    if(row.event_type==='leave_hourly')timeLabel=normalizeTime(row.start_time)+' تا '+normalizeTime(row.end_time);
+    else if(isStart&&isEnd&&row.start_time&&row.end_time)timeLabel=normalizeTime(row.start_time)+' تا '+normalizeTime(row.end_time);
+    else if(isStart&&row.start_time)timeLabel='شروع '+normalizeTime(row.start_time);
+    else if(isEnd&&row.end_time)timeLabel='پایان '+normalizeTime(row.end_time);
+    out.push({date:d,isOffDay:off,dayLabel:dayLabel,dayName:dayName,timeLabel:timeLabel,startTime:isStart?normalizeTime(row.start_time):'',endTime:isEnd?normalizeTime(row.end_time):''});
+  }
+  return out;
+}
 function eventCalendarDays(row,from,to){
-  // همه روزهای تقویمی بازه رویداد شمرده می‌شوند؛ پنجشنبه، جمعه و تعطیلات نیز حذف نمی‌شوند.
-  var start=jalaliToTimestamp(row.start_date),end=jalaliToTimestamp(row.end_date),lo=jalaliToTimestamp(from),hi=jalaliToTimestamp(to);
-  if(end<lo||start>hi||row.event_type==='leave_hourly')return 0;
-  var a=start<lo?from:row.start_date,b=end>hi?to:row.end_date,count=0;
-  for(var d=a,guard=0;jalaliToTimestamp(d)<=jalaliToTimestamp(b)&&guard<4000;d=addDaysStr(d,1),guard++)count++;
-  return count;
+  // مرخصی ساعتی در ساعت محاسبه می‌شود؛ سایر رویدادها به تفکیک روز تقویمی شمرده می‌شوند.
+  return row.event_type==='leave_hourly'?0:expandAttendanceEventDays(row,from,to).length;
 }
 // زمان‌های PostgreSQL ممکن است به‌شکل HH:mm:ss برگردند؛ محاسبه را بر مبنای HH:mm انجام می‌دهیم.
 function timeToMinutes(value){var p=String(value||'').slice(0,5).split(':').map(Number);return p.length===2&&p.every(Number.isFinite)?p[0]*60+p[1]:0}
 function normalizeTime(value){return value?String(value).slice(0,5):''}
 function hoursBetween(start,end){return (timeToMinutes(end)-timeToMinutes(start))/60}
 
-// داشبورد عدم حضور را فقط برای ادمین و سوپر ادمین، در سه سطح کل، افراد و جزئیات تاریخ‌دار می‌سازد.
+// داشبورد عدم حضور را با تفکیک روزهای کاری/غیرکاری و ریز هر تاریخ تولید می‌کند.
 async function generateAttendanceReport(){
   if(!isAttendanceReportAdmin()){attendanceMessage('مشاهده گزارش عدم حضور سایر کارکنان فقط برای ادمین و سوپر ادمین مجاز است.','error');return}
   var from=val('att_report_from'),to=val('att_report_to'),person=val('att_report_person');
@@ -2421,8 +2431,15 @@ async function generateAttendanceReport(){
   var persons=getData(KEYS.persons).filter(p=>!person||p.id===person),personIds=new Set(persons.map(p=>p.id));
   var rows=attendanceCache.filter(e=>personIds.has(e.person_id)&&jalaliToTimestamp(e.start_date)<=jalaliToTimestamp(to)&&jalaliToTimestamp(e.end_date)>=jalaliToTimestamp(from));
   var totalsByPerson=persons.map(p=>{
-    var pr=rows.filter(e=>e.person_id===p.id),o={person:p,leave_daily:0,leave_hourly:0,mission_in:0,mission_out:0,training:0,other:0};
-    pr.forEach(e=>{if(e.event_type==='leave_hourly')o.leave_hourly+=hoursBetween(e.start_time,e.end_time);else o[e.event_type]=(o[e.event_type]||0)+eventCalendarDays(e,from,to)});
+    var pr=rows.filter(e=>e.person_id===p.id),o={person:p,leave_daily:0,leave_hourly:0,mission_in:0,mission_out:0,training:0,other:0,workingEventDays:0,nonWorkingEventDays:0};
+    pr.forEach(e=>{
+      var dayRows=expandAttendanceEventDays(e,from,to);
+      if(e.event_type==='leave_hourly')o.leave_hourly+=hoursBetween(e.start_time,e.end_time);
+      else{
+        o[e.event_type]=(o[e.event_type]||0)+dayRows.length;
+        dayRows.forEach(d=>{if(d.isOffDay)o.nonWorkingEventDays++;else o.workingEventDays++});
+      }
+    });
     o.events=pr.sort((a,b)=>jalaliToTimestamp(a.start_date)-jalaliToTimestamp(b.start_date));
     o.totalEventDays=o.leave_daily+o.mission_in+o.mission_out+o.training+o.other;
     return o;
@@ -2433,6 +2450,7 @@ async function generateAttendanceReport(){
   var totalEventDays=sumDays('leave_daily')+missionDays+sumDays('training')+sumDays('other');
   var summaryItems=[
     ['تعداد افراد',persons.length+' نفر'],['مجموع روزهای رویداد',totalEventDays+' روز تقویمی'],
+    ['روزهای کاری رویدادها',sumDays('workingEventDays')+' روز'],['روزهای غیرکاری رویدادها',sumDays('nonWorkingEventDays')+' روز'],
     ['مرخصی روزانه',sumDays('leave_daily')+' روز تقویمی'],['مرخصی ساعتی',sumDays('leave_hourly').toFixed(2)+' ساعت'],
     ['مأموریت داخل استان',sumDays('mission_in')+' روز تقویمی'],['مأموریت خارج استان',sumDays('mission_out')+' روز تقویمی'],
     ['دوره آموزشی',sumDays('training')+' روز تقویمی'],['سایر موارد',sumDays('other')+' روز تقویمی'],['رویدادهای ثبت‌شده',rows.length+' مورد']
@@ -2441,32 +2459,32 @@ async function generateAttendanceReport(){
   var peopleHtml=totalsByPerson.map(o=>{
     var name=o.person.firstName+' '+o.person.lastName;
     var eventRows=o.events.map(e=>{
-      var clippedStart=jalaliToTimestamp(e.start_date)<jalaliToTimestamp(from)?from:e.start_date;
-      var clippedEnd=jalaliToTimestamp(e.end_date)>jalaliToTimestamp(to)?to:e.end_date;
-      var duration=e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':eventCalendarDays(e,from,to)+' روز تقویمی';
-      return '<tr><td>'+esc(ATT_TYPES[e.event_type]||e.event_type)+'</td><td>'+esc(clippedStart)+'</td><td>'+esc(clippedEnd)+'</td><td>'+esc(e.start_time?normalizeTime(e.start_time)+' تا '+normalizeTime(e.end_time):'—')+'</td><td>'+esc(duration)+'</td><td>'+esc(e.description||'—')+'</td></tr>';
+      var days=expandAttendanceEventDays(e,from,to);
+      return days.map(d=>'<tr><td>'+esc(ATT_TYPES[e.event_type]||e.event_type)+'</td><td>'+esc(d.date)+'</td><td>'+esc(d.dayLabel)+'</td><td>'+esc(d.timeLabel)+'</td><td>'+esc(e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':'۱ روز')+'</td><td>'+esc(e.description||'—')+'</td></tr>').join('');
     }).join('');
-    return '<details class="att-person-detail"><summary><span class="att-person-name">'+esc(name)+'</span><span class="att-person-metric">مرخصی '+o.leave_daily+' روز</span><span class="att-person-metric">مرخصی ساعتی '+o.leave_hourly.toFixed(2)+' ساعت</span><span class="att-person-metric">مأموریت '+(o.mission_in+o.mission_out)+' روز</span><span class="att-person-event-count">'+o.events.length+' رویداد</span></summary><div class="att-person-detail-body"><div class="att-person-kpis"><span>آموزش: <b>'+o.training+' روز تقویمی</b></span><span>سایر: <b>'+o.other+' روز تقویمی</b></span></div>'+(eventRows?'<div class="table-wrap"><table><thead><tr><th>نوع رویداد</th><th>از تاریخ</th><th>تا تاریخ</th><th>ساعت</th><th>مدت</th><th>شرح</th></tr></thead><tbody>'+eventRows+'</tbody></table></div>':'<p class="hint">برای این فرد در بازه انتخابی رویدادی ثبت نشده است.</p>')+'</div></details>';
+    return '<details class="att-person-detail"><summary><span class="att-person-name">'+esc(name)+'</span><span class="att-person-metric">مرخصی '+o.leave_daily+' روز</span><span class="att-person-metric">مرخصی ساعتی '+o.leave_hourly.toFixed(2)+' ساعت</span><span class="att-person-metric">مأموریت '+(o.mission_in+o.mission_out)+' روز</span><span class="att-person-event-count">'+o.events.length+' رویداد</span></summary><div class="att-person-detail-body"><div class="att-person-kpis"><span>روزهای کاری رویدادها: <b>'+o.workingEventDays+' روز</b></span><span>روزهای غیرکاری رویدادها: <b>'+o.nonWorkingEventDays+' روز</b></span><span>آموزش: <b>'+o.training+' روز تقویمی</b></span><span>سایر: <b>'+o.other+' روز تقویمی</b></span></div>'+(eventRows?'<div class="table-wrap"><table><thead><tr><th>نوع رویداد</th><th>تاریخ</th><th>نوع روز</th><th>ساعت</th><th>مدت</th><th>شرح</th></tr></thead><tbody>'+eventRows+'</tbody></table></div>':'<p class="hint">برای این فرد در بازه انتخابی رویدادی ثبت نشده است.</p>')+'</div></details>';
   }).join('');
-  $('att_report_results').innerHTML='<div class="att-dashboard-heading"><strong>خلاصه افراد و جزئیات تاریخ‌دار</strong><span>'+totalsByPerson.length+' نفر</span></div>'+    '<div class="table-wrap"><table class="att-people-summary"><thead><tr><th>کارمند</th><th>مرخصی روزانه</th><th>مرخصی ساعتی</th><th>مأموریت داخل</th><th>مأموریت خارج</th><th>آموزش</th><th>سایر</th><th>مجموع روز رویداد</th><th>تعداد رویداد</th></tr></thead><tbody>'+    (totalsByPerson.map(o=>'<tr><td>'+esc(o.person.firstName+' '+o.person.lastName)+'</td><td>'+o.leave_daily+'</td><td>'+o.leave_hourly.toFixed(2)+'</td><td>'+o.mission_in+'</td><td>'+o.mission_out+'</td><td>'+o.training+'</td><td>'+o.other+'</td><td>'+o.totalEventDays+'</td><td>'+o.events.length+'</td></tr>').join('')||'<tr><td colspan="9">فردی برای نمایش یافت نشد.</td></tr>')+    '</tbody></table></div><div class="att-person-details-list">'+(peopleHtml||'<p class="hint">اطلاعاتی برای این بازه وجود ندارد.</p>')+'</div>';
-  attendanceReportMeta={from:from,to:to,peopleCount:persons.length,totals:{totalEventDays:totalEventDays,leaveDaily:sumDays('leave_daily'),leaveHourly:sumDays('leave_hourly'),missionIn:sumDays('mission_in'),missionOut:sumDays('mission_out'),training:sumDays('training'),other:sumDays('other'),eventCount:rows.length}};
+  $('att_report_results').innerHTML='<div class="att-dashboard-heading"><strong>خلاصه افراد و جزئیات روزانه</strong><span>'+totalsByPerson.length+' نفر</span></div>'+    '<div class="table-wrap"><table class="att-people-summary"><thead><tr><th>کارمند</th><th>مرخصی روزانه</th><th>مرخصی ساعتی</th><th>مأموریت داخل</th><th>مأموریت خارج</th><th>آموزش</th><th>سایر</th><th>روز کاری رویدادها</th><th>روز غیرکاری رویدادها</th><th>مجموع روز رویداد</th><th>تعداد رویداد</th></tr></thead><tbody>'+    (totalsByPerson.map(o=>'<tr><td>'+esc(o.person.firstName+' '+o.person.lastName)+'</td><td>'+o.leave_daily+'</td><td>'+o.leave_hourly.toFixed(2)+'</td><td>'+o.mission_in+'</td><td>'+o.mission_out+'</td><td>'+o.training+'</td><td>'+o.other+'</td><td>'+o.workingEventDays+'</td><td>'+o.nonWorkingEventDays+'</td><td>'+o.totalEventDays+'</td><td>'+o.events.length+'</td></tr>').join('')||'<tr><td colspan="11">فردی برای نمایش یافت نشد.</td></tr>')+    '</tbody></table></div><div class="att-person-details-list">'+(peopleHtml||'<p class="hint">اطلاعاتی برای این بازه وجود ندارد.</p>')+'</div>';
+  attendanceReportMeta={from:from,to:to,peopleCount:persons.length,totals:{totalEventDays:totalEventDays,workingEventDays:sumDays('workingEventDays'),nonWorkingEventDays:sumDays('nonWorkingEventDays'),leaveDaily:sumDays('leave_daily'),leaveHourly:sumDays('leave_hourly'),missionIn:sumDays('mission_in'),missionOut:sumDays('mission_out'),training:sumDays('training'),other:sumDays('other'),eventCount:rows.length}};
 }
 function csvCell(value){return '"'+String(value==null?'':value).replace(/"/g,'""')+'"'}
-// خروجی CSV شامل خلاصه کلی، خلاصه هر فرد و ریز رویدادهای تاریخ‌دار است.
+// خروجی CSV شامل خلاصه کلی، تفکیک روزهای کاری/غیرکاری هر فرد و یک ردیف برای هر تاریخ رویداد است.
 function exportAttendanceCsv(){
   if(!isAttendanceReportAdmin()){attendanceMessage('دریافت گزارش عدم حضور دیگران فقط برای ادمین و سوپر ادمین مجاز است.','error');return}
   if(!attendanceReportRows.length){attendanceMessage('ابتدا گزارش را تهیه کنید.','error');return}
   var meta=attendanceReportMeta||{},totals=meta.totals||{};
   var lines=[['گزارش عدم حضور','بازه',(meta.from||'')+' تا '+(meta.to||'')].map(csvCell).join(',')];
-  lines.push(['خلاصه کلی','تعداد افراد','مجموع روزهای تقویمی رویداد','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','ماموریت داخل استان (روز تقویمی)','ماموریت خارج استان (روز تقویمی)','آموزش (روز تقویمی)','سایر (روز تقویمی)','تعداد رویداد'].map(csvCell).join(','));
-  lines.push(['کل',meta.peopleCount||0,totals.totalEventDays||0,totals.leaveDaily||0,Number(totals.leaveHourly||0).toFixed(2),totals.missionIn||0,totals.missionOut||0,totals.training||0,totals.other||0,totals.eventCount||0].map(csvCell).join(','));
-  lines.push('');lines.push(['خلاصه افراد','کارمند','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','مأموریت داخل استان (روز تقویمی)','مأموریت خارج استان (روز تقویمی)','دوره آموزشی (روز تقویمی)','سایر (روز تقویمی)','مجموع روز رویداد','تعداد رویداد'].map(csvCell).join(','));
-  attendanceReportRows.forEach(o=>lines.push(['خلاصه',o.person.firstName+' '+o.person.lastName,o.leave_daily,o.leave_hourly.toFixed(2),o.mission_in,o.mission_out,o.training,o.other,o.totalEventDays,(o.events||[]).length].map(csvCell).join(',')));
-  lines.push('');lines.push(['جزئیات رویدادها','کارمند','نوع رویداد','از تاریخ','تا تاریخ','ساعت شروع','ساعت پایان','مدت در بازه گزارش','شرح'].map(csvCell).join(','));
+  lines.push(['خلاصه کلی','تعداد افراد','مجموع روزهای رویداد','روزهای کاری رویدادها','روزهای غیرکاری رویدادها','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','ماموریت داخل استان (روز تقویمی)','ماموریت خارج استان (روز تقویمی)','آموزش (روز تقویمی)','سایر (روز تقویمی)','تعداد رویداد'].map(csvCell).join(','));
+  lines.push(['کل',meta.peopleCount||0,totals.totalEventDays||0,totals.workingEventDays||0,totals.nonWorkingEventDays||0,totals.leaveDaily||0,Number(totals.leaveHourly||0).toFixed(2),totals.missionIn||0,totals.missionOut||0,totals.training||0,totals.other||0,totals.eventCount||0].map(csvCell).join(','));
+  lines.push('');lines.push(['خلاصه افراد','کارمند','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','مأموریت داخل استان','مأموریت خارج استان','دوره آموزشی','سایر','روز کاری رویدادها','روز غیرکاری رویدادها','مجموع روز رویداد','تعداد رویداد'].map(csvCell).join(','));
+  attendanceReportRows.forEach(o=>lines.push(['خلاصه',o.person.firstName+' '+o.person.lastName,o.leave_daily,o.leave_hourly.toFixed(2),o.mission_in,o.mission_out,o.training,o.other,o.workingEventDays,o.nonWorkingEventDays,o.totalEventDays,(o.events||[]).length].map(csvCell).join(',')));
+  lines.push('');lines.push(['جزئیات روزانه','کارمند','نوع رویداد','تاریخ','نوع روز','ساعت/بازه','مدت','شرح'].map(csvCell).join(','));
   attendanceReportRows.forEach(o=>(o.events||[]).forEach(e=>{
     var from=(attendanceReportMeta||{}).from||val('att_report_from'),to=(attendanceReportMeta||{}).to||val('att_report_to');
-    var a=jalaliToTimestamp(e.start_date)<jalaliToTimestamp(from)?from:e.start_date,b=jalaliToTimestamp(e.end_date)>jalaliToTimestamp(to)?to:e.end_date;
-    lines.push(['جزئیات',o.person.firstName+' '+o.person.lastName,ATT_TYPES[e.event_type]||e.event_type,a,b,normalizeTime(e.start_time),normalizeTime(e.end_time),e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':eventCalendarDays(e,from,to)+' روز تقویمی',e.description||''].map(csvCell).join(','));
+    expandAttendanceEventDays(e,from,to).forEach(d=>{
+      var duration=e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':'۱ روز تقویمی';
+      lines.push(['جزئیات',o.person.firstName+' '+o.person.lastName,ATT_TYPES[e.event_type]||e.event_type,d.date,d.dayLabel,d.timeLabel,duration,e.description||''].map(csvCell).join(','));
+    });
   }));
   var blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='attendance-dashboard-'+getTodayJalali().replaceAll('/','-')+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }

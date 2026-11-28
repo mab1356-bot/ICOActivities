@@ -122,20 +122,24 @@
         <input type="hidden" id="att_event_id">
         <div class="form-row">
           <div class="form-group"><label for="att_type">نوع رویداد</label><select id="att_type"><option value="leave_daily">مرخصی روزانه</option><option value="leave_hourly">مرخصی ساعتی</option><option value="mission_in">مأموریت داخل استان</option><option value="mission_out">مأموریت خارج استان</option><option value="training">دوره آموزشی</option><option value="other">سایر موارد</option></select></div>
-          <div class="form-group"><label for="att_start_date">تاریخ شروع (شمسی)</label><input id="att_start_date" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
-          <div class="form-group" id="att_end_date_group"><label for="att_end_date">تاریخ پایان (شمسی)</label><input id="att_end_date" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
         </div>
-        <div class="form-row att-time-row" id="att_time_row">
-          <div class="form-group"><label for="att_start_time">ساعت شروع</label><input id="att_start_time" type="time" step="60"></div>
-          <div class="form-group"><label for="att_end_time">ساعت پایان</label><input id="att_end_time" type="time" step="60"></div>
-          <p class="att-time-hint" id="att_time_hint">برای مرخصی ساعتی الزامی است؛ برای سایر رویدادها در صورت نیاز وارد کنید.</p>
+        <div id="att_time_row">
+          <div class="form-row att-datetime-row">
+            <div class="form-group"><label for="att_start_date">تاریخ شروع (شمسی)</label><input id="att_start_date" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
+            <div class="form-group"><label for="att_start_time">ساعت شروع (۲۴ ساعته)</label><input id="att_start_time" type="time" step="60" lang="en-GB"></div>
+          </div>
+          <div class="form-row att-datetime-row">
+            <div class="form-group" id="att_end_date_group"><label for="att_end_date">تاریخ پایان (شمسی)</label><input id="att_end_date" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
+            <div class="form-group"><label for="att_end_time">ساعت پایان (۲۴ ساعته)</label><input id="att_end_time" type="time" step="60" lang="en-GB"></div>
+          </div>
+          <p class="att-time-hint" id="att_time_hint">برای رویداد چندروزه، ساعت شروع مربوط به تاریخ شروع و ساعت پایان مربوط به تاریخ پایان است.</p>
         </div>
         <div class="form-group"><label for="att_description">شرح (مقصد، عنوان، توضیحات و ...)</label><textarea id="att_description" rows="3" placeholder="شرح رویداد را وارد کنید..."></textarea></div>
         <div class="attendance-form-actions"><button class="btn btn-success" id="btn_att_save">ثبت رویداد</button><button class="btn btn-secondary" id="btn_att_reset">پاک کردن فرم</button></div>
         <div id="att_form_message" class="alert" role="status"></div>
       </section>
       <section id="att_panel_history" class="attendance-panel hidden"><div class="attendance-panel-heading"><h3>سوابق رویدادهای من</h3><button class="btn btn-secondary btn-sm" id="btn_att_refresh">بروزرسانی</button></div><div id="att_my_events" class="table-wrap"></div></section>
-      <section id="att_panel_report" class="attendance-panel hidden"><h3>داشبورد مدیریتی عدم حضور</h3><p class="hint">این داشبورد فقط برای ادمین و سوپر ادمین قابل مشاهده است؛ جزئیات هر فرد با باز کردن ردیف مربوط نمایش داده می‌شود.</p><div class="form-row">
+      <section id="att_panel_report" class="attendance-panel hidden"><h3>داشبورد مدیریتی عدم حضور</h3><p class="hint">این داشبورد فقط برای ادمین و سوپر ادمین قابل مشاهده است؛ بازه‌های چندروزه در جزئیات به تفکیک هر تاریخ و بر اساس روز کاری یا غیرکاری نمایش داده می‌شوند.</p><div class="form-row">
         <div class="form-group"><label for="att_report_from">از تاریخ</label><input id="att_report_from" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
         <div class="form-group"><label for="att_report_to">تا تاریخ</label><input id="att_report_to" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۳۰"></div>
         <div class="form-group"><label for="att_report_person">کارمند</label><select id="att_report_person"><option value="">همه کارکنان</option></select></div>
