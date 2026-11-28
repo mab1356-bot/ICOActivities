@@ -23,6 +23,8 @@ function getSession(){try{return JSON.parse(sessionStorage.getItem('actbk_sessio
 function setSession(s){sessionStorage.setItem('actbk_session',JSON.stringify(s))}
 function clearSession(){sessionStorage.removeItem('actbk_session')}
 function isPriv(){var s=getSession();return !!s&&(s.role==='admin'||s.role==='manager'||s.role==='superadmin')}
+// فقط ادمین و سوپر ادمین مجاز به مشاهده وضعیت عدم حضور سایر کارکنان هستند.
+function isAttendanceReportAdmin(){var s=getSession();return !!s&&(s.role==='admin'||s.role==='superadmin')}
 
 const THEME_KEY='actbk_theme';
 function initTheme(){var t=localStorage.getItem(THEME_KEY)||'light';document.documentElement.setAttribute('data-theme',t);var b=$('themeBtn');if(b)b.textContent=t==='dark'?'☀️':'🌙'}
@@ -247,6 +249,7 @@ function refreshDropdowns(){
 }
 
 function showSection(id){
+  lastActivitySection=id;
   closePopups();
   var cards=document.querySelectorAll('.content > div.card'),i;
   for(i=0;i<cards.length;i++)cards[i].classList.add('hidden');
@@ -1857,6 +1860,7 @@ async function handleLogin(){
   if (person.must_change_password) { 
     location.reload(); 
   } else {
+    await loadModuleCatalog();await loadModuleAccess();
     var initialSync=await syncFromCloud(false);
     if(!initialSync.ok){
       await dbClient.auth.signOut();clearSession();
@@ -2070,7 +2074,7 @@ async function startApp(){
   $('login_modal').style.display='none';
   $('main_app').style.display='block';
   
-  await seedImportance();
+  if(getVisibleModules().some(m=>m.id==='activities'))await seedImportance();
   refreshDropdowns();applyPermissions();
   var today=getTodayJalali().split('/');
   $('cal_year').value=parseInt(today[0],10);$('cal_month').value=parseInt(today[1],10);$('h_default_year').value=parseInt(today[0],10);
@@ -2081,6 +2085,8 @@ async function startApp(){
   if(!$('rec_to').value)$('rec_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
   if(!$('rep_from').value)$('rep_from').value=fmtJalali(tp[0],tp[1],1);
   if(!$('rep_to').value)$('rep_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
+  if($('att_report_from'))$('att_report_from').value=fmtJalali(tp[0],tp[1],1);
+  if($('att_report_to'))$('att_report_to').value=fmtJalali(tp[0],tp[1],jalaliMonthLength(tp[0],tp[1]));
   
   populateParticipants();renderPersons();renderImportance();renderLocations();
   
@@ -2093,7 +2099,7 @@ async function startApp(){
   
   renderCalendar(); updateCalculatedHours(); updatePlanningBadge();
   startIdleWatch();
-  showSection('calendar');
+  updateModuleLabels();await showModuleHome();
 }
 async function seedImportance(){
   if(localStorage.getItem('actbk_importance_seeded'))return;
@@ -2101,7 +2107,369 @@ async function seedImportance(){
   localStorage.setItem('actbk_importance_seeded','1');
 }
 
+
+/* ================================================================
+   نسخه ۵ — درگاه مرکزی، مدیریت ماژول‌ها و ماژول ثبت عدم حضور
+   ================================================================ */
+const MODULE_DEFAULTS=[
+  {id:'activities',title:'ثبت فعالیت',description:'ثبت، پیگیری و گزارش فعالیت‌های ماهانه',icon:'📋',route:'activities'},
+  {id:'attendance',title:'ثبت عدم حضور',description:'مرخصی، مأموریت، دوره آموزشی و سایر رویدادها',icon:'📅',route:'attendance'}
+];
+const ATT_TYPES={
+  leave_daily:'مرخصی روزانه',leave_hourly:'مرخصی ساعتی',mission_in:'مأموریت داخل استان',
+  mission_out:'مأموریت خارج استان',training:'دوره آموزشی',other:'سایر موارد'
+};
+let moduleCatalog=MODULE_DEFAULTS.map(x=>Object.assign({},x));
+let moduleAccessRows=[];
+let moduleAccessLoaded=false;
+let activityCacheCleared=false;
+let attendanceCache=[];
+let attendanceReportRows=[];
+let attendanceReportMeta=null;
+let attendanceActiveTab='form';
+let attendanceInitialized=false;
+let lastActivitySection='calendar';
+let activeModuleId='';
+
+// نام‌های نمایشی را از جدول مرکزی می‌خواند؛ در نبود مهاجرت، نام‌های پیش‌فرض حفظ می‌شوند.
+async function loadModuleCatalog(){
+  if(!dbClient||!navigator.onLine)return;
+  try{
+    const {data,error}=await dbClient.from('app_modules').select('id,display_name,description,icon,sort_order,is_enabled').eq('is_enabled',true).order('sort_order',{ascending:true});
+    if(error){console.warn('[Modules] catalog:',error.message);return}
+    (data||[]).forEach(row=>{var m=moduleCatalog.find(x=>x.id===row.id);if(!m){m={id:row.id,title:row.display_name||row.id,description:row.description||'ماژول سامانه',icon:row.icon||'🧩',route:row.id};moduleCatalog.push(m)}else{if(row.display_name)m.title=row.display_name;if(row.description)m.description=row.description;if(row.icon)m.icon=row.icon}});
+    moduleCatalog=moduleCatalog.filter(m=>(data||[]).some(row=>row.id===m.id)).sort((a,b)=>{var x=(data||[]).find(r=>r.id===a.id),y=(data||[]).find(r=>r.id===b.id);return (x?x.sort_order:100)-(y?y.sort_order:100)});
+  }catch(e){console.warn('[Modules] catalog unavailable:',e.message)}
+}
+
+// نبود رکورد دسترسی به معنی فعال بودن ماژول است؛ سوپر ادمین همیشه دسترسی کامل دارد.
+async function loadModuleAccess(){
+  if(!dbClient||!navigator.onLine)return
+  try{var {data,error}=await dbClient.from('person_module_access').select('person_id,module_id,enabled');if(error)throw error;moduleAccessRows=data||[];moduleAccessLoaded=true;var s=getSession();if(s&&!getVisibleModules().some(m=>m.id==='activities')){[KEYS.acts,KEYS.topics,KEYS.importance,KEYS.planning,KEYS.locations].forEach(k=>localStorage.removeItem(k));activityCacheCleared=true}if(s&&!getVisibleModules().some(m=>m.id==='attendance'))attendanceCache=[]}
+  catch(e){moduleAccessRows=[];moduleAccessLoaded=false;console.warn('[Modules] access list:',e.message)}
+}
+function hasModuleAccess(personId,moduleId){var row=moduleAccessRows.find(x=>x.person_id===personId&&x.module_id===moduleId);return row?row.enabled!==false:true}
+function getVisibleModules(){var s=getSession();if(!s)return[];if(s.role==='superadmin')return moduleCatalog;if(!moduleAccessLoaded)return[];return moduleCatalog.filter(m=>hasModuleAccess(s.personId,m.id))}
+
+// صفحه درگاه مرکزی را متناسب با مجوز کاربر می‌سازد.
+function renderModuleHome(){
+  var s=getSession();if(!s)return;
+  var user=$('module_home_user');if(user)user.textContent=s.name;
+  var q=val('module_search').toLocaleLowerCase('fa');
+  var c=$('module_cards');if(!c)return;
+  var visibleModules=getVisibleModules(),visibleIds=visibleModules.map(m=>m.id);
+  var favorites=readModuleList('actbk_module_favorites').filter(id=>visibleIds.includes(id)),recent=readModuleList('actbk_module_recent').filter(id=>visibleIds.includes(id));
+  var shortcutHtml='';
+  if(favorites.length)shortcutHtml+='<div class="module-shortcut-group"><b>علاقه‌مندی‌ها</b>'+favorites.map(id=>visibleModules.find(x=>x.id===id)).filter(Boolean).map(m=>'<button data-open-module="'+esc(m.id)+'">'+esc(m.icon)+' '+esc(m.title)+'</button>').join('')+'</div>';
+  if(recent.length)shortcutHtml+='<div class="module-shortcut-group"><b>ماژول‌های اخیر</b>'+recent.map(id=>visibleModules.find(x=>x.id===id)).filter(Boolean).map(m=>'<button data-open-module="'+esc(m.id)+'">'+esc(m.icon)+' '+esc(m.title)+'</button>').join('')+'</div>';
+  $('module_shortcuts').innerHTML=shortcutHtml;
+  c.innerHTML=visibleModules.filter(m=>(m.title+' '+m.description).toLocaleLowerCase('fa').includes(q)).map(m=>
+    '<div class="module-card" role="button" tabindex="0" data-open-module="'+esc(m.id)+'"><button type="button" class="module-favorite '+(favorites.includes(m.id)?'is-favorite':'')+'" data-fav-module="'+esc(m.id)+'" aria-label="افزودن به علاقه‌مندی‌ها">'+(favorites.includes(m.id)?'★':'☆')+'</button><span class="module-card-icon">'+esc(m.icon)+'</span><strong>'+esc(m.title)+'</strong><small>'+esc(m.description)+'</small><span class="module-open-label">ورود به ماژول ←</span></div>'
+  ).join('')||(visibleModules.length?'<p class="hint">ماژولی با این عبارت پیدا نشد.</p>':'<p class="hint">برای حساب کاربری شما هنوز ماژولی فعال نشده است. با مدیر سامانه تماس بگیرید.</p>');
+  var admin=$('module_admin_panel');if(admin)admin.classList.toggle('hidden',s.role!=='superadmin');
+  if(s.role==='superadmin'){renderModuleAdminList();renderModuleAccessAdminList();if(!moduleAccessLoaded)moduleNotify('برای فعال شدن مدیریت دسترسی ماژول‌ها، ابتدا مهاجرت SQL نسخه ۵ را اجرا کنید.','error')}
+  else if(!moduleAccessLoaded)moduleNotify('دریافت مجوزهای ماژول ناموفق است؛ با مدیر سامانه تماس بگیرید.','error');
+}
+
+// فهرست ویرایش عنوان ماژول‌ها را فقط برای سوپر ادمین نمایش می‌دهد.
+function renderModuleAdminList(){
+  var c=$('module_admin_list');if(!c)return;
+  c.innerHTML=moduleCatalog.map(m=>'<div class="module-admin-row"><strong>'+esc(m.title)+'</strong><input type="text" maxlength="60" data-module-title="'+esc(m.id)+'" value="'+esc(m.title)+'"><button class="btn btn-success btn-sm" data-save-module-title="'+esc(m.id)+'">ذخیره عنوان</button></div>').join('');
+}
+
+// ماتریس دسترسی کارکنان را فقط برای سوپر ادمین نمایش می‌دهد.
+function renderModuleAccessAdminList(){
+  var c=$('module_access_admin_list');if(!c)return;
+  if(!moduleAccessLoaded){c.innerHTML='<p class="hint">جدول دسترسی ماژول‌ها در دسترس نیست؛ مهاجرت SQL نسخه ۵ را اجرا یا اتصال را بررسی کنید.</p>';return}
+  var persons=sortPersonsById(getData(KEYS.persons)),s=getSession();
+  if(!persons.length){c.innerHTML='<p class="hint">کاربری برای نمایش وجود ندارد.</p>';return}
+  var html='<table><thead><tr><th>کارمند</th>'+moduleCatalog.map(m=>'<th>'+esc(m.title)+'</th>').join('')+'</tr></thead><tbody>';
+  persons.forEach(p=>{html+='<tr><td>'+esc(p.firstName+' '+p.lastName)+'</td>'+moduleCatalog.map(m=>'<td><label class="module-access-check"><input type="checkbox" data-module-access-person="'+esc(p.id)+'" data-module-access-id="'+esc(m.id)+'" '+((p.role==='superadmin'||hasModuleAccess(p.id,m.id))?'checked':'')+' '+(p.role==='superadmin'?'disabled':'')+'><span>'+((p.role==='superadmin'||hasModuleAccess(p.id,m.id))?'فعال':'غیرفعال')+'</span></label></td>').join('')+'</tr>'});
+  c.innerHTML=html+'</tbody></table>';
+}
+
+// ذخیره تغییر دسترسی در دیتابیس؛ RLS فقط به سوپر ادمین اجازه مدیریت می‌دهد.
+async function savePersonModuleAccess(personId,moduleId,enabled){
+  var s=getSession();if(!s||s.role!=='superadmin'){renderModuleAccessAdminList();return}
+  var person=getData(KEYS.persons).find(p=>p.id===personId);if(!person||person.role==='superadmin'){renderModuleAccessAdminList();return}
+  var {error}=await dbClient.from('person_module_access').upsert({person_id:personId,module_id:moduleId,enabled:enabled,updated_at:new Date().toISOString()},{onConflict:'person_id,module_id'});
+  if(error){moduleNotify('ذخیره دسترسی ناموفق بود. مهاجرت SQL نسخه ۵ را بررسی کنید.','error');console.error(error);renderModuleAccessAdminList();return}
+  var old=moduleAccessRows.find(x=>x.person_id===personId&&x.module_id===moduleId);
+  if(old)old.enabled=enabled;else moduleAccessRows.push({person_id:personId,module_id:moduleId,enabled:enabled});
+  renderModuleAccessAdminList();moduleNotify('دسترسی ماژول به‌روزرسانی شد.','success');
+}
+
+// تغییر عنوان ماژول را با کنترل دسترسی سمت سرور در جدول app_modules ذخیره می‌کند.
+async function saveModuleTitle(id){
+  var s=getSession();if(!s||s.role!=='superadmin'){moduleNotify('فقط سوپر ادمین مجاز است.','error');return}
+  var input=document.querySelector('[data-module-title="'+id+'"]'),title=input?input.value.trim():'';
+  if(!title||title.length>60){moduleNotify('عنوان باید بین ۱ تا ۶۰ نویسه باشد.','error');return}
+  var {error}=await dbClient.from('app_modules').update({display_name:title}).eq('id',id);
+  if(error){moduleNotify('ذخیره عنوان ناموفق بود. ابتدا مهاجرت SQL نسخه ۵ را اجرا کنید.','error');console.error(error);return}
+  var m=moduleCatalog.find(x=>x.id===id);if(m)m.title=title;
+  renderModuleHome();updateModuleLabels();moduleNotify('عنوان ماژول ذخیره شد.','success');
+}
+
+// عنوان ماژول انتخاب‌شده را در سربرگ و کارت‌ها همگام می‌کند.
+function moduleNotify(message,type){var box=$('module_home_message');if(box){box.textContent=message;box.className='alert '+(type==='error'?'alert-error':'alert-success');box.style.display='block'}}
+function updateModuleLabels(){var m=moduleCatalog.find(x=>x.id==='attendance');if(m&&$('attendance_module_title'))$('attendance_module_title').textContent=m.title}
+
+// بین درگاه مرکزی و ماژول‌ها جابه‌جا می‌شود؛ نشست کاربر دست‌نخورده باقی می‌ماند.
+function readModuleList(key){try{var a=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+function toggleModuleFavorite(id){var a=readModuleList('actbk_module_favorites'),i=a.indexOf(id);if(i>=0)a.splice(i,1);else a.unshift(id);localStorage.setItem('actbk_module_favorites',JSON.stringify(a));renderModuleHome()}
+function rememberModule(id){var a=readModuleList('actbk_module_recent').filter(x=>x!==id);a.unshift(id);localStorage.setItem('actbk_module_recent',JSON.stringify(a.slice(0,5)))}
+
+// پنل جابه‌جایی سریع را از هر ماژول، بدون بازگشت اجباری به صفحه اصلی، باز و بسته می‌کند.
+function closeModuleSwitcher(){var panel=$('module_switcher_panel');if(panel)panel.classList.add('hidden')}
+async function toggleModuleSwitcher(){
+  var panel=$('module_switcher_panel');if(!panel)return;
+  await loadModuleCatalog();await loadModuleAccess();updateModuleLabels();
+  if(activeModuleId&&!getVisibleModules().some(m=>m.id===activeModuleId)){attendanceCache=[];await showModuleHome();return}
+  if(!panel.classList.contains('hidden')){closeModuleSwitcher();return}
+  var modules=getVisibleModules(),favorites=readModuleList('actbk_module_favorites'),recent=readModuleList('actbk_module_recent');
+  var quick=[];favorites.concat(recent).forEach(id=>{if(id!==activeModuleId&&!quick.includes(id)&&modules.some(m=>m.id===id))quick.push(id)});
+  if(!quick.length)quick=modules.filter(m=>m.id!==activeModuleId).map(m=>m.id).slice(0,6);
+  quick=quick.slice(0,6);
+  panel.innerHTML='<div class="module-switcher-heading"><strong>جابه‌جایی سریع</strong><button type="button" class="btn-icon" data-close-module-switcher aria-label="بستن">×</button></div>'+(quick.length?quick.map(id=>{var m=modules.find(x=>x.id===id);return '<button type="button" class="module-switcher-item" data-switch-to-module="'+esc(m.id)+'">'+esc(m.icon)+' <span>'+esc(m.title)+'</span><small>ورود</small></button>'}).join(''):'<p class="hint">ماژول دیگری برای جابه‌جایی وجود ندارد.</p>')+'<button type="button" class="module-switcher-all" data-open-module-home>مشاهده همه ماژول‌ها و جستجو ←</button>';
+  panel.classList.remove('hidden');
+}
+
+async function showModuleHome(){
+  await loadModuleCatalog();await loadModuleAccess();updateModuleLabels();
+  closeModuleSwitcher();activeModuleId='';
+  if($('att_module_message'))$('att_module_message').style.display='none';
+  $('module_home').classList.remove('hidden');$('attendance_module').classList.add('hidden');$('activity_module_shell').style.display='none';
+  renderModuleHome();window.scrollTo({top:0,behavior:'smooth'});
+}
+async function openModule(id){
+  closeModuleSwitcher();
+  if($('module_home_message'))$('module_home_message').style.display='none';
+  if(!getVisibleModules().some(m=>m.id===id)){moduleNotify('شما به این ماژول دسترسی ندارید.','error');return}
+  if(id!=='activities'&&id!=='attendance'){moduleNotify('این ماژول در فهرست سامانه ثبت شده، اما مسیر اجرایی آن هنوز به برنامه اضافه نشده است.','error');return}
+  rememberModule(id);activeModuleId=id;
+  if(id==='activities'){
+    $('module_home').classList.add('hidden');$('attendance_module').classList.add('hidden');$('activity_module_shell').style.display='';
+    if(activityCacheCleared){var refresh=await syncFromCloud(false);if(refresh.ok)activityCacheCleared=false;else showAlert('همگام‌سازی ماژول ثبت فعالیت ناموفق بود.','error')}
+    showSection(lastActivitySection||'calendar');
+  }else if(id==='attendance'){
+    $('module_home').classList.add('hidden');$('activity_module_shell').style.display='none';$('attendance_module').classList.remove('hidden');
+    var s=getSession();$('attendance_user_name').textContent=s?s.name:'';
+    $('att_report_tab').classList.toggle('hidden',!isAttendanceReportAdmin());
+    updateModuleLabels();if(!attendanceInitialized){resetAttendanceForm();attendanceInitialized=true}
+    loadAttendanceEvents().then(()=>{renderAttendanceHistory();if(isAttendanceReportAdmin())populateAttendanceReportPeople()});
+    setAttendanceTab(attendanceActiveTab||'form');window.scrollTo({top:0,behavior:'smooth'});
+  }
+}
+
+// تب‌های داخلی ماژول عدم حضور را جابه‌جا می‌کند.
+function setAttendanceTab(tab){
+  if(tab==='report'&&!isAttendanceReportAdmin()){attendanceMessage('دسترسی گزارش مدیریتی ندارید.','error');return}
+  attendanceActiveTab=tab;
+  ['form','history','report'].forEach(k=>{var panel=$('att_panel_'+k),button=document.querySelector('[data-att-tab="'+k+'"]');if(panel)panel.classList.toggle('hidden',k!==tab);if(button)button.classList.toggle('active',k===tab)});
+  if(tab==='history')loadAttendanceEvents().then(renderAttendanceHistory);
+  if(tab==='report'&&isAttendanceReportAdmin())populateAttendanceReportPeople();
+}
+
+function showAttendanceTypeFields(){
+  var hourly=val('att_type')==='leave_hourly';
+  $('att_time_row').style.display=hourly?'':'none';$('att_end_date_group').style.display=hourly?'none':'';
+  if(hourly)$('att_end_date').value=val('att_start_date');
+}
+function resetAttendanceForm(){
+  ['att_event_id','att_description','att_start_time','att_end_time'].forEach(id=>{if($(id))$(id).value=''});
+  $('att_type').value='leave_daily';$('att_start_date').value=getTodayJalali();$('att_end_date').value=getTodayJalali();
+  $('btn_att_save').textContent='ثبت رویداد';$('att_form_message').style.display='none';showAttendanceTypeFields();
+}
+function attendanceMessage(message,type){var box=$('att_module_message');if(!box)return;box.textContent=message;box.className='alert '+(type==='error'?'alert-error':'alert-success');box.style.display='block'}
+
+// رویدادهای مجاز را از Supabase می‌خواند؛ RLS تعیین می‌کند کاربر چه ردیف‌هایی ببیند.
+async function loadAttendanceEvents(){
+  if(!dbClient||!navigator.onLine){attendanceMessage('برای دریافت اطلاعات به اتصال اینترنت نیاز است.','error');return false}
+  try{
+    var {data,error}=await dbClient.from('attendance_events').select('*').order('start_date',{ascending:false});
+    if(error)throw error;attendanceCache=data||[];return true;
+  }catch(e){console.error('[Attendance] load:',e);attendanceMessage('دریافت رویدادها ناموفق بود. مهاجرت SQL نسخه ۵ و سیاست‌های دسترسی را بررسی کنید.','error');return false}
+}
+
+// تاریخ‌های جلالی و قواعد نوع رویداد را پیش از ارسال به دیتابیس اعتبارسنجی می‌کند.
+function validateAttendanceForm(){
+  var type=val('att_type'),start=val('att_start_date'),end=type==='leave_hourly'?start:val('att_end_date');
+  if(!Object.prototype.hasOwnProperty.call(ATT_TYPES,type)){attendanceMessage('نوع رویداد معتبر نیست.','error');return null}
+  if(!isValidJalaliDate(start)||!isValidJalaliDate(end)){attendanceMessage('تاریخ شروع یا پایان معتبر نیست.','error');return null}
+  if(jalaliToTimestamp(end)<jalaliToTimestamp(start)){attendanceMessage('تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.','error');return null}
+  var st=null,et=null;
+  if(type==='leave_hourly'){
+    st=val('att_start_time');et=val('att_end_time');
+    if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(st)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(et)||et<=st){attendanceMessage('برای مرخصی ساعتی، ساعت شروع و پایان معتبر و پایان بعد از شروع الزامی است.','error');return null}
+  }
+  var normalized={event_type:type,start_date:normJ(start),end_date:normJ(end),start_time:st,end_time:et,description:val('att_description')};
+  var editing=val('att_event_id'),self=getSession().personId;
+  var conflict=attendanceCache.find(function(old){
+    if(old.person_id!==self||old.id===editing)return false;
+    var overlap=jalaliToTimestamp(normalized.start_date)<=jalaliToTimestamp(old.end_date)&&jalaliToTimestamp(normalized.end_date)>=jalaliToTimestamp(old.start_date);
+    if(!overlap)return false;
+    if(normalized.event_type==='leave_hourly'&&old.event_type==='leave_hourly')return !(timeToMinutes(normalized.end_time)<=timeToMinutes(old.start_time)||timeToMinutes(normalized.start_time)>=timeToMinutes(old.end_time));
+    return true;
+  });
+  if(conflict){attendanceMessage('برای این بازه رویداد دیگری ثبت شده است. ابتدا سوابق را بررسی کنید.','error');return null}
+  return normalized;
+}
+
+// رویداد را فقط با شناسه پرسنلی نشست جاری ثبت یا ویرایش می‌کند؛ انتخاب شخص دیگر در فرم وجود ندارد.
+async function saveAttendanceEvent(){
+  var session=getSession();if(!session)return;
+  if(!dbClient||!navigator.onLine){attendanceMessage('اتصال به سرور برقرار نیست.','error');return}
+  if(!(await loadAttendanceEvents()))return;
+  var payload=validateAttendanceForm();if(!payload)return;
+  var id=val('att_event_id'),result;
+  if(id)result=await dbClient.from('attendance_events').update(payload).eq('id',id);
+  else result=await dbClient.from('attendance_events').insert(Object.assign({id:genId('att_'),person_id:session.personId},payload));
+  if(result.error){console.error('[Attendance] save:',result.error);attendanceMessage('ثبت رویداد ناموفق بود: '+result.error.message,'error');return}
+  resetAttendanceForm();await loadAttendanceEvents();renderAttendanceHistory();attendanceMessage(id?'رویداد ویرایش شد.':'رویداد با موفقیت ثبت شد.','success');
+}
+
+// فرم را با اطلاعات رویداد متعلق به خود کاربر برای ویرایش پر می‌کند.
+function editAttendanceEvent(id){
+  var row=attendanceCache.find(x=>x.id===id);if(!row||row.person_id!==getSession().personId){attendanceMessage('فقط رویدادهای خودتان قابل ویرایش است.','error');return}
+  $('att_event_id').value=row.id;$('att_type').value=row.event_type;$('att_start_date').value=row.start_date;$('att_end_date').value=row.end_date;
+  $('att_start_time').value=normalizeTime(row.start_time);$('att_end_time').value=normalizeTime(row.end_time);$('att_description').value=row.description||'';
+  $('btn_att_save').textContent='ذخیره تغییرات';showAttendanceTypeFields();setAttendanceTab('form');window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// حذف رویداد متعلق به کاربر جاری را درخواست می‌کند؛ RLS محدودیت نهایی را اعمال می‌کند.
+async function deleteAttendanceEvent(id){
+  var row=attendanceCache.find(x=>x.id===id);if(!row||row.person_id!==getSession().personId)return;
+  if(!confirm('رویداد انتخاب‌شده حذف شود؟'))return;
+  var {error}=await dbClient.from('attendance_events').delete().eq('id',id);
+  if(error){attendanceMessage('حذف رویداد ناموفق بود: '+error.message,'error');return}
+  await loadAttendanceEvents();renderAttendanceHistory();attendanceMessage('رویداد حذف شد.','success');
+}
+
+function renderAttendanceHistory(){
+  var c=$('att_my_events');if(!c)return;var self=getSession().personId;
+  var rows=attendanceCache.filter(x=>x.person_id===self).sort((a,b)=>jalaliToTimestamp(b.start_date)-jalaliToTimestamp(a.start_date));
+  if(!rows.length){c.innerHTML='<p class="hint">هنوز رویدادی ثبت نکرده‌اید.</p>';return}
+  c.innerHTML='<table><thead><tr><th>نوع رویداد</th><th>از تاریخ</th><th>تا تاریخ</th><th>ساعت</th><th>شرح</th><th>عملیات</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(ATT_TYPES[x.event_type]||x.event_type)+'</td><td>'+esc(x.start_date)+'</td><td>'+esc(x.end_date)+'</td><td>'+esc(x.start_time?normalizeTime(x.start_time)+' تا '+normalizeTime(x.end_time):'—')+'</td><td>'+esc(x.description||'—')+'</td><td><div class="att-event-actions"><button class="btn btn-warning btn-sm" data-att-edit="'+esc(x.id)+'">ویرایش</button><button class="btn btn-danger btn-sm" data-att-delete="'+esc(x.id)+'">حذف</button></div></td></tr>').join('')+'</tbody></table>';
+}
+
+// فهرست کارکنان را برای فیلتر گزارش مدیر از داده‌های همگام‌شده سامانه پر می‌کند.
+function populateAttendanceReportPeople(){
+  if(!isAttendanceReportAdmin())return;
+  var el=$('att_report_person');if(!el)return;var old=el.value;
+  el.innerHTML='<option value="">همه کارکنان</option>'+sortPersonsById(getData(KEYS.persons)).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.firstName+' '+p.lastName)+'</option>').join('');
+  if(old&&Array.from(el.options).some(o=>o.value===old))el.value=old;
+}
+function countAttendanceWorkdays(from,to){
+  var count=0,holidays=new Set(getData(KEYS.holidays).map(x=>x.date));
+  for(var d=from,guard=0;jalaliToTimestamp(d)<=jalaliToTimestamp(to)&&guard<4000;d=addDaysStr(d,1),guard++){
+    var p=parseJalali(d),dow=getJalaliDayOfWeek(p.jy,p.jm,p.jd);if(dow>=0&&dow<=4&&!holidays.has(d))count++;
+  }return count;
+}
+function eventWorkdays(row,from,to){
+  var start=jalaliToTimestamp(row.start_date),end=jalaliToTimestamp(row.end_date),lo=jalaliToTimestamp(from),hi=jalaliToTimestamp(to);
+  if(end<lo||start>hi||row.event_type==='leave_hourly')return 0;
+  var a=start<lo?from:row.start_date,b=end>hi?to:row.end_date,count=0,holidays=new Set(getData(KEYS.holidays).map(x=>x.date));
+  for(var d=a,guard=0;jalaliToTimestamp(d)<=jalaliToTimestamp(b)&&guard<4000;d=addDaysStr(d,1),guard++){
+    var p=parseJalali(d),dow=getJalaliDayOfWeek(p.jy,p.jm,p.jd);if(dow<=4&&!holidays.has(d))count++;
+  }return count;
+}
+// زمان‌های PostgreSQL ممکن است به‌شکل HH:mm:ss برگردند؛ محاسبه را بر مبنای HH:mm انجام می‌دهیم.
+function timeToMinutes(value){var p=String(value||'').slice(0,5).split(':').map(Number);return p.length===2&&p.every(Number.isFinite)?p[0]*60+p[1]:0}
+function normalizeTime(value){return value?String(value).slice(0,5):''}
+function hoursBetween(start,end){return (timeToMinutes(end)-timeToMinutes(start))/60}
+
+// داشبورد عدم حضور را فقط برای ادمین و سوپر ادمین، در سه سطح کل، افراد و جزئیات تاریخ‌دار می‌سازد.
+async function generateAttendanceReport(){
+  if(!isAttendanceReportAdmin()){attendanceMessage('مشاهده گزارش عدم حضور سایر کارکنان فقط برای ادمین و سوپر ادمین مجاز است.','error');return}
+  var from=val('att_report_from'),to=val('att_report_to'),person=val('att_report_person');
+  if(!isValidJalaliDate(from)||!isValidJalaliDate(to)||jalaliToTimestamp(to)<jalaliToTimestamp(from)){attendanceMessage('بازه گزارش معتبر نیست.','error');return}
+  if(!(await loadAttendanceEvents()))return;
+  var persons=getData(KEYS.persons).filter(p=>!person||p.id===person),personIds=new Set(persons.map(p=>p.id));
+  var rows=attendanceCache.filter(e=>personIds.has(e.person_id)&&jalaliToTimestamp(e.start_date)<=jalaliToTimestamp(to)&&jalaliToTimestamp(e.end_date)>=jalaliToTimestamp(from));
+  var workingPerPerson=countAttendanceWorkdays(from,to),summary={leave_daily:0,leave_hourly:0,mission_in:0,mission_out:0,training:0,other:0,presence:0};
+  rows.forEach(e=>{if(e.event_type==='leave_hourly')summary.leave_hourly+=hoursBetween(e.start_time,e.end_time);else summary[e.event_type]=(summary[e.event_type]||0)+eventWorkdays(e,from,to)});
+  var totalsByPerson=persons.map(p=>{
+    var pr=rows.filter(e=>e.person_id===p.id),o={person:p,leave_daily:0,leave_hourly:0,mission_in:0,mission_out:0,training:0,other:0};
+    pr.forEach(e=>{if(e.event_type==='leave_hourly')o.leave_hourly+=hoursBetween(e.start_time,e.end_time);else o[e.event_type]=(o[e.event_type]||0)+eventWorkdays(e,from,to)});
+    var nonPresence=o.leave_daily+o.mission_in+o.mission_out+o.training+o.other;
+    o.presence=Math.max(0,workingPerPerson-nonPresence);o.events=pr.sort((a,b)=>jalaliToTimestamp(a.start_date)-jalaliToTimestamp(b.start_date));
+    o.nonPresence=nonPresence;return o;
+  });
+  attendanceReportRows=totalsByPerson;
+  summary.presence=totalsByPerson.reduce((sum,o)=>sum+o.presence,0);
+  var sumDays=key=>totalsByPerson.reduce((sum,o)=>sum+(o[key]||0),0);
+  var totalWorking=workingPerPerson*persons.length;
+  var totalNonPresence=sumDays('leave_daily')+sumDays('mission_in')+sumDays('mission_out')+sumDays('training')+sumDays('other');
+  var missionDays=sumDays('mission_in')+sumDays('mission_out');
+  var summaryItems=[
+    ['تعداد افراد',persons.length+' نفر'],['روزهای کاری دوره',totalWorking+' روز'],['حضور عادی',summary.presence+' روز'],
+    ['کل روزهای عدم حضور/ماموریت/آموزش',totalNonPresence+' روز'],['مرخصی روزانه',sumDays('leave_daily')+' روز'],
+    ['مرخصی ساعتی',sumDays('leave_hourly').toFixed(2)+' ساعت'],['مأموریت داخل و خارج استان',missionDays+' روز'],
+    ['دوره آموزشی',sumDays('training')+' روز'],['سایر موارد',sumDays('other')+' روز'],['رویدادهای ثبت‌شده',rows.length+' مورد']
+  ];
+  $('att_report_summary').innerHTML='<div class="att-dashboard-heading"><strong>نمای کلی وضعیت عدم حضور</strong><span>'+esc(from)+' تا '+esc(to)+'</span></div>'+summaryItems.map((x,i)=>'<div class="att-summary-item '+(i===3?'att-summary-total':'')+'"><strong>'+esc(x[1])+'</strong><span>'+esc(x[0])+'</span></div>').join('');
+  var peopleHtml=totalsByPerson.map(o=>{
+    var name=o.person.firstName+' '+o.person.lastName;
+    var eventRows=o.events.map(e=>{
+      var clippedStart=jalaliToTimestamp(e.start_date)<jalaliToTimestamp(from)?from:e.start_date;
+      var clippedEnd=jalaliToTimestamp(e.end_date)>jalaliToTimestamp(to)?to:e.end_date;
+      var duration=e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':eventWorkdays(e,from,to)+' روز کاری';
+      return '<tr><td>'+esc(ATT_TYPES[e.event_type]||e.event_type)+'</td><td>'+esc(clippedStart)+'</td><td>'+esc(clippedEnd)+'</td><td>'+esc(e.start_time?normalizeTime(e.start_time)+' تا '+normalizeTime(e.end_time):'—')+'</td><td>'+esc(duration)+'</td><td>'+esc(e.description||'—')+'</td></tr>';
+    }).join('');
+    return '<details class="att-person-detail"><summary><span class="att-person-name">'+esc(name)+'</span><span class="att-person-metric">حضور '+o.presence+' روز</span><span class="att-person-metric">مرخصی '+o.leave_daily+' روز</span><span class="att-person-metric">ماموریت '+(o.mission_in+o.mission_out)+' روز</span><span class="att-person-event-count">'+o.events.length+' رویداد</span></summary><div class="att-person-detail-body"><div class="att-person-kpis"><span>مرخصی ساعتی: <b>'+o.leave_hourly.toFixed(2)+' ساعت</b></span><span>آموزش: <b>'+o.training+' روز</b></span><span>سایر: <b>'+o.other+' روز</b></span></div>'+(eventRows?'<div class="table-wrap"><table><thead><tr><th>نوع رویداد</th><th>از تاریخ</th><th>تا تاریخ</th><th>ساعت</th><th>مدت</th><th>شرح</th></tr></thead><tbody>'+eventRows+'</tbody></table></div>':'<p class="hint">برای این فرد در بازه انتخابی رویدادی ثبت نشده است.</p>')+'</div></details>';
+  }).join('');
+  $('att_report_results').innerHTML='<div class="att-dashboard-heading"><strong>وضعیت افراد و جزئیات رویدادها</strong><span>'+totalsByPerson.length+' نفر</span></div>'+
+    '<div class="table-wrap"><table class="att-people-summary"><thead><tr><th>کارمند</th><th>حضور عادی</th><th>مرخصی روزانه</th><th>مرخصی ساعتی</th><th>ماموریت داخل</th><th>ماموریت خارج</th><th>آموزش</th><th>سایر</th><th>رویداد</th></tr></thead><tbody>'+
+    (totalsByPerson.map(o=>'<tr><td>'+esc(o.person.firstName+' '+o.person.lastName)+'</td><td>'+o.presence+'</td><td>'+o.leave_daily+'</td><td>'+o.leave_hourly.toFixed(2)+'</td><td>'+o.mission_in+'</td><td>'+o.mission_out+'</td><td>'+o.training+'</td><td>'+o.other+'</td><td>'+o.events.length+'</td></tr>').join('')||'<tr><td colspan="9">فردی برای نمایش یافت نشد.</td></tr>')+
+    '</tbody></table></div><div class="att-person-details-list">'+(peopleHtml||'<p class="hint">اطلاعاتی برای این بازه وجود ندارد.</p>')+'</div>';
+  attendanceReportMeta={from:from,to:to,peopleCount:persons.length,totals:{working:totalWorking,presence:summary.presence,nonPresence:totalNonPresence,leaveDaily:sumDays('leave_daily'),leaveHourly:sumDays('leave_hourly'),missionIn:sumDays('mission_in'),missionOut:sumDays('mission_out'),training:sumDays('training'),other:sumDays('other'),eventCount:rows.length}};
+}
+function csvCell(value){return '"'+String(value==null?'':value).replace(/"/g,'""')+'"'}
+// خروجی CSV شامل خلاصه کلی، خلاصه هر فرد و ریز رویدادهای تاریخ‌دار است.
+function exportAttendanceCsv(){
+  if(!isAttendanceReportAdmin()){attendanceMessage('دریافت گزارش عدم حضور دیگران فقط برای ادمین و سوپر ادمین مجاز است.','error');return}
+  if(!attendanceReportRows.length){attendanceMessage('ابتدا گزارش را تهیه کنید.','error');return}
+  var meta=attendanceReportMeta||{},totals=meta.totals||{};
+  var lines=[['گزارش عدم حضور','بازه',(meta.from||'')+' تا '+(meta.to||'')].map(csvCell).join(',')];
+  lines.push(['خلاصه کلی','تعداد افراد','روزهای کاری','حضور عادی (روز)','کل روزهای عدم حضور/ماموریت/آموزش','مرخصی روزانه (روز)','مرخصی ساعتی (ساعت)','ماموریت داخل استان (روز)','ماموریت خارج استان (روز)','آموزش (روز)','سایر (روز)','تعداد رویداد'].map(csvCell).join(','));
+  lines.push(['کل',meta.peopleCount||0,totals.working||0,totals.presence||0,totals.nonPresence||0,totals.leaveDaily||0,Number(totals.leaveHourly||0).toFixed(2),totals.missionIn||0,totals.missionOut||0,totals.training||0,totals.other||0,totals.eventCount||0].map(csvCell).join(','));
+  lines.push('');lines.push(['خلاصه افراد','کارمند','حضور عادی (روز)','مرخصی روزانه (روز)','مرخصی ساعتی (ساعت)','مأموریت داخل استان (روز)','مأموریت خارج استان (روز)','دوره آموزشی (روز)','سایر (روز)','تعداد رویداد'].map(csvCell).join(','));
+  attendanceReportRows.forEach(o=>lines.push(['خلاصه',o.person.firstName+' '+o.person.lastName,o.presence,o.leave_daily,o.leave_hourly.toFixed(2),o.mission_in,o.mission_out,o.training,o.other,(o.events||[]).length].map(csvCell).join(',')));
+  lines.push('');lines.push(['جزئیات رویدادها','کارمند','نوع رویداد','از تاریخ','تا تاریخ','ساعت شروع','ساعت پایان','مدت در بازه گزارش','شرح'].map(csvCell).join(','));
+  attendanceReportRows.forEach(o=>(o.events||[]).forEach(e=>{
+    var from=(attendanceReportMeta||{}).from||val('att_report_from'),to=(attendanceReportMeta||{}).to||val('att_report_to');
+    var a=jalaliToTimestamp(e.start_date)<jalaliToTimestamp(from)?from:e.start_date,b=jalaliToTimestamp(e.end_date)>jalaliToTimestamp(to)?to:e.end_date;
+    lines.push(['جزئیات',o.person.firstName+' '+o.person.lastName,ATT_TYPES[e.event_type]||e.event_type,a,b,normalizeTime(e.start_time),normalizeTime(e.end_time),e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':eventWorkdays(e,from,to)+' روز کاری',e.description||''].map(csvCell).join(','));
+  }));
+  var blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='attendance-dashboard-'+getTodayJalali().replaceAll('/','-')+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+
 function bindEvents(){
+  document.querySelectorAll('[data-toggle-module-switcher]').forEach(b=>b.addEventListener('click',toggleModuleSwitcher));
+  document.addEventListener('click',e=>{if(!e.target.closest('#module_switcher_panel,[data-toggle-module-switcher]'))closeModuleSwitcher()});
+  on('module_switcher_panel','click',e=>{var close=e.target.closest('[data-close-module-switcher]');if(close){closeModuleSwitcher();return}var home=e.target.closest('[data-open-module-home]');if(home){showModuleHome();return}var target=e.target.closest('[data-switch-to-module]');if(target)openModule(target.dataset.switchToModule)});
+  on('btn_attendance_theme','click',toggleTheme);
+  on('btn_home_logout','click',handleLogout);
+  on('btn_home_password','click',openChangePasswordModal);
+  on('btn_attendance_logout','click',handleLogout);
+  on('btn_attendance_password','click',openChangePasswordModal);
+  on('module_search','input',renderModuleHome);
+  on('module_cards','click',e=>{var fav=e.target.closest('[data-fav-module]');if(fav){e.stopPropagation();toggleModuleFavorite(fav.dataset.favModule);return}var b=e.target.closest('[data-open-module]');if(b)openModule(b.dataset.openModule)});
+  on('module_cards','keydown',e=>{if(e.key==='Enter'||e.key===' '){var b=e.target.closest('[data-open-module]');if(b&&!e.target.closest('[data-fav-module]')){e.preventDefault();openModule(b.dataset.openModule)}}});
+  on('module_shortcuts','click',e=>{var b=e.target.closest('[data-open-module]');if(b)openModule(b.dataset.openModule)});
+  on('module_admin_list','click',e=>{var b=e.target.closest('[data-save-module-title]');if(b)saveModuleTitle(b.dataset.saveModuleTitle)});
+  on('module_access_admin_list','change',e=>{var cb=e.target.closest('[data-module-access-person]');if(cb)savePersonModuleAccess(cb.dataset.moduleAccessPerson,cb.dataset.moduleAccessId,cb.checked)});
+  on('att_type','change',showAttendanceTypeFields);
+  on('att_start_date','change',()=>{if(val('att_type')==='leave_hourly')$('att_end_date').value=val('att_start_date')});
+  on('btn_att_save','click',saveAttendanceEvent);
+  on('btn_att_reset','click',resetAttendanceForm);
+  on('btn_att_refresh','click',()=>loadAttendanceEvents().then(renderAttendanceHistory));
+  on('att_my_events','click',e=>{var ed=e.target.closest('[data-att-edit]'),del=e.target.closest('[data-att-delete]');if(ed)editAttendanceEvent(ed.dataset.attEdit);if(del)deleteAttendanceEvent(del.dataset.attDelete)});
+  document.querySelectorAll('[data-att-tab]').forEach(b=>b.addEventListener('click',()=>setAttendanceTab(b.dataset.attTab)));
+  on('btn_att_report','click',generateAttendanceReport);
+  on('btn_att_report_csv','click',exportAttendanceCsv);
+  on('btn_att_report_print','click',()=>{if(!isAttendanceReportAdmin()){attendanceMessage('چاپ گزارش عدم حضور دیگران فقط برای ادمین و سوپر ادمین مجاز است.','error');return}if(!attendanceReportRows.length){attendanceMessage('ابتدا گزارش را تهیه کنید.','error');return}window.print()});
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
   on('btn_sync_cloud','click',()=>syncFromCloud(true));
   on('btn_logout','click',handleLogout);
@@ -2222,6 +2590,7 @@ async function init(){
   if (person.must_change_password) { showForcePasswordChange(session.user.id); return; }
   
   if(!navigator.onLine){await dbClient.auth.signOut();clearSession();await showLogin();return}
+  await loadModuleCatalog();await loadModuleAccess();
   var initialSync=await syncFromCloud(false);
   if(!initialSync.ok){
     await dbClient.auth.signOut();clearSession();

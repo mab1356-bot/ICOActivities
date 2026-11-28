@@ -7,12 +7,12 @@
 <meta http-equiv="Expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>ثبت فعالیت ماهانه</title>
+<title>سامانه مدیریت فعالیت‌ها</title>
 <meta name="theme-color" content="#2563eb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="فعالیت ماهانه">
-<meta name="description" content="سیستم ثبت فعالیت ماهانه واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری">
+<meta name="apple-mobile-web-app-title" content="مدیریت فعالیت‌ها">
+<meta name="description" content="سامانه یکپارچه مدیریت فعالیت‌ها و ثبت عدم حضور کارکنان">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%232563eb' width='100' height='100' rx='20'/%3E%3Cpath fill='white' d='M20 70 L40 50 L55 60 L80 30 L80 70 Z'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -76,6 +76,61 @@
 </div>
 
 <div class="app" id="main_app" style="display:none">
+  <!-- درگاه مرکزی: نقطه ورود مشترک به ماژول‌های سامانه -->
+  <section id="module_home" class="module-home">
+    <header class="module-home-header">
+      <div><div class="module-home-kicker">سامانه یکپارچه سازمانی</div><h1>درگاه مرکزی سامانه</h1><p>برای ادامه، ماژول موردنظر را انتخاب کنید.</p></div>
+      <div class="module-home-user"><span id="module_home_user"></span><button class="btn-icon" id="btn_home_password" title="تغییر رمز عبور">🔑</button><button class="btn btn-secondary btn-sm" id="btn_home_logout">خروج</button></div>
+    </header>
+    <div id="module_home_message" class="alert" role="status"></div>
+    <div id="module_shortcuts" class="module-shortcuts"></div>
+    <div class="module-home-toolbar"><h2>ماژول‌های در دسترس</h2><input id="module_search" type="search" placeholder="جستجوی ماژول..." aria-label="جستجوی ماژول"></div>
+    <div id="module_cards" class="module-grid"></div>
+    <section id="module_admin_panel" class="module-admin-panel hidden" data-superadmin-only="1">
+      <h3>مدیریت ماژول‌ها</h3><p>سوپر ادمین می‌تواند عنوان نمایشی ماژول‌ها را تغییر دهد. شناسه و مسیر فنی ماژول ثابت می‌ماند.</p>
+      <div id="module_admin_list"></div>
+      <div class="module-access-admin"><h4>دسترسی ماژول‌ها برای کارکنان</h4><p>دسترسی همه ماژول‌ها به‌صورت پیش‌فرض فعال است؛ سوپر ادمین می‌تواند دسترسی هر فرد را جداگانه محدود کند. دسترسی سوپر ادمین قابل غیرفعال‌سازی نیست.</p><div id="module_access_admin_list" class="table-wrap"></div></div>
+    </section>
+  </section>
+
+  <div id="module_switcher_panel" class="module-switcher-panel hidden" aria-label="جابه‌جایی سریع بین ماژول‌ها"></div>
+
+  <!-- ماژول مستقل ثبت عدم حضور -->
+  <section id="attendance_module" class="attendance-module hidden">
+    <header class="module-topbar">
+      <div class="module-topbar-brand"><span class="module-topbar-icon">📅</span><div><strong id="attendance_module_title">ثبت عدم حضور</strong><small>مرخصی، مأموریت، آموزش و سایر رویدادها</small></div></div>
+      <div class="module-topbar-actions"><button class="btn-icon" id="btn_attendance_theme" title="تغییر تم">🌙</button><button class="btn btn-secondary btn-sm" id="btn_attendance_home" data-toggle-module-switcher>▦ تغییر ماژول</button><span id="attendance_user_name"></span><button class="btn-icon" id="btn_attendance_password" title="تغییر رمز عبور">🔑</button><button class="btn-icon" id="btn_attendance_logout" title="خروج از سامانه">🚪</button></div>
+    </header>
+    <main class="attendance-content">
+      <div class="attendance-intro"><div><span class="module-home-kicker">ماژول دوم</span><h2>ثبت رویدادهای عدم حضور</h2><p>روزهای شنبه تا چهارشنبه حضور پیش‌فرض محسوب می‌شوند؛ فقط موارد متفاوت را ثبت کنید.</p></div><div class="attendance-rule"><b>قاعده پایه</b><span>شنبه تا چهارشنبه: حضور</span><span>پنجشنبه و جمعه: غیرکاری</span></div></div>
+      <div id="att_module_message" class="alert" role="status"></div>
+      <div class="attendance-tabs"><button class="active" data-att-tab="form">ثبت رویداد</button><button data-att-tab="history">سوابق من</button><button data-att-tab="report" id="att_report_tab" class="hidden">داشبورد عدم حضور</button></div>
+      <section id="att_panel_form" class="attendance-panel">
+        <h3>ثبت رویداد جدید</h3>
+        <input type="hidden" id="att_event_id">
+        <div class="form-row">
+          <div class="form-group"><label for="att_type">نوع رویداد</label><select id="att_type"><option value="leave_daily">مرخصی روزانه</option><option value="leave_hourly">مرخصی ساعتی</option><option value="mission_in">مأموریت داخل استان</option><option value="mission_out">مأموریت خارج استان</option><option value="training">دوره آموزشی</option><option value="other">سایر موارد</option></select></div>
+          <div class="form-group"><label for="att_start_date">تاریخ شروع (شمسی)</label><input id="att_start_date" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
+          <div class="form-group" id="att_end_date_group"><label for="att_end_date">تاریخ پایان (شمسی)</label><input id="att_end_date" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
+        </div>
+        <div class="form-row" id="att_time_row" style="display:none">
+          <div class="form-group"><label for="att_start_time">ساعت شروع</label><input id="att_start_time" type="time"></div>
+          <div class="form-group"><label for="att_end_time">ساعت پایان</label><input id="att_end_time" type="time"></div>
+        </div>
+        <div class="form-group"><label for="att_description">شرح (مقصد، عنوان، توضیحات و ...)</label><textarea id="att_description" rows="3" placeholder="شرح رویداد را وارد کنید..."></textarea></div>
+        <div class="attendance-form-actions"><button class="btn btn-success" id="btn_att_save">ثبت رویداد</button><button class="btn btn-secondary" id="btn_att_reset">پاک کردن فرم</button></div>
+        <div id="att_form_message" class="alert" role="status"></div>
+      </section>
+      <section id="att_panel_history" class="attendance-panel hidden"><div class="attendance-panel-heading"><h3>سوابق رویدادهای من</h3><button class="btn btn-secondary btn-sm" id="btn_att_refresh">بروزرسانی</button></div><div id="att_my_events" class="table-wrap"></div></section>
+      <section id="att_panel_report" class="attendance-panel hidden"><h3>داشبورد مدیریتی عدم حضور</h3><p class="hint">این داشبورد فقط برای ادمین و سوپر ادمین قابل مشاهده است؛ جزئیات هر فرد با باز کردن ردیف مربوط نمایش داده می‌شود.</p><div class="form-row">
+        <div class="form-group"><label for="att_report_from">از تاریخ</label><input id="att_report_from" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۰۱"></div>
+        <div class="form-group"><label for="att_report_to">تا تاریخ</label><input id="att_report_to" type="text" class="date-picker" inputmode="numeric" readonly placeholder="۱۴۰۵/۰۸/۳۰"></div>
+        <div class="form-group"><label for="att_report_person">کارمند</label><select id="att_report_person"><option value="">همه کارکنان</option></select></div>
+      </div><div class="attendance-form-actions"><button class="btn btn-success" id="btn_att_report">به‌روزرسانی داشبورد</button><button class="btn btn-secondary" id="btn_att_report_csv">دریافت خروجی Excel (CSV)</button><button class="btn btn-secondary" id="btn_att_report_print">چاپ / ذخیره PDF</button></div><div id="att_report_summary" class="attendance-summary"></div><div id="att_report_results" class="table-wrap"></div></section>
+    </main>
+  </section>
+
+  <div id="activity_module_shell">
   <header class="top">
     <div class="top-brand">
       <button class="btn-icon menu-btn" onclick="toggleNav()" style="width:auto">☰</button>
@@ -88,6 +143,7 @@
     <div class="top-actions">
       <button class="btn-icon" onclick="toggleTheme()" id="themeBtn" title="تغییر تم">🌙</button>
       <span class="online-dot checking" id="onlineDot" title="در حال بررسی..."></span>
+      <button class="btn btn-sm btn-secondary" id="btn_switch_module" data-toggle-module-switcher>▦ تغییر ماژول</button>
       <button class="btn btn-sm btn-success" id="btn_sync_cloud" style="display:none">🔄 بروزرسانی</button>
       <div class="user-chip" id="user_info" style="display:none">
         <span class="user-name" id="current_user"></span>
@@ -374,6 +430,7 @@
       </div>
     </main>
   </div>
+  </div><!-- /activity_module_shell -->
 </div>
 
 <div id="modal_change_password" class="modal-overlay hidden">
