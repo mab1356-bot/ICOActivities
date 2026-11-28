@@ -416,3 +416,23 @@ tbody tr:last-child td{border-bottom:0}
 
 .att-datetime-row{align-items:flex-end;margin:4px 0 10px}.att-datetime-row .form-group{margin-bottom:0}.att-time-hint{display:block;margin:2px 0 14px;padding:8px 12px;border-radius:9px;background:var(--surface2);color:var(--text2);font-size:11px;line-height:1.9}.time-picker-input{direction:ltr;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.5px}.att-datetime-row .time-picker-input{min-width:130px}.activity-save-next-actions{display:flex;gap:10px;flex-wrap:wrap}.activity-save-next-actions .btn{flex:1 1 180px}
 @media(max-width:700px){.att-datetime-row{display:block}.att-time-hint{margin:4px 0 12px}}
+
+
+/* نسخه برنامه و منوی مدیریت مشترک در صفحه ورود، درگاه و ماژول‌ها */
+.app-version-line{font-size:11px;color:var(--text3);text-align:center;margin:7px 0 0}
+.app-version-chip{font-size:10px;color:var(--text2);white-space:nowrap;padding:4px 7px;border:1px solid var(--border);border-radius:20px;background:var(--surface)}
+.admin-tools{position:relative;display:inline-flex;align-items:center}
+.admin-tools-panel{position:absolute;z-index:1200;top:calc(100% + 7px);right:0;min-width:210px;max-width:min(290px,85vw);padding:7px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+.admin-tools-panel.hidden{display:none}
+.admin-tools-panel button{display:flex;align-items:center;gap:9px;width:100%;text-align:right;padding:9px 11px;border:0;border-radius:8px;background:transparent;color:var(--text);cursor:pointer;font:inherit}
+.admin-tools-panel button:hover{background:var(--surface2)}
+.admin-tools-panel .admin-tools-heading{font-size:11px;color:var(--text3);padding:6px 10px 4px;font-weight:800}
+@media(max-width:700px){.module-topbar-actions{flex-wrap:wrap}.admin-tools-panel{position:fixed;top:auto;right:12px;left:12px;bottom:14px;max-width:none}}
+#print_area{display:none}
+@media print{
+  body.attendance-report-print>*:not(#print_area){display:none!important}
+  body.attendance-report-print #print_area{display:block!important}
+  #print_area .att-person-detail{break-inside:avoid}
+  #print_area table{width:100%;border-collapse:collapse}
+  #print_area th,#print_area td{border:1px solid #777;padding:5px;text-align:right}
+}

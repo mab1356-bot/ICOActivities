@@ -248,7 +248,66 @@ function refreshDropdowns(){
   fillLocationSelect();
 }
 
+// سیاست واحد نقش‌ها برای منوها، ورود به صفحات و عملیات مدیریتی.
+const ROLE_ACCESS_POLICY={
+  persons:['admin','superadmin'],topics:['admin','superadmin'],importance:['admin','superadmin'],holidays:['admin','superadmin'],
+  planning:['manager','admin','superadmin'],records:['manager','admin','superadmin'],reports:['manager','admin','superadmin'],
+  locations:['superadmin'],settings:['superadmin'],module_admin:['superadmin'],repair_emails:['superadmin']
+};
+const ADMIN_TOOL_DEFINITIONS=[
+  {id:'persons',label:'مدیریت پرسنل و کاربران',icon:'👥'},
+  {id:'topics',label:'مدیریت موضوعات',icon:'🏷'},
+  {id:'importance',label:'درجات اهمیت',icon:'⭐'},
+  {id:'holidays',label:'تعطیلات تقویم',icon:'🎉'},
+  {id:'planning',label:'موضوعات در انتظار',icon:'📝'},
+  {id:'records',label:'سوابق فعالیت',icon:'📋'},
+  {id:'reports',label:'گزارش‌گیری فعالیت',icon:'📊'},
+  {id:'locations',label:'محل‌های برگزاری',icon:'📍'},
+  {id:'settings',label:'پشتیبان‌گیری و بازیابی',icon:'💾'},
+  {id:'repair_emails',label:'همگام‌سازی ایمیل‌های ورود',icon:'🛠'},
+  {id:'module_admin',label:'مدیریت ماژول‌ها و دسترسی‌ها',icon:'🧩'}
+];
+// مجوز هر صفحه از ROLE_ACCESS_POLICY خوانده می‌شود؛ تقویم و ثبت اقدام برای همه نقش‌های واردشده مجاز است.
+function canAccessActivitySection(sectionId){
+  var session=getSession();if(!session)return false;
+  if(ROLE_ACCESS_POLICY[sectionId])return ROLE_ACCESS_POLICY[sectionId].includes(session.role);
+  return ['calendar','activity'].includes(sectionId);
+}
+function requireActivityPermission(sectionId){
+  if(canAccessActivitySection(sectionId))return true;
+  showAlert('شما مجوز دسترسی به این بخش یا عملیات را ندارید.','error');return false;
+}
+function getAdminToolItems(){
+  var session=getSession();if(!session)return [];
+  return ADMIN_TOOL_DEFINITIONS.filter(function(item){return (ROLE_ACCESS_POLICY[item.id]||[]).includes(session.role)});
+}
+// منوی مدیریت واحد را در صفحه اصلی و سربرگ هر دو ماژول با توجه به نقش جاری تولید می‌کند.
+function renderAdminToolsMenus(){
+  var items=getAdminToolItems();
+  document.querySelectorAll('[data-admin-tools-root]').forEach(function(root){
+    root.style.display=items.length?'':'none';
+    var panel=root.querySelector('[data-admin-tools-panel]');if(!panel)return;
+    panel.innerHTML=items.length?'<div class="admin-tools-heading">ابزارهای مجاز بر اساس نقش شما</div>'+items.map(function(item){
+      return '<button type="button" data-admin-tool="'+esc(item.id)+'"><span>'+esc(item.icon)+'</span><span>'+esc(item.label)+'</span></button>';
+    }).join(''):'';
+  });
+}
+// مقصد هر گزینه مدیریتی را با کنترل مجوز باز می‌کند؛ منوی مدیریت ماژول‌ها فقط برای سوپر ادمین است.
+async function openAdminTool(target){
+  if(!requireActivityPermission(target))return;
+  if(target==='module_admin'){
+    await showModuleHome();
+    var adminPanel=$('module_admin_panel');
+    if(adminPanel){adminPanel.classList.remove('hidden');adminPanel.scrollIntoView({behavior:'smooth',block:'start'})}
+    return;
+  }
+  if(target==='repair_emails'){if(typeof repairLoginEmails==='function')await repairLoginEmails();return}
+  if(!['persons','topics','importance','holidays','planning','records','reports','locations','settings'].includes(target))return;
+  await openModule('activities');
+  if(activeModuleId==='activities')showSection(target);
+}
 function showSection(id){
+  if(!requireActivityPermission(id))return;
   lastActivitySection=id;
   closePopups();
   var cards=document.querySelectorAll('.content > div.card'),i;
@@ -314,14 +373,15 @@ function getSelectedParticipants(){var arr=[];document.querySelectorAll('#partic
 function applyPermissions(){
   var s=getSession();if(!s)return;
   var isSuper=s.role==='superadmin',admin=s.role==='admin'||isSuper,priv=admin||s.role==='manager';
-  document.querySelectorAll('[data-superadmin-only]').forEach(el=>{el.style.display=isSuper?'':'none'});
-  document.querySelectorAll('[data-admin-only]').forEach(el=>{el.style.display=admin?'':'none'});
-  document.querySelectorAll('[data-manager-only]').forEach(el=>{el.style.display=priv?'':'none'});
+  document.querySelectorAll('[data-superadmin-only]').forEach(el=>{el.style.display=canAccessActivitySection('settings')?'':'none'});
+  document.querySelectorAll('[data-admin-only]').forEach(el=>{el.style.display=canAccessActivitySection('persons')?'':'none'});
+  document.querySelectorAll('[data-manager-only]').forEach(el=>{el.style.display=canAccessActivitySection('planning')?'':'none'});
   var roleSel=$('p_role');
   if(roleSel)Array.prototype.forEach.call(roleSel.options,o=>{if(o.value==='superadmin'){o.hidden=!isSuper;o.disabled=!isSuper}});
   $('btn_sync_cloud').style.display='';
   var roleLabel=isSuper?'سوپر ادمین':(admin?'ادمین':(s.role==='manager'?'مدیر':'کاربر'));
   $('current_user').textContent=s.name+' — '+roleLabel;$('user_info').style.display='';
+  renderAdminToolsMenus();
   if(!priv){
     ['rec_person','rep_person'].forEach(id=>{var el=$(id);if(el){el.value=s.personId;el.disabled=true}});
     var calEl=$('cal_person');if(calEl){calEl.value='';calEl.disabled=false}
@@ -329,6 +389,7 @@ function applyPermissions(){
 }
 
 async function savePerson(){
+  if(!requireActivityPermission('persons'))return;
   var s=getSession();if(!s)return;
   var id=val('p_id'),first=val('p_first_name'),last=val('p_last_name'),pid=val('p_personnel_id');
   var username=val('p_username'),password=$('p_password').value,role=val('p_role');
@@ -427,6 +488,7 @@ async function callAccountFn(action,payload){
   }catch(e){return{ok:false,error:e.message}}
 }
 async function changePersonPassword(id){
+  if(!requireActivityPermission('persons'))return;
   var p=getData(KEYS.persons).find(x=>x.id===id);if(!p)return;
   var pw=prompt('رمز جدید برای «'+p.firstName+' '+p.lastName+'» (حداقل '+MIN_PASSWORD_LEN+' کاراکتر):');
   if(pw===null)return;
@@ -443,6 +505,7 @@ async function repairLoginEmails(){
   showAlert('✅ اصلاح‌شده: '+((r.fixed||[]).length?(r.fixed||[]).join('، '):'موردی نبود')+((r.skipped||[]).length?'\nرد شده: '+(r.skipped||[]).join('، '):''),'success');
 }
 async function deletePerson(id){
+  if(!requireActivityPermission('persons'))return;
   var s=getSession();if(!s)return;
   if(id===s.personId){showAlert('نمی‌توانید حساب خودتان را حذف کنید.','error');return}
   if(!confirm('حذف کاربر باعث حذف حساب ورود او می‌شود. مطمئن؟'))return;
@@ -453,6 +516,7 @@ async function deletePerson(id){
 }
 
 async function saveTopic(){
+  if(!requireActivityPermission('topics'))return;
   var name=val('t_name');if(!name){showAlert('نام موضوع الزامی.');return}
   var topics=getData(KEYS.topics);
   for(var i=0;i<topics.length;i++)if(normText(topics[i].name)===normText(name)){showAlert('قبلاً ثبت شده.');return}
@@ -462,6 +526,7 @@ async function saveTopic(){
 }
 function nextTopicOrder(){var l=readOnly(KEYS.topics).list;return l.length?Math.max.apply(null,l.map(x=>x.sortOrder||0))+1:1}
 async function moveTopic(id,dir){
+  if(!requireActivityPermission('topics'))return;
   var list=getData(KEYS.topics).sort(byOrder),i=list.findIndex(x=>x.id===id),j=i+dir;
   if(i<0||j<0||j>=list.length)return;
   var t=list[i];list[i]=list[j];list[j]=t;
@@ -477,6 +542,7 @@ function renderTopics(){
   c.innerHTML=h+'</table>';
 }
 async function deleteTopic(id){
+  if(!requireActivityPermission('topics'))return;
   var used=getData(KEYS.acts).filter(a=>a.topicId===id).length;
   if(used>0){showAlert('در '+used+' اقدام استفاده شده و قابل حذف نیست.');return}
   if(!confirm('از حذف مطمئن هستید؟'))return;
@@ -493,6 +559,7 @@ function editImportance(id){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 async function saveImportance(){
+  if(!requireActivityPermission('importance'))return;
   var id=val('imp_id'),name=val('imp_name'),color=val('imp_color')||'#3498db',isKey=$('imp_is_key').checked;
   if(!name){showAlert('نام الزامی.');return}
   if(!/^#[0-9a-fA-F]{6}$/.test(color))color='#3498db';
@@ -509,6 +576,7 @@ async function saveImportance(){
   }
 }
 async function deleteImportance(id){
+  if(!requireActivityPermission('importance'))return;
   var levels=getImportanceLevels(),lv=levels.find(x=>x.id===id);if(!lv)return;
   if(levels.length<=1){showAlert('حداقل یک درجه لازم است.','error');return}
   var used=getData(KEYS.acts).filter(a=>a.importance===id).length;
@@ -531,6 +599,7 @@ function renderImportance(){
 }
 
 async function saveHoliday(){
+  if(!requireActivityPermission('holidays'))return;
   var dateStr=val('h_date'),title=val('h_title');
   if(!isValidJalaliDate(dateStr)){showAlert('تاریخ نامعتبر.');return}
   if(!title){showAlert('عنوان الزامی.');return}
@@ -541,6 +610,7 @@ async function saveHoliday(){
   $('h_title').value='';renderHolidays();renderCalendar();showAlert('ثبت شد.','success');
 }
 async function deleteHoliday(id){
+  if(!requireActivityPermission('holidays'))return;
   if(!confirm('از حذف مطمئن هستید؟'))return;
   if(!(await deleteRemote('holidays',id)))return;
   writeLocal(KEYS.holidays,getData(KEYS.holidays).filter(h=>h.id!==id));
@@ -555,6 +625,7 @@ function renderHolidays(){
   c.innerHTML=h+'</table>';
 }
 async function loadDefaultHolidays(){
+  if(!requireActivityPermission('holidays'))return;
   var year=parseInt(val('h_default_year'),10);
   if(isNaN(year)||year<1300||year>1500){showAlert('سال معتبر.');return}
   var defaults=[{m:1,d:1,t:'عید نوروز'},{m:1,d:2,t:'عید نوروز'},{m:1,d:3,t:'عید نوروز'},{m:1,d:4,t:'عید نوروز'},{m:1,d:12,t:'روز جمهوری اسلامی'},{m:1,d:13,t:'سیزده بدر'},{m:3,d:14,t:'رحلت امام خمینی'},{m:3,d:15,t:'قیام ۱۵ خرداد'},{m:11,d:22,t:'پیروزی انقلاب اسلامی'},{m:12,d:29,t:'ملی شدن صنعت نفت'}];
@@ -597,6 +668,7 @@ function editLocation(id){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 async function saveLocation(){
+  if(!requireActivityPermission('locations'))return;
   var s=getSession();if(!s||s.role!=='superadmin'){showAlert('فقط سوپر ادمین مجاز است.');return}
   var id=val('loc_id'),name=val('loc_name'),order=parseInt(val('loc_order'),10);
   if(!name){showAlert('نام محل الزامی.');return}
@@ -611,6 +683,7 @@ async function saveLocation(){
   if(await setData(KEYS.locations,list)){renderLocations();fillLocationSelect();resetLocationForm();showAlert(id?'ویرایش شد. (اقدامات قبلی با نام قدیمی باقی می‌مانند)':'افزوده شد.','success')}
 }
 async function moveLocation(id,dir){
+  if(!requireActivityPermission('locations'))return;
   var list=getData(KEYS.locations).sort(byOrder),i=list.findIndex(x=>x.id===id),j=i+dir;
   if(i<0||j<0||j>=list.length)return;
   var t=list[i];list[i]=list[j];list[j]=t;
@@ -618,6 +691,7 @@ async function moveLocation(id,dir){
   if(await setData(KEYS.locations,list)){renderLocations();fillLocationSelect()}
 }
 async function deleteLocation(id){
+  if(!requireActivityPermission('locations'))return;
   var l=getData(KEYS.locations).find(x=>x.id===id);if(!l)return;
   var used=getData(KEYS.acts).filter(a=>a.location===l.name).length;
   if(!confirm('حذف «'+l.name+'»؟'+(used?'\n'+used+' اقدام ثبت‌شده با این محل، متن محل خود را حفظ می‌کنند.':'')))return;
@@ -855,60 +929,63 @@ function setTimePickerValue(id, value) {
 }
 
 // انتخاب‌گر مشترک هر دو ماژول را به ساعت ۲۴ ساعته محدود می‌کند تا AM/PM مبهم یا وابسته به زبان دستگاه نباشد.
+// انتخاب‌گر موبایل مانند نسخه ۴.۳.۷ از کنترل بومی سیستم‌عامل استفاده می‌کند؛ دسکتاپ از Flatpickr بیست‌وچهارساعته.
+function isMobileTimePicker(){
+  return !!((window.matchMedia&&window.matchMedia('(pointer: coarse)').matches)||
+    (window.matchMedia&&window.matchMedia('(max-width: 767px)').matches));
+}
 function initTimePickers() {
+  var mobilePicker=isMobileTimePicker();
   ['act_start_time', 'act_end_time', 'att_start_time', 'att_end_time'].forEach(function (id) {
     var input = $(id);
     if (!input || input.dataset.timePickerInitialized === 'true') return;
-
     var initialized = false;
-    if (typeof window.flatpickr === 'function') {
-      try {
-        // در همه دستگاه‌ها از نمایش ۲۴ ساعته استفاده می‌شود؛ 08:00 صبح و 15:00 بعدازظهر است.
-        input.type = 'text';
+
+    if(mobilePicker){
+      // در موبایل type=time باعث باز شدن ساعت‌گیر بومی Android/iOS می‌شود؛ مقدار value همچنان HH:mm است.
+      input.type='time';
+      input.step='60';
+      input.lang='en-GB';
+      input.classList.remove('time-picker-input');
+      input.classList.add('native-time-input');
+    }else if(typeof window.flatpickr==='function'){
+      try{
+        input.type='text';
         input.classList.add('time-picker-input');
-        input.setAttribute('placeholder', 'انتخاب ساعت (۲۴ ساعته)');
-        input.setAttribute('autocomplete', 'off');
-        input.setAttribute('inputmode', 'none');
+        input.classList.remove('native-time-input');
+        input.setAttribute('placeholder','انتخاب ساعت (۲۴ ساعته)');
+        input.setAttribute('autocomplete','off');
+        input.setAttribute('inputmode','none');
         input.removeAttribute('step');
-        window.flatpickr(input, {
-          enableTime: true,
-          noCalendar: true,
-          dateFormat: 'H:i',
-          time_24hr: true,
-          enableSeconds: false,
-          hourIncrement: 1,
-          minuteIncrement: 1,
-          allowInput: false,
-          clickOpens: true,
-          disableMobile: true,
-          defaultDate: input.value || null,
-          onChange: function (selectedDates, dateStr) {
-            input.value = dateStr || '';
-            if (id.indexOf('act_') === 0) updateCalculatedHours();
+        window.flatpickr(input,{
+          enableTime:true,noCalendar:true,dateFormat:'H:i',time_24hr:true,
+          enableSeconds:false,hourIncrement:1,minuteIncrement:1,
+          allowInput:false,clickOpens:true,disableMobile:true,
+          defaultDate:input.value||null,
+          onChange:function(selectedDates,dateStr){
+            input.value=dateStr||'';
+            if(id.indexOf('act_')===0)updateCalculatedHours();
           }
         });
-        initialized = !!input._flatpickr;
-      } catch (pickerError) {
-        console.warn('24-hour time picker initialization failed; using native picker.', pickerError);
-        if (input._flatpickr && typeof input._flatpickr.destroy === 'function') {
-          try { input._flatpickr.destroy(); } catch (destroyError) {}
+        initialized=!!input._flatpickr;
+      }catch(error){
+        console.warn('[TimePicker] Desktop picker initialization failed; using native input.',error);
+        if(input._flatpickr&&typeof input._flatpickr.destroy==='function'){
+          try{input._flatpickr.destroy()}catch(ignore){}
         }
       }
     }
-
-    if (!initialized) {
-      // در صورت در دسترس نبودن Flatpickr، ورودی بومی با مقدار استاندارد ۲۴ ساعته فعال می‌شود.
-      input.type = 'time';
-      input.step = '60';
-      input.lang = 'en-GB';
+    if(!mobilePicker&&!initialized){
+      input.type='time';input.step='60';input.lang='en-GB';
       input.classList.remove('time-picker-input');
-      if (id.indexOf('act_') === 0) {
-        input.addEventListener('input', updateCalculatedHours);
-        input.addEventListener('change', updateCalculatedHours);
-        input.addEventListener('blur', updateCalculatedHours);
-      }
+      input.classList.add('native-time-input');
     }
-    input.dataset.timePickerInitialized = 'true';
+    if(id.indexOf('act_')===0){
+      input.addEventListener('input',updateCalculatedHours);
+      input.addEventListener('change',updateCalculatedHours);
+      input.addEventListener('blur',updateCalculatedHours);
+    }
+    input.dataset.timePickerInitialized='true';
   });
 }
 
@@ -925,11 +1002,15 @@ function setActivityEditMode(isEdit){
   var cb=$('btn_cancel_edit_act');if(cb)cb.style.display=isEdit?'':'none';
 }
 function resetActivityForm(keepDate){
+  // تمام ورودی‌های وابسته به اقدام قبلی پاک می‌شوند؛ در حالت اقدام بعدی تاریخ شروع امروز قرار می‌گیرد.
   $('act_id').value='';setActivityEditMode(false);
+  if($('act_topic'))$('act_topic').value='';
   var levels=getImportanceLevels();$('act_importance').value=levels.length?levels[0].id:'';
-  setTimePickerValue('act_start_time','');setTimePickerValue('act_end_time','');$('act_desc').value='';$('act_calc_hours').value='';$('act_private_desc').value='';
+  setTimePickerValue('act_start_time','');setTimePickerValue('act_end_time','');
+  $('act_desc').value='';$('act_calc_hours').value='';$('act_private_desc').value='';
+  $('act_end_date').value='';
   setLocationFields('');$('act_only_for_me').checked=false;
-  if(!keepDate){$('act_start_date').value=getTodayJalali();$('act_end_date').value=''}
+  $('act_start_date').value=keepDate?($('act_start_date').value||getTodayJalali()):getTodayJalali();
   populateParticipants();updateCalculatedHours();renderDayActs();
 }
 function cancelEditAct(){resetActivityForm(true);showAlert('ویرایش لغو شد.','info')}
@@ -1017,10 +1098,11 @@ function showSaveSuccessPopup(msg,activity){
   var calendarButton=overlay.querySelector('#activity-save-success-calendar');
   nextButton.addEventListener('click',function(){
     overlay.remove();
-    // فرم برای اقدام بعدی آماده می‌شود و تاریخ اقدام قبلی حفظ می‌گردد.
-    resetActivityForm(true);
+    // فرم کاملاً پاک می‌شود تا اطلاعات اقدام ذخیره‌شده به اقدام بعدی منتقل نشود.
+    resetActivityForm(false);
     showSection('activity');
-    var topic=$('act_topic');if(topic)topic.focus();
+    // بازسازی Dropdown ممکن است موضوع اول را به‌صورت پیش‌فرض انتخاب کند؛ فرم اقدام بعدی باید بدون موضوع قبلی/پیش‌فرض باز شود.
+    var topic=$('act_topic');if(topic){topic.value='';topic.focus()}
   });
   calendarButton.addEventListener('click',function(){
     overlay.remove();
@@ -1190,6 +1272,7 @@ function editPlan(id){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 async function savePlan(){
+  if(!requireActivityPermission('planning'))return;
   var id=val('plan_id'),title=val('plan_title');
   if(!title){showAlert('عنوان موضوع الزامی.');return}
   var plans=(await getFresh(KEYS.planning)),session=getSession();
@@ -1205,6 +1288,7 @@ async function savePlan(){
   }
 }
 async function advancePlanStatus(id,newStatus){
+  if(!requireActivityPermission('planning'))return;
   var plans=await getFresh(KEYS.planning),p=plans.find(x=>x.id===id);if(!p)return;
   if((PLAN_FLOW[p.status]||[]).indexOf(newStatus)===-1){showAlert('این انتقال وضعیت مجاز نیست.','error');return}
   if(newStatus==='cancelled'){var reason=prompt('دلیل انصراف:');if(reason===null)return;p.cancelReason=reason.trim()}
@@ -1212,6 +1296,7 @@ async function advancePlanStatus(id,newStatus){
   if(await setData(KEYS.planning,plans)){renderPlanning();updatePlanningBadge();showAlert('وضعیت به «'+PLAN_STATUS[newStatus].label+'» تغییر کرد.','success')}
 }
 async function deletePlan(id){
+  if(!requireActivityPermission('planning'))return;
   var p=getData(KEYS.planning).find(x=>x.id===id);if(!p)return;
   if(p.status==='converted'){showAlert('موضوع تبدیل‌شده قابل حذف نیست.','warning');return}
   if(!confirm('حذف «'+p.title+'»؟'))return;
@@ -1306,6 +1391,7 @@ function gatherReportData(){
   return{list,from,to,periodTitle,totalActs:list.length,totalPersonHours,topicStats,topicsData};
 }
 function generateReport(){
+  if(!requireActivityPermission('reports'))return;
   var data=gatherReportData();
   if(!data){$('report_area').innerHTML='<p style="padding:24px;text-align:center;color:var(--text3)">اقدامی یافت نشد یا بازه نامعتبر است.</p>';return false}
   var withDetails=$('rep_details').checked;
@@ -1333,7 +1419,8 @@ function generateReport(){
   $('report_area').innerHTML=h;return true;
 }
 
-function printReport(){var c=$('report_area');if(!c.querySelector('.dashboard-report')){showAlert('ابتدا گزارش را تولید کنید.');return}$('print_area').innerHTML=c.innerHTML;window.print()}
+function printReport(){
+  if(!requireActivityPermission('reports'))return;var c=$('report_area');if(!c.querySelector('.dashboard-report')){showAlert('ابتدا گزارش را تولید کنید.');return}$('print_area').innerHTML=c.innerHTML;window.print()}
 function printData(containerId,needTable){var c=$(containerId);if(!c.innerHTML.trim()||(needTable&&!c.querySelector('table'))){showAlert('موردی برای چاپ نیست.');return}var HEAD='<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px"><h2>واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری</h2></div>';var SIGN='<div style="margin-top:50px;display:flex;justify-content:space-between"><div>امضای کاربر: ............................</div><div>امضای مسئول: ............................</div></div>';$('print_area').innerHTML=HEAD+'<div>'+c.innerHTML+'</div>'+SIGN;window.print()}
 
 // مرتب‌سازی مشترک سوابق برای خروجی Word و PowerPoint؛ ترتیب تاریخ و سپس ساعت شروع.
@@ -1555,6 +1642,7 @@ function buildWordReportHtml(data, withDetails) {
 }
 
 function exportWord() {
+  if(!requireActivityPermission('reports'))return;
   var data = gatherReportData();
   if (!data) { showAlert('اقدامی یافت نشد یا بازه گزارش نامعتبر است.', 'warning'); return; }
   var withDetails = !!($('rep_details') && $('rep_details').checked);
@@ -1590,6 +1678,7 @@ function addReportPptxFrame(slide, pptx, data, pageNumber, totalPages, title) {
 
 // تولید بسته خروجی PowerPoint شامل داشبورد، اقدامات کلیدی و جدول سوابق با سرصفحه‌های تکرارشونده.
 async function exportPPTX() {
+  if(!requireActivityPermission('reports'))return;
   if (typeof PptxGenJS === 'undefined') { showAlert('کتابخانه PowerPoint بارگذاری نشده است.', 'error'); return; }
   var data = gatherReportData();
   if (!data) { showAlert('اقدامی یافت نشد یا بازه گزارش نامعتبر است.', 'warning'); return; }
@@ -1734,6 +1823,7 @@ async function exportPPTX() {
 }
 
 function exportJSON(){
+  if(!requireActivityPermission('settings'))return;
   var s=getSession();if(!s||s.role!=='superadmin'){showAlert('فقط سوپر ادمین مجاز است.');return}
   var data={version:'13.0',export_date:getTodayJalali(),persons:getData(KEYS.persons),topics:getData(KEYS.topics),acts:getData(KEYS.acts),holidays:getData(KEYS.holidays),importance:getData(KEYS.importance),planning:getData(KEYS.planning),locations:getData(KEYS.locations)};
   var url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
@@ -1742,6 +1832,7 @@ function exportJSON(){
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 async function importJSON(){
+  if(!requireActivityPermission('settings'))return;
   var s=getSession();
   if(!s||s.role!=='superadmin'){showAlert('بازیابی فقط برای سوپر ادمین مجاز است.');return}
   var fi=$('import_file');if(!fi.files.length){showAlert('فایلی انتخاب نشده.');return}
@@ -1996,53 +2087,30 @@ async function initDbClient(){
   }catch(e){console.error('[DB] init failed:',e);window.dbInitError='خطا در راه‌اندازی اتصال.';return false}
 }
 
-function loadAppVersion() {
-  var el = $('app_version_display');
-  if (!el) return;
-  
-  var done = false;
-  var timer = setTimeout(function() {
-    if (done) return;
-    done = true;
-    if (window.caches && caches.keys) {
-      caches.keys().then(keys => {
-        var k = keys.filter(x => x.indexOf('actbk-cache-') === 0).sort().pop();
-        if (k) el.textContent = k.replace('actbk-cache-', '');
-        else el.textContent = 'نامشخص';
-      }).catch(() => { el.textContent = 'نامشخص'; });
-    } else {
-      el.textContent = 'نامشخص';
-    }
-  }, 3000);
-
-  fetch('./sw.js?t=' + Date.now(), { cache: 'no-store' })
-    .then(res => {
-      if (!res.ok) throw new Error('Network error');
-      return res.text();
-    })
-    .then(text => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      var match = text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
-      if (match && match[1]) el.textContent = match[1];
-      else el.textContent = 'نامشخص';
-    })
-    .catch(err => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      console.warn('Version fetch failed:', err);
-      if (window.caches && caches.keys) {
-        caches.keys().then(keys => {
-          var k = keys.filter(x => x.indexOf('actbk-cache-') === 0).sort().pop();
-          if (k) el.textContent = k.replace('actbk-cache-', '');
-          else el.textContent = 'نامشخص';
-        }).catch(() => { el.textContent = 'نامشخص'; });
-      } else {
-        el.textContent = 'نامشخص';
-      }
-    });
+// نسخه فعال Service Worker را یک‌بار خوانده و در تمام صفحات و ماژول‌ها نمایش می‌دهد.
+function loadAppVersion(){
+  var elements=Array.prototype.slice.call(document.querySelectorAll('.app-version-display'));
+  if(!elements.length)return;
+  function paint(value){elements.forEach(function(el){el.textContent=value||'نامشخص'})}
+  function cacheFallback(){
+    if(!window.caches||!caches.keys){paint('نامشخص');return}
+    caches.keys().then(function(keys){
+      var versions=keys.filter(function(k){return k.indexOf('actbk-cache-Ver-')===0});
+      versions.sort(function(a,b){
+        var av=a.replace('actbk-cache-Ver-','').split('.').map(Number),bv=b.replace('actbk-cache-Ver-','').split('.').map(Number);
+        for(var n=0;n<Math.max(av.length,bv.length);n++){var d=(av[n]||0)-(bv[n]||0);if(d)return d}
+        return 0;
+      });
+      paint(versions.length?versions[versions.length-1].replace('actbk-cache-',''):'نامشخص');
+    }).catch(function(){paint('نامشخص')});
+  }
+  var settled=false,timer=setTimeout(function(){if(!settled){settled=true;cacheFallback()}},3500);
+  fetch('./sw.js?version-check='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('SW version unavailable');return r.text()})
+    .then(function(source){
+      if(settled)return;settled=true;clearTimeout(timer);
+      var match=source.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+      paint(match&&match[1]?match[1]:'نامشخص');
+    }).catch(function(err){if(settled)return;settled=true;clearTimeout(timer);console.warn('[Version]',err);cacheFallback()});
 }
 
 function setConnectionStatus(status,serverName){
@@ -2100,7 +2168,7 @@ async function startApp(){
   $('main_app').style.display='block';
   
   if(getVisibleModules().some(m=>m.id==='activities'))await seedImportance();
-  refreshDropdowns();applyPermissions();
+  refreshDropdowns();applyPermissions();renderAdminToolsMenus();
   var today=getTodayJalali().split('/');
   $('cal_year').value=parseInt(today[0],10);$('cal_month').value=parseInt(today[1],10);$('h_default_year').value=parseInt(today[0],10);
   if(!$('act_start_date').value)$('act_start_date').value=getTodayJalali();
@@ -2458,14 +2526,26 @@ async function generateAttendanceReport(){
   $('att_report_summary').innerHTML='<div class="att-dashboard-heading"><strong>نمای کلی وضعیت رویدادها</strong><span>'+esc(from)+' تا '+esc(to)+'</span></div>'+summaryItems.map((x,i)=>'<div class="att-summary-item '+(i===1?'att-summary-total':'')+'"><strong>'+esc(x[1])+'</strong><span>'+esc(x[0])+'</span></div>').join('');
   var peopleHtml=totalsByPerson.map(o=>{
     var name=o.person.firstName+' '+o.person.lastName;
+    var personnelNumber=o.person.personnelId||o.person.id;
     var eventRows=o.events.map(e=>{
       var days=expandAttendanceEventDays(e,from,to);
-      return days.map(d=>'<tr><td>'+esc(ATT_TYPES[e.event_type]||e.event_type)+'</td><td>'+esc(d.date)+'</td><td>'+esc(d.dayLabel)+'</td><td>'+esc(d.timeLabel)+'</td><td>'+esc(e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':'۱ روز')+'</td><td>'+esc(e.description||'—')+'</td></tr>').join('');
+      return days.map(d=>'<tr><td>'+esc(personnelNumber)+'</td><td>'+esc(ATT_TYPES[e.event_type]||e.event_type)+'</td><td>'+esc(d.date)+'</td><td>'+esc(d.dayLabel)+'</td><td>'+esc(d.timeLabel)+'</td><td>'+esc(e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':'۱ روز')+'</td><td>'+esc(e.description||'—')+'</td></tr>').join('');
     }).join('');
-    return '<details class="att-person-detail"><summary><span class="att-person-name">'+esc(name)+'</span><span class="att-person-metric">مرخصی '+o.leave_daily+' روز</span><span class="att-person-metric">مرخصی ساعتی '+o.leave_hourly.toFixed(2)+' ساعت</span><span class="att-person-metric">مأموریت '+(o.mission_in+o.mission_out)+' روز</span><span class="att-person-event-count">'+o.events.length+' رویداد</span></summary><div class="att-person-detail-body"><div class="att-person-kpis"><span>روزهای کاری رویدادها: <b>'+o.workingEventDays+' روز</b></span><span>روزهای غیرکاری رویدادها: <b>'+o.nonWorkingEventDays+' روز</b></span><span>آموزش: <b>'+o.training+' روز تقویمی</b></span><span>سایر: <b>'+o.other+' روز تقویمی</b></span></div>'+(eventRows?'<div class="table-wrap"><table><thead><tr><th>نوع رویداد</th><th>تاریخ</th><th>نوع روز</th><th>ساعت</th><th>مدت</th><th>شرح</th></tr></thead><tbody>'+eventRows+'</tbody></table></div>':'<p class="hint">برای این فرد در بازه انتخابی رویدادی ثبت نشده است.</p>')+'</div></details>';
+    return '<details class="att-person-detail"><summary><span class="att-person-name">'+esc(name)+' — '+esc(personnelNumber)+'</span><span class="att-person-metric">مرخصی '+o.leave_daily+' روز</span><span class="att-person-metric">مرخصی ساعتی '+o.leave_hourly.toFixed(2)+' ساعت</span><span class="att-person-metric">مأموریت '+(o.mission_in+o.mission_out)+' روز</span><span class="att-person-event-count">'+o.events.length+' رویداد</span></summary><div class="att-person-detail-body"><div class="att-person-kpis"><span>روزهای کاری رویدادها: <b>'+o.workingEventDays+' روز</b></span><span>روزهای غیرکاری رویدادها: <b>'+o.nonWorkingEventDays+' روز</b></span><span>آموزش: <b>'+o.training+' روز تقویمی</b></span><span>سایر: <b>'+o.other+' روز تقویمی</b></span></div>'+(eventRows?'<div class="table-wrap"><table><thead><tr><th>شماره پرسنلی</th><th>نوع رویداد</th><th>تاریخ</th><th>نوع روز</th><th>ساعت</th><th>مدت</th><th>شرح</th></tr></thead><tbody>'+eventRows+'</tbody></table></div>':'<p class="hint">برای این فرد در بازه انتخابی رویدادی ثبت نشده است.</p>')+'</div></details>';
   }).join('');
-  $('att_report_results').innerHTML='<div class="att-dashboard-heading"><strong>خلاصه افراد و جزئیات روزانه</strong><span>'+totalsByPerson.length+' نفر</span></div>'+    '<div class="table-wrap"><table class="att-people-summary"><thead><tr><th>کارمند</th><th>مرخصی روزانه</th><th>مرخصی ساعتی</th><th>مأموریت داخل</th><th>مأموریت خارج</th><th>آموزش</th><th>سایر</th><th>روز کاری رویدادها</th><th>روز غیرکاری رویدادها</th><th>مجموع روز رویداد</th><th>تعداد رویداد</th></tr></thead><tbody>'+    (totalsByPerson.map(o=>'<tr><td>'+esc(o.person.firstName+' '+o.person.lastName)+'</td><td>'+o.leave_daily+'</td><td>'+o.leave_hourly.toFixed(2)+'</td><td>'+o.mission_in+'</td><td>'+o.mission_out+'</td><td>'+o.training+'</td><td>'+o.other+'</td><td>'+o.workingEventDays+'</td><td>'+o.nonWorkingEventDays+'</td><td>'+o.totalEventDays+'</td><td>'+o.events.length+'</td></tr>').join('')||'<tr><td colspan="11">فردی برای نمایش یافت نشد.</td></tr>')+    '</tbody></table></div><div class="att-person-details-list">'+(peopleHtml||'<p class="hint">اطلاعاتی برای این بازه وجود ندارد.</p>')+'</div>';
+  $('att_report_results').innerHTML='<div class="att-dashboard-heading"><strong>خلاصه افراد و جزئیات روزانه</strong><span>'+totalsByPerson.length+' نفر</span></div>'+    '<div class="table-wrap"><table class="att-people-summary"><thead><tr><th>شماره پرسنلی</th><th>مرخصی روزانه</th><th>مرخصی ساعتی</th><th>مأموریت داخل</th><th>مأموریت خارج</th><th>آموزش</th><th>سایر</th><th>روز کاری رویدادها</th><th>روز غیرکاری رویدادها</th><th>مجموع روز رویداد</th><th>تعداد رویداد</th></tr></thead><tbody>'+    (totalsByPerson.map(o=>'<tr><td>'+esc(o.person.personnelId||o.person.id)+'</td><td>'+o.leave_daily+'</td><td>'+o.leave_hourly.toFixed(2)+'</td><td>'+o.mission_in+'</td><td>'+o.mission_out+'</td><td>'+o.training+'</td><td>'+o.other+'</td><td>'+o.workingEventDays+'</td><td>'+o.nonWorkingEventDays+'</td><td>'+o.totalEventDays+'</td><td>'+o.events.length+'</td></tr>').join('')||'<tr><td colspan="11">فردی برای نمایش یافت نشد.</td></tr>')+    '</tbody></table></div><div class="att-person-details-list">'+(peopleHtml||'<p class="hint">اطلاعاتی برای این بازه وجود ندارد.</p>')+'</div>';
   attendanceReportMeta={from:from,to:to,peopleCount:persons.length,totals:{totalEventDays:totalEventDays,workingEventDays:sumDays('workingEventDays'),nonWorkingEventDays:sumDays('nonWorkingEventDays'),leaveDaily:sumDays('leave_daily'),leaveHourly:sumDays('leave_hourly'),missionIn:sumDays('mission_in'),missionOut:sumDays('mission_out'),training:sumDays('training'),other:sumDays('other'),eventCount:rows.length}};
+}
+// داشبورد عدم حضور را در ناحیه اختصاصی چاپ قرار می‌دهد تا PDF فقط گزارش انتخاب‌شده را شامل شود.
+function printAttendanceReport(){
+  if(!isAttendanceReportAdmin()){attendanceMessage('چاپ گزارش عدم حضور دیگران فقط برای ادمین و سوپر ادمین مجاز است.','error');return}
+  if(!attendanceReportRows.length){attendanceMessage('ابتدا گزارش را تهیه کنید.','error');return}
+  var target=$('print_area');if(!target){attendanceMessage('بخش چاپ در صفحه یافت نشد.','error');return}
+  var meta=attendanceReportMeta||{};
+  target.innerHTML='<div dir="rtl" style="font-family:Tahoma,sans-serif;color:#111"><header style="text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:16px"><h2>گزارش داشبورد عدم حضور کارکنان</h2><div>بازه گزارش: '+esc(meta.from||'')+' تا '+esc(meta.to||'')+'</div></header>'+($('att_report_summary')?$('att_report_summary').innerHTML:'')+($('att_report_results')?$('att_report_results').innerHTML:'')+'</div>';
+  document.body.classList.add('attendance-report-print');
+  window.onafterprint=function(){document.body.classList.remove('attendance-report-print');window.onafterprint=null};
+  window.print();
 }
 function csvCell(value){return '"'+String(value==null?'':value).replace(/"/g,'""')+'"'}
 // خروجی CSV شامل خلاصه کلی، تفکیک روزهای کاری/غیرکاری هر فرد و یک ردیف برای هر تاریخ رویداد است.
@@ -2474,26 +2554,29 @@ function exportAttendanceCsv(){
   if(!attendanceReportRows.length){attendanceMessage('ابتدا گزارش را تهیه کنید.','error');return}
   var meta=attendanceReportMeta||{},totals=meta.totals||{};
   // شماره پرسنلی معیار اصلی مرتب‌سازی است؛ تاریخ شروع معیار دوم برای رویدادهای هر فرد است.
-  var orderedPeople=attendanceReportRows.slice().sort((a,b)=>
-    (Number(a.person.personnelId)||0)-(Number(b.person.personnelId)||0)
-  );
+  var orderedPeople=attendanceReportRows.slice().sort((a,b)=>{
+    var av=String(a.person.personnelId||a.person.id||''),bv=String(b.person.personnelId||b.person.id||'');
+    var an=Number(av),bn=Number(bv);
+    if(Number.isFinite(an)&&Number.isFinite(bn)&&an!==bn)return an-bn;
+    return av.localeCompare(bv,'en',{numeric:true});
+  });
   var lines=[['گزارش عدم حضور','بازه',(meta.from||'')+' تا '+(meta.to||'')].map(csvCell).join(',')];
   lines.push(['خلاصه کلی','تعداد افراد','مجموع روزهای رویداد','روزهای کاری رویدادها','روزهای غیرکاری رویدادها','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','ماموریت داخل استان (روز تقویمی)','ماموریت خارج استان (روز تقویمی)','آموزش (روز تقویمی)','سایر (روز تقویمی)','تعداد رویداد'].map(csvCell).join(','));
   lines.push(['کل',meta.peopleCount||0,totals.totalEventDays||0,totals.workingEventDays||0,totals.nonWorkingEventDays||0,totals.leaveDaily||0,Number(totals.leaveHourly||0).toFixed(2),totals.missionIn||0,totals.missionOut||0,totals.training||0,totals.other||0,totals.eventCount||0].map(csvCell).join(','));
   lines.push('');
   // در خلاصه افراد، شماره پرسنلی جایگزین نام/عنوان کارمند می‌شود.
-  lines.push(['خلاصه افراد','شماره پرسنلی','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','مأموریت داخل استان','مأموریت خارج استان','دوره آموزشی','سایر','روز کاری رویدادها','روز غیرکاری رویدادها','مجموع روز رویداد','تعداد رویداد'].map(csvCell).join(','));
-  orderedPeople.forEach(o=>lines.push(['خلاصه',o.person.personnelId||o.person.id,o.leave_daily,o.leave_hourly.toFixed(2),o.mission_in,o.mission_out,o.training,o.other,o.workingEventDays,o.nonWorkingEventDays,o.totalEventDays,(o.events||[]).length].map(csvCell).join(',')));
+  lines.push(['شماره پرسنلی','مرخصی روزانه (روز تقویمی)','مرخصی ساعتی (ساعت)','مأموریت داخل استان','مأموریت خارج استان','دوره آموزشی','سایر','روز کاری رویدادها','روز غیرکاری رویدادها','مجموع روز رویداد','تعداد رویداد'].map(csvCell).join(','));
+  orderedPeople.forEach(o=>lines.push([o.person.personnelId||o.person.id,o.leave_daily,o.leave_hourly.toFixed(2),o.mission_in,o.mission_out,o.training,o.other,o.workingEventDays,o.nonWorkingEventDays,o.totalEventDays,(o.events||[]).length].map(csvCell).join(',')));
   lines.push('');
   // جزئیات روزانه نیز با شماره پرسنلی و سپس تاریخ شروع رویداد مرتب می‌شود.
-  lines.push(['جزئیات روزانه','شماره پرسنلی','نوع رویداد','تاریخ','نوع روز','ساعت/بازه','مدت','شرح'].map(csvCell).join(','));
+  lines.push(['شماره پرسنلی','نوع رویداد','تاریخ','نوع روز','ساعت/بازه','مدت','شرح'].map(csvCell).join(','));
   orderedPeople.forEach(o=>{
     var orderedEvents=(o.events||[]).slice().sort((a,b)=>jalaliToTimestamp(a.start_date)-jalaliToTimestamp(b.start_date)||jalaliToTimestamp(a.end_date)-jalaliToTimestamp(b.end_date));
     orderedEvents.forEach(e=>{
       var from=(attendanceReportMeta||{}).from||val('att_report_from'),to=(attendanceReportMeta||{}).to||val('att_report_to');
       expandAttendanceEventDays(e,from,to).forEach(d=>{
         var duration=e.event_type==='leave_hourly'?hoursBetween(e.start_time,e.end_time).toFixed(2)+' ساعت':'۱ روز تقویمی';
-        lines.push(['جزئیات',o.person.personnelId||o.person.id,ATT_TYPES[e.event_type]||e.event_type,d.date,d.dayLabel,d.timeLabel,duration,e.description||''].map(csvCell).join(','));
+        lines.push([o.person.personnelId||o.person.id,ATT_TYPES[e.event_type]||e.event_type,d.date,d.dayLabel,d.timeLabel,duration,e.description||''].map(csvCell).join(','));
       });
     });
   });
@@ -2502,6 +2585,25 @@ function exportAttendanceCsv(){
 
 
 function bindEvents(){
+  // باز و بسته کردن منوهای مدیریتی مشترک در تمام صفحات.
+  document.addEventListener('click',function(e){
+    var toggle=e.target.closest('[data-admin-tools-toggle]');
+    if(toggle){
+      e.preventDefault();e.stopPropagation();
+      var panel=$(toggle.dataset.adminToolsToggle);
+      document.querySelectorAll('[data-admin-tools-panel]').forEach(function(p){if(p!==panel)p.classList.add('hidden')});
+      if(panel)panel.classList.toggle('hidden');
+      return;
+    }
+    var item=e.target.closest('[data-admin-tool]');
+    if(item){
+      e.preventDefault();
+      document.querySelectorAll('[data-admin-tools-panel]').forEach(function(p){p.classList.add('hidden')});
+      openAdminTool(item.dataset.adminTool);return;
+    }
+    if(!e.target.closest('[data-admin-tools-root]'))document.querySelectorAll('[data-admin-tools-panel]').forEach(function(p){p.classList.add('hidden')});
+  });
+
   document.querySelectorAll('[data-toggle-module-switcher]').forEach(b=>b.addEventListener('click',toggleModuleSwitcher));
   document.addEventListener('click',e=>{if(!e.target.closest('#module_switcher_panel,[data-toggle-module-switcher]'))closeModuleSwitcher()});
   on('module_switcher_panel','click',e=>{var close=e.target.closest('[data-close-module-switcher]');if(close){closeModuleSwitcher();return}var home=e.target.closest('[data-open-module-home]');if(home){showModuleHome();return}var target=e.target.closest('[data-switch-to-module]');if(target)openModule(target.dataset.switchToModule)});
@@ -2525,7 +2627,7 @@ function bindEvents(){
   document.querySelectorAll('[data-att-tab]').forEach(b=>b.addEventListener('click',()=>setAttendanceTab(b.dataset.attTab)));
   on('btn_att_report','click',generateAttendanceReport);
   on('btn_att_report_csv','click',exportAttendanceCsv);
-  on('btn_att_report_print','click',()=>{if(!isAttendanceReportAdmin()){attendanceMessage('چاپ گزارش عدم حضور دیگران فقط برای ادمین و سوپر ادمین مجاز است.','error');return}if(!attendanceReportRows.length){attendanceMessage('ابتدا گزارش را تهیه کنید.','error');return}window.print()});
+  on('btn_att_report_print','click',printAttendanceReport);
   on('main_nav','click',e=>{var b=e.target.closest('button');if(b&&b.dataset.target)showSection(b.dataset.target)});
   on('btn_sync_cloud','click',()=>syncFromCloud(true));
   on('btn_logout','click',handleLogout);

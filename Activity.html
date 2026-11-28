@@ -55,7 +55,7 @@
       <span id="login_conn_text">در حال بررسی اتصال...</span>
     </div>
     <div id="login_alert_box" class="alert"></div>
-    <h2 id="login_title" class="auth-title">ورود به سیستم</h2>
+    <h2 id="login_title" class="auth-title">ورود به سیستم</h2><div class="app-version-line">نسخه برنامه: <span class="app-version-display">...</span></div>
     <p id="login_msg" class="auth-sub">لطفاً نام کاربری و کلمه عبور خود را وارد کنید.</p>
     <div id="login_form">
       <div class="form-group"><label>نام کاربری:</label><input type="text" id="login_username" autocomplete="username"></div>
@@ -88,7 +88,7 @@
         </div>
       </div>
       <div class="module-home-user">
-        <div class="module-home-user-meta"><small>خوش آمدید</small><strong id="module_home_user"></strong></div>
+        <div class="module-home-user-meta"><small>خوش آمدید</small><strong id="module_home_user"></strong><small class="app-version-line">نسخه <span class="app-version-display">...</span></small></div><div class="admin-tools" data-admin-tools-root><button type="button" class="btn btn-secondary btn-sm" data-admin-tools-toggle="admin_tools_home">⚙ مدیریت</button><div id="admin_tools_home" class="admin-tools-panel hidden" data-admin-tools-panel></div></div>
         <button class="btn-icon" id="btn_home_password" title="تغییر رمز عبور" aria-label="تغییر رمز عبور">🔑</button>
         <button class="btn btn-secondary btn-sm" id="btn_home_logout">خروج از سامانه</button>
       </div>
@@ -111,7 +111,7 @@
   <section id="attendance_module" class="attendance-module hidden">
     <header class="module-topbar">
       <div class="module-topbar-brand"><span class="module-topbar-icon">📅</span><div><strong id="attendance_module_title">ثبت عدم حضور</strong><small>مرخصی، مأموریت، آموزش و سایر رویدادها</small></div></div>
-      <div class="module-topbar-actions"><button class="btn-icon" id="btn_attendance_theme" title="تغییر تم">🌙</button><button class="btn btn-secondary btn-sm" id="btn_attendance_home" data-toggle-module-switcher>▦ تغییر ماژول</button><span id="attendance_user_name"></span><button class="btn-icon" id="btn_attendance_password" title="تغییر رمز عبور">🔑</button><button class="btn-icon" id="btn_attendance_logout" title="خروج از سامانه">🚪</button></div>
+      <div class="module-topbar-actions"><div class="admin-tools" data-admin-tools-root><button type="button" class="btn btn-secondary btn-sm" data-admin-tools-toggle="admin_tools_attendance">⚙ مدیریت</button><div id="admin_tools_attendance" class="admin-tools-panel hidden" data-admin-tools-panel></div></div><span class="app-version-chip">نسخه <span class="app-version-display">...</span></span><button class="btn-icon" id="btn_attendance_theme" title="تغییر تم">🌙</button><button class="btn btn-secondary btn-sm" id="btn_attendance_home" data-toggle-module-switcher>▦ تغییر ماژول</button><span id="attendance_user_name"></span><button class="btn-icon" id="btn_attendance_password" title="تغییر رمز عبور">🔑</button><button class="btn-icon" id="btn_attendance_logout" title="خروج از سامانه">🚪</button></div>
     </header>
     <main class="attendance-content">
       <div class="attendance-intro"><div><span class="module-home-kicker">ماژول دوم</span><h2>ثبت رویدادهای عدم حضور</h2><p>روزهای شنبه تا چهارشنبه حضور پیش‌فرض محسوب می‌شوند؛ فقط موارد متفاوت را ثبت کنید.</p></div><div class="attendance-rule"><b>قاعده پایه</b><span>شنبه تا چهارشنبه: حضور</span><span>پنجشنبه و جمعه: غیرکاری</span></div></div>
@@ -153,14 +153,14 @@
       <button class="btn-icon menu-btn" onclick="toggleNav()" style="width:auto">☰</button>
       <div class="top-logo">📊</div>
       <div class="top-title">
-        <h1>ثبت فعالیت ماهانه <span id="app_version_display" style="font-size:11px;font-weight:normal;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:10px;border:1px solid #e2e8f0;margin-right:4px;">...</span></h1>
+        <h1>ثبت فعالیت ماهانه <span id="app_version_display" class="app-version-display" style="font-size:11px;font-weight:normal;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:10px;border:1px solid #e2e8f0;margin-right:4px;">...</span></h1>
         <p>واحد کنترل و نظارت پروژه‌های سرمایه‌گذاری</p>
       </div>
     </div>
     <div class="top-actions">
       <button class="btn-icon" onclick="toggleTheme()" id="themeBtn" title="تغییر تم">🌙</button>
       <span class="online-dot checking" id="onlineDot" title="در حال بررسی..."></span>
-      <button class="btn btn-sm btn-secondary" id="btn_switch_module" data-toggle-module-switcher>▦ تغییر ماژول</button>
+      <div class="admin-tools" data-admin-tools-root><button type="button" class="btn btn-sm btn-secondary" data-admin-tools-toggle="admin_tools_activities">⚙ مدیریت</button><div id="admin_tools_activities" class="admin-tools-panel hidden" data-admin-tools-panel></div></div><span class="app-version-chip">نسخه <span class="app-version-display">...</span></span><button class="btn btn-sm btn-secondary" id="btn_switch_module" data-toggle-module-switcher>▦ تغییر ماژول</button>
       <button class="btn btn-sm btn-success" id="btn_sync_cloud" style="display:none">🔄 بروزرسانی</button>
       <div class="user-chip" id="user_info" style="display:none">
         <span class="user-name" id="current_user"></span>
